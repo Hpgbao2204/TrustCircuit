@@ -15,7 +15,7 @@ Register -> Negotiate -> Compute -> Prove Compliance -> Audit & Consume
 - Solidity smart contracts for data registration, access control, budget tracking, verification, and audit records.
 - Differential privacy experiments with aggregate queries, Gaussian noise, and budget consumption.
 - Circom/snarkjs zero-knowledge compliance proof flow.
-- TEE worker simulator for request execution, attestation-like reports, and sealed witnesses.
+- TEE worker simulator for request execution, attestation-like reports, and sealed witnesses, with experiments run on AWS Nitro as a TEE-like evaluation environment.
 - Benchmark scripts for gas, latency, proof overhead, throughput, and privacy-utility evaluation.
 
 ## Quick Start
@@ -32,7 +32,7 @@ This work is currently unpublished. If you use this repository, please cite the 
 
 ```bibtex
 @misc{huynh2026trustcircuit,
-  title        = {TrustCircuit: A Blockchain-Based Framework for Accountable Privacy-Preserving Data Access},
+  title        = {TrustCircuit: Blockchain-Orchestrated Privacy-Preserving Data Circulation with Verifiable Compliance},
   author       = {Huynh, Bao and Tran, Tuan-Dung and Pham, Van-Hau},
   year         = {2026},
   publisher    = {Zenodo},
