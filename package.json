@@ -1,0 +1,25 @@
+{
+  "name": "trust-circuit-kltn",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TrustCircuit prototype: blockchain audit, privacy budget, DP simulation, TEE worker simulator, and ZK compliance.",
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "gas": "hardhat run scripts/gas-report.js",
+    "gas:loop": "hardhat run scripts/gas-benchmark.js",
+    "benchmark": "hardhat run benchmarks/pipeline-runner.js",
+    "zk:benchmark": "node zk/scripts/benchmark_zk.js",
+    "lint": "echo \"TODO: add lint command\""
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "circomlib": "2.0.5",
+    "circomlibjs": "0.1.7",
+    "hardhat": "^2.22.0",
+    "snarkjs": "0.7.5"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0"
+  }
+}

@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.cjs
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Hardhat / Solidity
+artifacts/
+cache/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+gas-report.txt
+
+# Circom / ZK build outputs
+*.r1cs
+*.sym
+*.zkey
+*.wtns
+proof.json
+public.json
+verification_key.json
+zk/build/
+zk/ptau/
+zk/circuits/compliance_lib.circom
+
+# Downloaded tool binaries
+tools/
+
+# Experiment outputs
+results/
+*.csv.tmp
+
+# Local notes / markdown docs
+*.md
+Paper/
+.skills/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Local generated data
+data/generated/*
+!data/generated/.gitkeep
+tee/witness/
+
+*.pem
