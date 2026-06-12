@@ -48,6 +48,7 @@ results/
 
 # Local notes / markdown docs
 *.md
+!/README.md
 Paper/
 .skills/
 
