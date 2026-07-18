@@ -11,5 +11,6 @@
     <VeiidPath>PATH_TO_WINDOWS_SDK_X64_BIN\veiid.exe</VeiidPath>
     <SignToolPath>PATH_TO_WINDOWS_SDK_X64_BIN\signtool.exe</SignToolPath>
     <EnclaveSigningThumbprint>REPLACE_WITH_LOCAL_TEST_SIGNING_CERTIFICATE_THUMBPRINT</EnclaveSigningThumbprint>
+    <ValidatorSigningThumbprint>REPLACE_WITH_LOCAL_VALIDATOR_SIGNING_CERTIFICATE_THUMBPRINT</ValidatorSigningThumbprint>
   </PropertyGroup>
 </Project>

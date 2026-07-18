@@ -1,3 +1,4 @@
+#include "Attestation.h"
 #include "Json.h"
 
 #include <chrono>
@@ -43,6 +44,18 @@ struct ExecutionRequest
     std::int64_t upperBoundFixed{};
     std::uint64_t deadlineUnixMs{};
     bool applyDp{};
+};
+
+struct ValidationRequest
+{
+    ExecutionRequest execution;
+    std::uint64_t executionUnixMs{};
+    std::int64_t resultFixed{};
+    std::uint64_t actualPrivacyCostFixed{};
+    std::vector<std::uint8_t> resultHash;
+    std::vector<std::uint8_t> transcriptHash;
+    std::vector<std::uint8_t> enclaveIdentity;
+    std::vector<std::uint8_t> attestationEvidence;
 };
 
 std::vector<std::uint8_t> loadBinaryFile(const std::filesystem::path& path)
@@ -167,14 +180,9 @@ std::uint64_t calibrateTscTicksPerMicrosecond()
     return ticksPerMicrosecond == 0 ? 1 : ticksPerMicrosecond;
 }
 
-ExecutionRequest parseExecutionRequest(const std::filesystem::path& path)
+ExecutionRequest parseCommonExecutionRequest(
+    const trustcircuit::json::Object& object)
 {
-    const auto object = trustcircuit::json::parseObject(loadTextFile(path));
-    if (trustcircuit::json::requireString(object, "operation") != "execute")
-    {
-        throw std::runtime_error("unsupported JSON operation");
-    }
-
     ExecutionRequest request;
     request.requestId =
         trustcircuit::json::requireString(object, "request_id");
@@ -202,12 +210,6 @@ ExecutionRequest parseExecutionRequest(const std::filesystem::path& path)
         object, "delta_requested_fixed");
     request.encryptedPayloadPath = trustcircuit::json::requireString(
         object, "encrypted_payload_path");
-    request.key = decodeHex(
-        trustcircuit::json::requireString(object, "key_hex"));
-    request.nonce = decodeHex(
-        trustcircuit::json::requireString(object, "nonce"));
-    request.authenticationTag = decodeHex(
-        trustcircuit::json::requireString(object, "authentication_tag"));
     request.aad = decodeHex(
         trustcircuit::json::requireString(object, "aad"));
     request.expectedDataHash = decodeHex(
@@ -252,6 +254,51 @@ ExecutionRequest parseExecutionRequest(const std::filesystem::path& path)
             throw std::runtime_error("privacy fixed-point fields are inconsistent");
         }
     }
+    return request;
+}
+
+ExecutionRequest parseExecutionRequest(
+    const trustcircuit::json::Object& object)
+{
+    if (trustcircuit::json::requireString(object, "operation") != "execute")
+    {
+        throw std::runtime_error("unsupported JSON operation");
+    }
+    auto request = parseCommonExecutionRequest(object);
+    request.key = decodeHex(
+        trustcircuit::json::requireString(object, "key_hex"));
+    request.nonce = decodeHex(
+        trustcircuit::json::requireString(object, "nonce"));
+    request.authenticationTag = decodeHex(
+        trustcircuit::json::requireString(object, "authentication_tag"));
+    return request;
+}
+
+ValidationRequest parseValidationRequest(
+    const trustcircuit::json::Object& object)
+{
+    if (trustcircuit::json::requireString(object, "operation") !=
+        "validate_attestation")
+    {
+        throw std::runtime_error("unsupported JSON operation");
+    }
+    ValidationRequest request;
+    request.execution = parseCommonExecutionRequest(object);
+    request.executionUnixMs = trustcircuit::json::requireUint64(
+        object, "execution_unix_ms");
+    request.resultFixed =
+        trustcircuit::json::requireInt64(object, "result_fixed");
+    request.actualPrivacyCostFixed = trustcircuit::json::requireUint64(
+        object, "actual_privacy_cost_fixed");
+    request.resultHash = decodeHex(
+        trustcircuit::json::requireString(object, "result_hash"));
+    request.transcriptHash = decodeHex(
+        trustcircuit::json::requireString(object, "transcript_hash"));
+    request.enclaveIdentity = decodeHex(
+        trustcircuit::json::requireString(object, "enclave_identity"));
+    request.attestationEvidence = decodeHex(
+        trustcircuit::json::requireString(
+            object, "native_attestation_evidence"));
     return request;
 }
 
@@ -352,8 +399,14 @@ int main(int argc, char* argv[])
 
         if (jsonMode)
         {
+            const auto object = trustcircuit::json::parseObject(
+                loadTextFile(argv[1]));
+            const auto operation = trustcircuit::json::requireString(
+                object, "operation");
+            if (operation == "execute")
+            {
             const auto hostTotalStarted = std::chrono::steady_clock::now();
-            auto request = parseExecutionRequest(argv[1]);
+            auto request = parseExecutionRequest(object);
             requestId = request.requestId;
             auto wipeKey = wil::scope_exit([&request] { wipe(request.key); });
             const auto ciphertext = loadBinaryFile(
@@ -366,11 +419,14 @@ int main(int argc, char* argv[])
             std::uint64_t actualPrivacyCostFixed = 0;
             std::vector<std::uint8_t> resultHash;
             std::vector<std::uint8_t> transcriptHash;
+            std::vector<std::uint8_t> enclaveIdentity;
+            std::vector<std::uint8_t> attestationEvidence;
             std::uint64_t decryptUs = 0;
             std::uint64_t hashUs = 0;
             std::uint64_t aggregateUs = 0;
             std::uint64_t dpNoiseUs = 0;
             std::uint64_t transcriptUs = 0;
+            std::uint64_t attestationUs = 0;
             const auto enclaveCallStarted = std::chrono::steady_clock::now();
             THROW_IF_FAILED(enclaveInterface.ExecuteEncrypted(
                 ciphertext,
@@ -399,11 +455,14 @@ int main(int argc, char* argv[])
                 actualPrivacyCostFixed,
                 resultHash,
                 transcriptHash,
+                enclaveIdentity,
+                attestationEvidence,
                 decryptUs,
                 hashUs,
                 aggregateUs,
                 dpNoiseUs,
-                transcriptUs));
+                transcriptUs,
+                attestationUs));
             const auto enclaveCallUs = elapsedMicroseconds(enclaveCallStarted);
             const auto hostTotalUs = elapsedMicroseconds(hostTotalStarted);
 
@@ -411,10 +470,16 @@ int main(int argc, char* argv[])
                 << "{\"ok\":true,\"request_id\":\""
                 << trustcircuit::json::escape(request.requestId)
                 << "\",\"result\":" << formatFixed(resultFixed)
+                << ",\"result_fixed\":" << resultFixed
                 << ",\"result_hash\":\"" << encodeHex(resultHash)
                 << "\",\"actual_privacy_cost_fixed\":"
                 << actualPrivacyCostFixed
                 << ",\"transcript_hash\":\"" << encodeHex(transcriptHash)
+                << "\",\"enclave_identity\":\""
+                << encodeHex(enclaveIdentity)
+                << "\",\"execution_unix_ms\":" << executionUnixMs
+                << ",\"native_attestation_evidence\":\""
+                << encodeHex(attestationEvidence)
                 << "\",\"attestation_evidence\":null,\"row_count\":"
                 << rowCount << ",\"timings_us\":{\"host_total\":"
                 << hostTotalUs << ",\"process_startup\":"
@@ -423,8 +488,108 @@ int main(int argc, char* argv[])
                 << ",\"hash\":" << hashUs << ",\"aggregate\":"
                 << aggregateUs << ",\"dp_noise\":" << dpNoiseUs
                 << ",\"transcript\":" << transcriptUs
-                << ",\"attestation\":0},\"error\":null}\n";
+                << ",\"attestation\":" << attestationUs
+                << "},\"error\":null}\n";
             return 0;
+            }
+
+            if (operation == "validate_attestation")
+            {
+                const auto hostTotalStarted = std::chrono::steady_clock::now();
+                auto request = parseValidationRequest(object);
+                requestId = request.execution.requestId;
+                std::vector<std::uint8_t> validatedTranscriptHash;
+                std::vector<std::uint8_t> validatedEnclaveIdentity;
+                std::vector<std::uint8_t> evidenceHash;
+                std::uint64_t issuedAtUnixMs = 0;
+                std::uint64_t expiresAtUnixMs = 0;
+                std::uint64_t validationUs = 0;
+                const auto enclaveCallStarted =
+                    std::chrono::steady_clock::now();
+                THROW_IF_FAILED(
+                    enclaveInterface.ValidateAttestationEvidence(
+                        request.attestationEvidence,
+                        request.execution.aad,
+                        request.execution.expectedDataHash,
+                        request.execution.requestId,
+                        request.execution.assetId,
+                        request.execution.consumerId,
+                        request.execution.policyHash,
+                        request.execution.encryptedPayloadPath,
+                        request.execution.policyVersion,
+                        request.execution.functionId,
+                        request.execution.epsilonRequestedFixed,
+                        request.execution.deltaRequestedFixed,
+                        request.execution.lowerBoundFixed,
+                        request.execution.upperBoundFixed,
+                        request.execution.deadlineUnixMs,
+                        request.executionUnixMs,
+                        request.execution.applyDp,
+                        request.resultFixed,
+                        request.actualPrivacyCostFixed,
+                        request.resultHash,
+                        request.transcriptHash,
+                        request.enclaveIdentity,
+                        currentUnixMilliseconds(),
+                        calibrateTscTicksPerMicrosecond(),
+                        validatedTranscriptHash,
+                        validatedEnclaveIdentity,
+                        evidenceHash,
+                        issuedAtUnixMs,
+                        expiresAtUnixMs,
+                        validationUs));
+                const auto enclaveCallUs =
+                    elapsedMicroseconds(enclaveCallStarted);
+                const auto statementSignature =
+                    trustcircuit::attestation::signStatement(
+                        validatedTranscriptHash,
+                        validatedEnclaveIdentity,
+                        issuedAtUnixMs,
+                        expiresAtUnixMs,
+                        evidenceHash);
+                if (!trustcircuit::attestation::verifyStatement(
+                        validatedTranscriptHash,
+                        validatedEnclaveIdentity,
+                        issuedAtUnixMs,
+                        expiresAtUnixMs,
+                        evidenceHash,
+                        statementSignature.validatorIdentity,
+                        statementSignature.bytes))
+                {
+                    throw std::runtime_error(
+                        "validator statement self-verification failed");
+                }
+                const auto hostTotalUs =
+                    elapsedMicroseconds(hostTotalStarted);
+
+                std::cout
+                    << "{\"ok\":true,\"format\":"
+                       "\"TrustCircuit.AttestationStatement.v1\","
+                       "\"request_id\":\""
+                    << trustcircuit::json::escape(request.execution.requestId)
+                    << "\",\"transcript_hash\":\""
+                    << encodeHex(validatedTranscriptHash)
+                    << "\",\"enclave_identity\":\""
+                    << encodeHex(validatedEnclaveIdentity)
+                    << "\",\"issued_at_unix_ms\":" << issuedAtUnixMs
+                    << ",\"expires_at_unix_ms\":" << expiresAtUnixMs
+                    << ",\"validator_identity\":\""
+                    << encodeHex(statementSignature.validatorIdentity)
+                    << "\",\"evidence_sha256\":\""
+                    << encodeHex(evidenceHash)
+                    << "\",\"signature_algorithm\":\""
+                    << trustcircuit::attestation::signatureAlgorithm
+                    << "\",\"signature\":\""
+                    << encodeHex(statementSignature.bytes)
+                    << "\",\"native_verification\":"
+                       "\"EnclaveVerifyAttestationReport\","
+                       "\"timings_us\":{\"host_total\":"
+                    << hostTotalUs << ",\"enclave_call\":"
+                    << enclaveCallUs << ",\"attestation_validation\":"
+                    << validationUs << "},\"error\":null}\n";
+                return 0;
+            }
+            throw std::runtime_error("unsupported JSON operation");
         }
 
         std::vector<std::uint8_t> input;

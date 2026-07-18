@@ -15,6 +15,9 @@ DATASET_VERSION = 1
 MAX_DATASET_ROWS = 100_000
 DELTA_FIXED_SCALE = 1_000_000_000_000
 REQUEST_DOMAIN = b"TrustCircuit.Request.v1\x00"
+RESULT_DOMAIN = b"TrustCircuit.Result.v1\x00"
+TRANSCRIPT_DOMAIN = b"TrustCircuit.Execution.v1\x00"
+ATTESTATION_BINDING_DOMAIN = b"TrustCircuit.Attestation.v1\x00"
 
 
 class BcryptAuthenticatedCipherModeInfo(ctypes.Structure):
@@ -167,6 +170,44 @@ def build_canonical_aad(request: dict[str, object]) -> bytes:
             bytes([1 if bool(request["apply_dp"]) else 0]),
         ]
     )
+
+
+def build_result_hash(result_fixed: int) -> bytes:
+    return hashlib.sha256(
+        RESULT_DOMAIN + struct.pack("<q", result_fixed)
+    ).digest()
+
+
+def build_transcript_hash(
+    request: dict[str, object],
+    execution_unix_ms: int,
+    result_fixed: int,
+    actual_privacy_cost_fixed: int,
+    result_hash: bytes,
+    enclave_identity: bytes,
+) -> bytes:
+    if len(result_hash) != 32 or len(enclave_identity) != 32:
+        raise ValueError("transcript hashes must be SHA-256 values")
+    canonical = b"".join(
+        [
+            TRANSCRIPT_DOMAIN,
+            build_canonical_aad(request),
+            struct.pack("<Q", execution_unix_ms),
+            struct.pack("<q", result_fixed),
+            struct.pack("<Q", actual_privacy_cost_fixed),
+            result_hash,
+            enclave_identity,
+        ]
+    )
+    return hashlib.sha256(canonical).digest()
+
+
+def build_attestation_binding(transcript_hash: bytes) -> bytes:
+    if len(transcript_hash) != 32:
+        raise ValueError("transcript_hash must be SHA-256")
+    return transcript_hash + hashlib.sha256(
+        ATTESTATION_BINDING_DOMAIN + transcript_hash
+    ).digest()
 
 
 def make_request(

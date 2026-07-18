@@ -2,13 +2,17 @@
 
 #include <VbsEnclave\Enclave\Implementation\Trusted.h>
 
+#include <algorithm>
+#include <array>
 #include <bcrypt.h>
 #include <cmath>
 #include <cstring>
 #include <intrin.h>
 #include <limits>
+#include <ntenclv.h>
 #include <span>
 #include <string>
+#include <winenclaveapi.h>
 #include <wil/stl.h>
 
 namespace
@@ -27,6 +31,7 @@ constexpr std::size_t gcmTagBytes = 16;
 constexpr std::size_t maxIdentifierBytes = 128;
 constexpr std::size_t maxPayloadPathBytes = 1024;
 constexpr std::size_t maxAadBytes = 4096;
+constexpr std::size_t maxAttestationEvidenceBytes = 64 * 1024;
 constexpr std::size_t maxEncryptedPayloadBytes =
     datasetHeaderBytes +
     static_cast<std::size_t>(maxDatasetRows) * sizeof(std::int64_t);
@@ -38,8 +43,11 @@ constexpr std::uint8_t resultDomain[] =
     "TrustCircuit.Result.v1";
 constexpr std::uint8_t transcriptDomain[] =
     "TrustCircuit.Execution.v1";
-constexpr std::uint8_t enclaveIdentity[] =
-    "TrustCircuitVbsEnclave.Phase5";
+constexpr std::uint8_t enclaveIdentityDomain[] =
+    "TrustCircuit.EnclaveIdentity.v1";
+constexpr std::uint8_t attestationBindingDomain[] =
+    "TrustCircuit.Attestation.v1";
+constexpr std::uint64_t maxAttestationLifetimeMs = 5 * 60 * 1000;
 constexpr long double epsilonFixedScale = 1000000.0L;
 constexpr long double deltaFixedScale = 1000000000000.0L;
 constexpr long double twoPi =
@@ -199,6 +207,177 @@ HRESULT sha256(
     {
         digest.clear();
         return HRESULT_FROM_NT(status);
+    }
+    return S_OK;
+}
+
+HRESULT hashEnclaveIdentity(
+    const ENCLAVE_IDENTITY& identity,
+    std::vector<std::uint8_t>& digest)
+{
+    std::vector<std::uint8_t> canonical;
+    canonical.reserve(192);
+    appendBytes(canonical, enclaveIdentityDomain);
+    appendBytes(canonical, identity.OwnerId);
+    appendBytes(canonical, identity.UniqueId);
+    appendBytes(canonical, identity.AuthorId);
+    appendBytes(canonical, identity.FamilyId);
+    appendBytes(canonical, identity.ImageId);
+    appendUint32LittleEndian(canonical, identity.EnclaveSvn);
+    appendUint32LittleEndian(canonical, identity.SecureKernelSvn);
+    appendUint32LittleEndian(canonical, identity.PlatformSvn);
+    appendUint32LittleEndian(canonical, identity.Flags);
+    appendUint32LittleEndian(canonical, identity.SigningLevel);
+    appendUint32LittleEndian(canonical, identity.EnclaveType);
+    return sha256(canonical, digest);
+}
+
+HRESULT currentEnclaveIdentityHash(
+    std::vector<std::uint8_t>& digest)
+{
+    ENCLAVE_INFORMATION information{};
+    RETURN_IF_FAILED(EnclaveGetEnclaveInformation(
+        sizeof(information),
+        &information));
+    if (information.EnclaveType != ENCLAVE_TYPE_VBS ||
+        information.Identity.EnclaveType != ENCLAVE_TYPE_VBS)
+    {
+        return E_UNEXPECTED;
+    }
+    return hashEnclaveIdentity(information.Identity, digest);
+}
+
+HRESULT buildTranscriptHash(
+    std::span<const std::uint8_t> canonicalAad,
+    std::uint64_t executionUnixMs,
+    std::int64_t resultFixed,
+    std::uint64_t actualPrivacyCostFixed,
+    std::span<const std::uint8_t> resultHash,
+    std::span<const std::uint8_t> enclaveIdentityHash,
+    std::vector<std::uint8_t>& transcriptHash)
+{
+    if (resultHash.size() != sha256DigestBytes ||
+        enclaveIdentityHash.size() != sha256DigestBytes)
+    {
+        return E_INVALIDARG;
+    }
+
+    std::vector<std::uint8_t> transcript;
+    transcript.reserve(
+        sizeof(transcriptDomain) + canonicalAad.size() + 96);
+    appendBytes(transcript, transcriptDomain);
+    appendBytes(transcript, canonicalAad);
+    appendUint64LittleEndian(transcript, executionUnixMs);
+    appendInt64LittleEndian(transcript, resultFixed);
+    appendUint64LittleEndian(transcript, actualPrivacyCostFixed);
+    appendBytes(transcript, resultHash);
+    appendBytes(transcript, enclaveIdentityHash);
+    return sha256(transcript, transcriptHash);
+}
+
+HRESULT buildAttestationBinding(
+    std::span<const std::uint8_t> transcriptHash,
+    std::array<std::uint8_t, ENCLAVE_REPORT_DATA_LENGTH>& binding)
+{
+    if (transcriptHash.size() != sha256DigestBytes)
+    {
+        return E_INVALIDARG;
+    }
+
+    std::copy(transcriptHash.begin(), transcriptHash.end(), binding.begin());
+    std::vector<std::uint8_t> domainSeparated;
+    domainSeparated.reserve(
+        sizeof(attestationBindingDomain) + transcriptHash.size());
+    appendBytes(domainSeparated, attestationBindingDomain);
+    appendBytes(domainSeparated, transcriptHash);
+    std::vector<std::uint8_t> secondHalf;
+    RETURN_IF_FAILED(sha256(domainSeparated, secondHalf));
+    std::copy(
+        secondHalf.begin(),
+        secondHalf.end(),
+        binding.begin() + sha256DigestBytes);
+    return S_OK;
+}
+
+HRESULT generateAttestationEvidence(
+    std::span<const std::uint8_t> transcriptHash,
+    std::vector<std::uint8_t>& evidence)
+{
+    std::array<std::uint8_t, ENCLAVE_REPORT_DATA_LENGTH> binding{};
+    RETURN_IF_FAILED(buildAttestationBinding(transcriptHash, binding));
+
+    std::uint32_t requiredSize = 0;
+    RETURN_IF_FAILED(EnclaveGetAttestationReport(
+        binding.data(),
+        nullptr,
+        0,
+        &requiredSize));
+    if (requiredSize <
+            sizeof(VBS_ENCLAVE_REPORT_PKG_HEADER) +
+                sizeof(VBS_ENCLAVE_REPORT) ||
+        requiredSize > maxAttestationEvidenceBytes)
+    {
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    evidence.assign(requiredSize, 0);
+    std::uint32_t actualSize = 0;
+    const auto result = EnclaveGetAttestationReport(
+        binding.data(),
+        evidence.data(),
+        static_cast<std::uint32_t>(evidence.size()),
+        &actualSize);
+    if (FAILED(result))
+    {
+        evidence.clear();
+        return result;
+    }
+    if (actualSize != requiredSize)
+    {
+        evidence.clear();
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+    return S_OK;
+}
+
+HRESULT parseVbsAttestationEvidence(
+    std::span<const std::uint8_t> evidence,
+    VBS_ENCLAVE_REPORT& report)
+{
+    if (evidence.size() <
+            sizeof(VBS_ENCLAVE_REPORT_PKG_HEADER) +
+                sizeof(VBS_ENCLAVE_REPORT) ||
+        evidence.size() > maxAttestationEvidenceBytes)
+    {
+        return E_INVALIDARG;
+    }
+
+    VBS_ENCLAVE_REPORT_PKG_HEADER package{};
+    std::memcpy(&package, evidence.data(), sizeof(package));
+    const auto totalSize =
+        static_cast<std::uint64_t>(sizeof(package)) +
+        static_cast<std::uint64_t>(package.SignedStatementSize) +
+        static_cast<std::uint64_t>(package.SignatureSize);
+    if (package.PackageSize != evidence.size() ||
+        totalSize != evidence.size() ||
+        package.Version != VBS_ENCLAVE_REPORT_PKG_HEADER_VERSION_CURRENT ||
+        package.SignatureScheme !=
+            VBS_ENCLAVE_REPORT_SIGNATURE_SCHEME_SHA256_RSA_PSS_SHA256 ||
+        package.SignedStatementSize < sizeof(VBS_ENCLAVE_REPORT) ||
+        package.SignatureSize == 0 || package.Reserved != 0)
+    {
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    std::memcpy(
+        &report,
+        evidence.data() + sizeof(package),
+        sizeof(report));
+    if (report.ReportSize != package.SignedStatementSize ||
+        report.ReportVersion != VBS_ENCLAVE_REPORT_VERSION_CURRENT ||
+        report.EnclaveIdentity.EnclaveType != ENCLAVE_TYPE_VBS)
+    {
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
     return S_OK;
 }
@@ -471,22 +650,28 @@ HRESULT VbsEnclave::Trusted::Implementation::ExecuteEncrypted(
     _Out_ std::uint64_t& actualPrivacyCostFixed,
     _Out_ std::vector<std::uint8_t>& resultHash,
     _Out_ std::vector<std::uint8_t>& transcriptHash,
+    _Out_ std::vector<std::uint8_t>& enclaveIdentityHash,
+    _Out_ std::vector<std::uint8_t>& attestationEvidence,
     _Out_ std::uint64_t& decryptUs,
     _Out_ std::uint64_t& hashUs,
     _Out_ std::uint64_t& aggregateUs,
     _Out_ std::uint64_t& dpNoiseUs,
-    _Out_ std::uint64_t& transcriptUs)
+    _Out_ std::uint64_t& transcriptUs,
+    _Out_ std::uint64_t& attestationUs)
 {
     resultFixed = 0;
     rowCount = 0;
     actualPrivacyCostFixed = 0;
     resultHash.clear();
     transcriptHash.clear();
+    enclaveIdentityHash.clear();
+    attestationEvidence.clear();
     decryptUs = 0;
     hashUs = 0;
     aggregateUs = 0;
     dpNoiseUs = 0;
     transcriptUs = 0;
+    attestationUs = 0;
 
     if (tscTicksPerUs == 0 || key.size() != aes256KeyBytes ||
         nonce.size() != gcmNonceBytes ||
@@ -621,15 +806,196 @@ HRESULT VbsEnclave::Trusted::Implementation::ExecuteEncrypted(
     appendInt64LittleEndian(resultCanonical, resultFixed);
     RETURN_IF_FAILED(sha256(resultCanonical, resultHash));
 
-    std::vector<std::uint8_t> transcript;
-    appendBytes(transcript, transcriptDomain);
-    appendBytes(transcript, expectedAad);
-    appendUint64LittleEndian(transcript, executionUnixMs);
-    appendInt64LittleEndian(transcript, resultFixed);
-    appendUint64LittleEndian(transcript, actualPrivacyCostFixed);
-    appendBytes(transcript, resultHash);
-    appendBytes(transcript, enclaveIdentity);
-    RETURN_IF_FAILED(sha256(transcript, transcriptHash));
+    RETURN_IF_FAILED(currentEnclaveIdentityHash(enclaveIdentityHash));
+    RETURN_IF_FAILED(buildTranscriptHash(
+        expectedAad,
+        executionUnixMs,
+        resultFixed,
+        actualPrivacyCostFixed,
+        resultHash,
+        enclaveIdentityHash,
+        transcriptHash));
     transcriptUs = (__rdtsc() - transcriptStarted) / tscTicksPerUs;
+
+    const auto attestationStarted = __rdtsc();
+    RETURN_IF_FAILED(generateAttestationEvidence(
+        transcriptHash,
+        attestationEvidence));
+    attestationUs = (__rdtsc() - attestationStarted) / tscTicksPerUs;
+    return S_OK;
+}
+
+HRESULT VbsEnclave::Trusted::Implementation::ValidateAttestationEvidence(
+    _In_ const std::vector<std::uint8_t>& attestationEvidence,
+    _In_ const std::vector<std::uint8_t>& aad,
+    _In_ const std::vector<std::uint8_t>& expectedDataHash,
+    _In_ const std::string& requestId,
+    _In_ const std::string& assetId,
+    _In_ const std::string& consumerId,
+    _In_ const std::string& policyHash,
+    _In_ const std::string& encryptedPayloadPath,
+    _In_ std::uint64_t policyVersion,
+    _In_ std::uint32_t functionId,
+    _In_ std::uint64_t epsilonRequestedFixed,
+    _In_ std::uint64_t deltaRequestedFixed,
+    _In_ std::int64_t lowerBoundFixed,
+    _In_ std::int64_t upperBoundFixed,
+    _In_ std::uint64_t deadlineUnixMs,
+    _In_ std::uint64_t executionUnixMs,
+    _In_ bool applyDp,
+    _In_ std::int64_t resultFixed,
+    _In_ std::uint64_t actualPrivacyCostFixed,
+    _In_ const std::vector<std::uint8_t>& resultHash,
+    _In_ const std::vector<std::uint8_t>& expectedTranscriptHash,
+    _In_ const std::vector<std::uint8_t>& expectedEnclaveIdentity,
+    _In_ std::uint64_t validationUnixMs,
+    _In_ std::uint64_t tscTicksPerUs,
+    _Out_ std::vector<std::uint8_t>& validatedTranscriptHash,
+    _Out_ std::vector<std::uint8_t>& validatedEnclaveIdentity,
+    _Out_ std::vector<std::uint8_t>& evidenceHash,
+    _Out_ std::uint64_t& issuedAtUnixMs,
+    _Out_ std::uint64_t& expiresAtUnixMs,
+    _Out_ std::uint64_t& validationUs)
+{
+    const auto started = __rdtsc();
+    validatedTranscriptHash.clear();
+    validatedEnclaveIdentity.clear();
+    evidenceHash.clear();
+    issuedAtUnixMs = 0;
+    expiresAtUnixMs = 0;
+    validationUs = 0;
+
+    if (tscTicksPerUs == 0 ||
+        attestationEvidence.empty() ||
+        attestationEvidence.size() > maxAttestationEvidenceBytes ||
+        aad.size() > maxAadBytes ||
+        expectedDataHash.size() != sha256DigestBytes ||
+        resultHash.size() != sha256DigestBytes ||
+        expectedTranscriptHash.size() != sha256DigestBytes ||
+        expectedEnclaveIdentity.size() != sha256DigestBytes ||
+        requestId.empty() || assetId.empty() || consumerId.empty() ||
+        requestId.size() > maxIdentifierBytes ||
+        assetId.size() > maxIdentifierBytes ||
+        consumerId.size() > maxIdentifierBytes ||
+        policyHash.size() != 64 || !isLowerHex(policyHash) ||
+        encryptedPayloadPath.size() > maxPayloadPathBytes ||
+        lowerBoundFixed > upperBoundFixed ||
+        (functionId != functionCount && functionId != functionMean) ||
+        executionUnixMs > deadlineUnixMs)
+    {
+        return E_INVALIDARG;
+    }
+    if ((!applyDp &&
+         (epsilonRequestedFixed != 0 || deltaRequestedFixed != 0 ||
+          actualPrivacyCostFixed != 0)) ||
+        (applyDp &&
+         (epsilonRequestedFixed == 0 ||
+          epsilonRequestedFixed >
+              static_cast<std::uint64_t>(epsilonFixedScale) ||
+          deltaRequestedFixed == 0 ||
+          deltaRequestedFixed >=
+              static_cast<std::uint64_t>(deltaFixedScale) ||
+          actualPrivacyCostFixed < epsilonRequestedFixed)))
+    {
+        return E_INVALIDARG;
+    }
+
+    const auto lifetimeExpiry =
+        executionUnixMs >
+                (std::numeric_limits<std::uint64_t>::max)() -
+                    maxAttestationLifetimeMs
+            ? (std::numeric_limits<std::uint64_t>::max)()
+            : executionUnixMs + maxAttestationLifetimeMs;
+    const auto expiry = (std::min)(deadlineUnixMs, lifetimeExpiry);
+    if (validationUnixMs < executionUnixMs || validationUnixMs > expiry)
+    {
+        return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
+    }
+
+    const auto canonicalAad = buildCanonicalAad(
+        requestId,
+        assetId,
+        consumerId,
+        policyHash,
+        encryptedPayloadPath,
+        expectedDataHash,
+        policyVersion,
+        functionId,
+        epsilonRequestedFixed,
+        deltaRequestedFixed,
+        lowerBoundFixed,
+        upperBoundFixed,
+        deadlineUnixMs,
+        applyDp);
+    if (!constantTimeEqual(aad, canonicalAad))
+    {
+        return E_INVALIDARG;
+    }
+
+    std::vector<std::uint8_t> calculatedResultHash;
+    std::vector<std::uint8_t> resultCanonical;
+    appendBytes(resultCanonical, resultDomain);
+    appendInt64LittleEndian(resultCanonical, resultFixed);
+    RETURN_IF_FAILED(sha256(resultCanonical, calculatedResultHash));
+    if (!constantTimeEqual(resultHash, calculatedResultHash))
+    {
+        return HRESULT_FROM_WIN32(ERROR_DATA_CHECKSUM_ERROR);
+    }
+
+    VBS_ENCLAVE_REPORT report{};
+    RETURN_IF_FAILED(parseVbsAttestationEvidence(
+        attestationEvidence,
+        report));
+    RETURN_IF_FAILED(EnclaveVerifyAttestationReport(
+        ENCLAVE_TYPE_VBS,
+        attestationEvidence.data(),
+        static_cast<std::uint32_t>(attestationEvidence.size())));
+
+    std::vector<std::uint8_t> reportIdentityHash;
+    RETURN_IF_FAILED(hashEnclaveIdentity(
+        report.EnclaveIdentity,
+        reportIdentityHash));
+    std::vector<std::uint8_t> validatorEnclaveIdentityHash;
+    RETURN_IF_FAILED(currentEnclaveIdentityHash(
+        validatorEnclaveIdentityHash));
+    if (!constantTimeEqual(reportIdentityHash, expectedEnclaveIdentity) ||
+        !constantTimeEqual(
+            reportIdentityHash,
+            validatorEnclaveIdentityHash))
+    {
+        return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);
+    }
+
+    std::vector<std::uint8_t> calculatedTranscriptHash;
+    RETURN_IF_FAILED(buildTranscriptHash(
+        canonicalAad,
+        executionUnixMs,
+        resultFixed,
+        actualPrivacyCostFixed,
+        calculatedResultHash,
+        reportIdentityHash,
+        calculatedTranscriptHash));
+    if (!constantTimeEqual(
+            calculatedTranscriptHash,
+            expectedTranscriptHash))
+    {
+        return HRESULT_FROM_WIN32(ERROR_DATA_CHECKSUM_ERROR);
+    }
+
+    std::array<std::uint8_t, ENCLAVE_REPORT_DATA_LENGTH> expectedBinding{};
+    RETURN_IF_FAILED(buildAttestationBinding(
+        calculatedTranscriptHash,
+        expectedBinding));
+    if (!constantTimeEqual(report.EnclaveData, expectedBinding))
+    {
+        return HRESULT_FROM_WIN32(ERROR_DATA_CHECKSUM_ERROR);
+    }
+
+    RETURN_IF_FAILED(sha256(attestationEvidence, evidenceHash));
+    validatedTranscriptHash = std::move(calculatedTranscriptHash);
+    validatedEnclaveIdentity = std::move(reportIdentityHash);
+    issuedAtUnixMs = executionUnixMs;
+    expiresAtUnixMs = expiry;
+    validationUs = (__rdtsc() - started) / tscTicksPerUs;
     return S_OK;
 }

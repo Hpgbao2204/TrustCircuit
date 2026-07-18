@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import time
 
+from attestation_validator import attach_validated_attestation
 from tests.vbs_reference import (
     FIXED_SCALE,
     delta_to_fixed,
@@ -85,8 +86,18 @@ def main() -> int:
         )
         if completed.stderr:
             print(completed.stderr, end="", file=__import__("sys").stderr)
-        print(completed.stdout.strip())
-        return completed.returncode
+        if completed.returncode != 0:
+            print(completed.stdout.strip())
+            return completed.returncode
+        execution = json.loads(completed.stdout)
+        validated = attach_validated_attestation(
+            host,
+            request,
+            execution,
+            working_directory=directory,
+        )
+        print(json.dumps(validated, separators=(",", ":")))
+        return 0
 
 
 if __name__ == "__main__":

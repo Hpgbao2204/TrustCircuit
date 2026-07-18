@@ -1,4 +1,4 @@
-# TrustCircuit VBS protocol (Phases 2-5)
+# TrustCircuit VBS protocol (Phases 2-6)
 
 All strings are UTF-8. All integers in binary canonical data are little-endian.
 Current limits are 1 MiB for `HashBuffer`, 100,000 dataset rows, 128 bytes per
@@ -88,10 +88,110 @@ ceil(max(requested epsilon, min RDP conversion for alpha=2..64) * 1e6)
 ```
 
 `result_hash` is SHA-256 over `TrustCircuit.Result.v1 || 00 || result_fixed`.
-`transcript_hash` binds canonical AAD, execution time, noisy fixed result,
-privacy cost, result hash, and the Phase 5 enclave identity string. Native VBS
-attestation is intentionally deferred to Phase 6; `attestation_evidence` is
-therefore `null` and its timing is zero.
+
+## Canonical execution transcript
+
+The processor enclave calls `EnclaveGetEnclaveInformation` and hashes the
+following identity bytes:
+
+```text
+TrustCircuit.EnclaveIdentity.v1 || 00
+OwnerId[32] || UniqueId[32] || AuthorId[32]
+FamilyId[16] || ImageId[16]
+EnclaveSvn:uint32
+SecureKernelSvn:uint32
+PlatformSvn:uint32
+Flags:uint32
+SigningLevel:uint32
+EnclaveType:uint32
+```
+
+The canonical transcript is serialized and hashed inside the processor enclave:
+
+```text
+TrustCircuit.Execution.v1 || 00
+canonical_aad
+execution_unix_ms:uint64
+result_fixed:int64
+actual_privacy_cost_fixed:uint64
+result_hash[32]
+enclave_identity_hash[32]
+```
+
+Because `canonical_aad` contains request ID, asset ID, consumer ID, policy hash
+and version, function ID, committed data hash, privacy request, bounds,
+deadline, payload path, and DP flag, the transcript binds all of those fields.
+The Python reference in `tests/vbs_reference.py` independently reconstructs the
+same bytes.
+
+## Native VBS evidence
+
+The 64-byte `EnclaveData` challenge passed to
+`EnclaveGetAttestationReport` is:
+
+```text
+transcript_hash[32]
+SHA256(TrustCircuit.Attestation.v1 || 00 || transcript_hash)[32]
+```
+
+The returned bytes are a real Windows `VBS_ENCLAVE_REPORT_PKG_HEADER`, signed
+statement, and RSA-PSS signature. They are not a mock and are never parsed as a
+trusted result in ordinary host code.
+
+`attestation_validator.py` starts a separate `TrustCircuitHost.exe` process,
+which loads another VBS enclave instance. The validator enclave calls
+`EnclaveVerifyAttestationReport`, reconstructs the complete transcript, checks
+the challenge, checks the caller's expected identity, and requires the report
+identity to equal its own current code identity. It also checks:
+
+```text
+issued_at_unix_ms = execution_unix_ms
+expires_at_unix_ms = min(deadline_unix_ms, execution_unix_ms + 300000)
+issued_at_unix_ms <= validator current time <= expires_at_unix_ms
+```
+
+This is deliberately same-machine validation: Windows only permits
+`EnclaveVerifyAttestationReport` inside another VBS enclave and only for reports
+generated on the current system.
+
+## Compact signed statement
+
+After successful enclave validation, the external validator obtains the local
+certificate identified by `ValidatorSigningThumbprint` from CurrentUser/My. It
+hashes the certificate DER with SHA-256 to form `validator_identity` and signs:
+
+```text
+TrustCircuit.AttestationStatement.v1 || 00
+transcript_hash[32]
+enclave_identity_hash[32]
+issued_at_unix_ms:uint64
+expires_at_unix_ms:uint64
+native_evidence_sha256[32]
+validator_identity[32]
+```
+
+The detached signature algorithm is RSA-PSS-SHA256 with a 32-byte salt. The
+compact JSON statement contains `format`, `validated`, `transcript_hash`,
+`enclave_identity`, issue/expiry times, `validator_identity`,
+`evidence_sha256`, `signature_algorithm`, `signature`, and
+`native_verification`. The raw native report is omitted from the final
+`run_pipeline.py` output after validation.
+
+## Trust assumptions and limitations
+
+- Native report authenticity and same-machine identity validation rely on the
+  Windows VBS secure kernel and `EnclaveVerifyAttestationReport`.
+- The current Debug build, Test Signing mode, and development certificates are
+  not production remote attestation or a production trust anchor.
+- VBS native reports do not supply a trusted wall-clock timestamp. Freshness
+  uses the external validator host's Windows clock and the transcript-bound
+  request deadline.
+- The compact signer runs outside the enclave. Its executable, certificate
+  pin, private-key ACL, and CurrentUser certificate store are part of the local
+  validator trust boundary. A production compressor should use a separately
+  protected service key and independent authorization/audit controls.
+- Native evidence is same-machine only; Phase 6 does not prove host boot-state
+  attestation to a remote verifier, nor does it integrate Circom or Solidity.
 
 Enclave stage timings use TSC with host calibration. They are measurement
 metadata, not trusted security inputs.

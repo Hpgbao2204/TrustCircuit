@@ -1,12 +1,13 @@
-# TrustCircuit VBS Enclave - Phase 1
+# TrustCircuit VBS Enclave - Phases 1-6
 
 This directory contains the independent x64 Windows VBS Enclave path for
 TrustCircuit. Phase 1 smoke remains available; Phases 2-5 add bounded SHA-256,
 COUNT/MEAN, AES-256-GCM decryption, Gaussian DP, fixed-point privacy accounting,
-and a JSON subprocess protocol.
+and a JSON subprocess protocol. Phase 6 adds canonical execution-transcript
+binding, native Windows VBS evidence, and external validation/compression.
 
-It does not yet implement VBS attestation, blockchain settlement, or proof
-integration. See `PROTOCOL.md` for canonical byte layouts and trust limits.
+It does not implement blockchain settlement or proof integration. See
+`PROTOCOL.md` for canonical byte layouts, evidence format, and trust limits.
 
 ## Local configuration
 
@@ -19,7 +20,9 @@ Copy-Item `
 ```
 
 `TrustCircuitVbs.Local.props` is ignored by Git. It contains local package/tool
-paths and the public thumbprint of the local test-signing certificate. Never put
+paths plus public thumbprints for the enclave and validator development
+certificates. The two thumbprints may refer to the same local certificate for
+development, but production deployments should separate those roles. Never put
 a private key or exported certificate key material in this repository.
 
 ## Build
@@ -71,6 +74,7 @@ python .\tee\vbs\tests\phase2_hash_buffer.py --configuration Debug -v
 python .\tee\vbs\tests\phase3_aggregates.py --configuration Debug -v
 python .\tee\vbs\tests\phase4_encrypted_path.py --configuration Debug -v
 python .\tee\vbs\tests\phase5_dp_pipeline.py --configuration Debug -v
+python .\tee\vbs\tests\phase6_attestation.py --configuration Debug -v
 ```
 
 ## End-to-end encrypted DP request
@@ -85,8 +89,10 @@ python .\tee\vbs\run_pipeline.py `
   --delta 0.00001
 ```
 
-This command writes a temporary encrypted dataset and request, invokes the host,
-prints exactly the host JSON response, and removes the temporary files.
+This command writes a temporary encrypted dataset and request, invokes the
+processor host, then invokes a separate validator process/enclave instance. It
+prints one JSON response containing the enclave result and a non-null compact,
+signed `attestation_evidence`, then removes all temporary files.
 
-See `PHASE1_COMMAND_LOG.md` and `IMPLEMENTATION_LOG.md` for exact commands and
-results.
+See `PHASE1_COMMAND_LOG.md`, `IMPLEMENTATION_LOG.md`, and
+`ATTESTATION_LOG.md` for exact commands and results.

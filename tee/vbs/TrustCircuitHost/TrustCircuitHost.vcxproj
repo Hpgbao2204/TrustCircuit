@@ -48,7 +48,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;TRUSTCIRCUIT_VALIDATOR_CERT_THUMBPRINT=$(ValidatorSigningThumbprint);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -56,7 +56,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>onecore.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;crypt32.lib;ncrypt.lib;bcrypt.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -65,7 +65,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRUSTCIRCUIT_VALIDATOR_CERT_THUMBPRINT=$(ValidatorSigningThumbprint);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -73,14 +73,16 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>onecore.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;crypt32.lib;ncrypt.lib;bcrypt.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Attestation.cpp" />
     <ClCompile Include="Json.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Attestation.h" />
     <ClInclude Include="Json.h" />
   </ItemGroup>
   <ItemGroup>
@@ -96,5 +98,6 @@
     <Error Condition="!Exists('..\TrustCircuitVbs.Local.props')" Text="Copy TrustCircuitVbs.Local.props.example to TrustCircuitVbs.Local.props and configure this machine." />
     <Error Condition="!Exists('$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.targets')" Text="VBS Enclave SDK package path is invalid: $(VbsEnclaveSdkRoot)" />
     <Error Condition="!Exists('$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.targets')" Text="VBS Enclave CodeGenerator package path is invalid: $(VbsEnclaveCodeGeneratorRoot)" />
+    <Error Condition="'$(ValidatorSigningThumbprint)'==''" Text="ValidatorSigningThumbprint is not configured." />
   </Target>
 </Project>
