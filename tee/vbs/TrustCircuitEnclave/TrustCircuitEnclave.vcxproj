@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\TrustCircuitVbs.Local.props" Condition="Exists('..\TrustCircuitVbs.Local.props')" />
+  <Import Project="$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.props" Condition="Exists('$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.props')" />
+  <Import Project="$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.props" Condition="Exists('$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.props')" />
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{7F5158EF-3294-49CC-A38B-A6A1052AA310}</ProjectGuid>
+    <RootNamespace>TrustCircuitEnclave</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup Label="Enclave libraries">
+    <VC_LibraryPath_Enclave>$(VC_LibraryPath_VC_x64_Desktop)\enclave</VC_LibraryPath_Enclave>
+    <WindowsSDK_LibraryPath_Enclave>$(WindowsSDK_LibraryPath)\..\ucrt_enclave\x64</WindowsSDK_LibraryPath_Enclave>
+    <VBS_Enclave_Dependencies>vertdll.lib;bcrypt.lib;$(VC_LibraryPath_Enclave)\libcmt.lib;$(VC_LibraryPath_Enclave)\libvcruntime.lib;$(WindowsSDK_LibraryPath_Enclave)\ucrt.lib;</VBS_Enclave_Dependencies>
+  </PropertyGroup>
+  <PropertyGroup Label="EDL code generation">
+    <VbsEnclaveEdlPath>$(ProjectDir)..\TrustCircuitEnclave.edl</VbsEnclaveEdlPath>
+    <VbsEnclaveNamespace>VbsEnclave</VbsEnclaveNamespace>
+    <VbsEnclaveVirtualTrustLayer>Enclave</VbsEnclaveVirtualTrustLayer>
+    <OutDir>$(SolutionDir)x64\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)x64\$(Configuration)\</IntDir>
+    <TargetName>TrustCircuitEnclave</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Label="Post-build tools">
+    <VEIID_Command>&quot;$(VeiidPath)&quot; &quot;$(OutDir)$(TargetName)$(TargetExt)&quot;&#xD;&#xA;if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%&#xD;&#xA;</VEIID_Command>
+    <SIGNTOOL_Command>&quot;$(SignToolPath)&quot; sign /ph /fd SHA256 /s My /sha1 $(EnclaveSigningThumbprint) &quot;$(OutDir)$(TargetName)$(TargetExt)&quot;&#xD;&#xA;if %ERRORLEVEL% EQU 2 exit /b 0&#xD;&#xA;if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%&#xD;&#xA;</SIGNTOOL_Command>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;TRUSTCIRCUITENCLAVE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalOptions>/ENCLAVE /INTEGRITYCHECK /GUARD:MIXED %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>$(VBS_Enclave_Dependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+    </Link>
+    <PostBuildEvent>
+      <Command>$(VEIID_Command)$(SIGNTOOL_Command)</Command>
+      <Message>Apply VEIID protection, then sign the TrustCircuit VBS enclave</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;TRUSTCIRCUITENCLAVE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalOptions>/ENCLAVE /INTEGRITYCHECK /GUARD:MIXED %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>$(VBS_Enclave_Dependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+    </Link>
+    <PostBuildEvent>
+      <Command>$(VEIID_Command)$(SIGNTOOL_Command)</Command>
+      <Message>Apply VEIID protection, then sign the TrustCircuit VBS enclave</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="Trusted.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VbsImplementationLibraryRoot)\build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('$(VbsImplementationLibraryRoot)\build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
+    <Import Project="$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.targets" Condition="Exists('$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.targets')" />
+    <Import Project="$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.targets" Condition="Exists('$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.targets')" />
+  </ImportGroup>
+  <Target Name="ValidateLocalVbsConfiguration" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('..\TrustCircuitVbs.Local.props')" Text="Copy TrustCircuitVbs.Local.props.example to TrustCircuitVbs.Local.props and configure this machine." />
+    <Error Condition="!Exists('$(VeiidPath)')" Text="VEIID path is invalid: $(VeiidPath)" />
+    <Error Condition="!Exists('$(SignToolPath)')" Text="SignTool path is invalid: $(SignToolPath)" />
+    <Error Condition="'$(EnclaveSigningThumbprint)'==''" Text="EnclaveSigningThumbprint is not configured." />
+  </Target>
+</Project>

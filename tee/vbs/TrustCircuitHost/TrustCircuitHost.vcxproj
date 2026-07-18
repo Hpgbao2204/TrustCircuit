@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\TrustCircuitVbs.Local.props" Condition="Exists('..\TrustCircuitVbs.Local.props')" />
+  <Import Project="$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.props" Condition="Exists('$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.props')" />
+  <Import Project="$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.props" Condition="Exists('$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.props')" />
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{8F47D7D5-BC6D-4E8D-A6A4-E0E520C5F098}</ProjectGuid>
+    <RootNamespace>TrustCircuitHost</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <VbsEnclaveEdlPath>$(ProjectDir)..\TrustCircuitEnclave.edl</VbsEnclaveEdlPath>
+    <VbsEnclaveVtl0ClassName>TrustCircuitEnclave</VbsEnclaveVtl0ClassName>
+    <VbsEnclaveNamespace>VbsEnclave</VbsEnclaveNamespace>
+    <VbsEnclaveVirtualTrustLayer>HostApp</VbsEnclaveVirtualTrustLayer>
+    <OutDir>$(SolutionDir)x64\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)x64\$(Configuration)\</IntDir>
+    <TargetName>TrustCircuitHost</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>onecore.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>onecore.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VbsImplementationLibraryRoot)\build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('$(VbsImplementationLibraryRoot)\build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
+    <Import Project="$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.targets" Condition="Exists('$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.targets')" />
+    <Import Project="$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.targets" Condition="Exists('$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.targets')" />
+  </ImportGroup>
+  <Target Name="ValidateLocalVbsConfiguration" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('..\TrustCircuitVbs.Local.props')" Text="Copy TrustCircuitVbs.Local.props.example to TrustCircuitVbs.Local.props and configure this machine." />
+    <Error Condition="!Exists('$(VbsEnclaveSdkRoot)\build\native\Microsoft.Windows.VbsEnclave.SDK.targets')" Text="VBS Enclave SDK package path is invalid: $(VbsEnclaveSdkRoot)" />
+    <Error Condition="!Exists('$(VbsEnclaveCodeGeneratorRoot)\build\native\Microsoft.Windows.VbsEnclave.CodeGenerator.targets')" Text="VBS Enclave CodeGenerator package path is invalid: $(VbsEnclaveCodeGeneratorRoot)" />
+  </Target>
+</Project>

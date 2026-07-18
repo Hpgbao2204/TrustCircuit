@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    Copy this file to TrustCircuitVbs.Local.props and update values for the
+    current machine. The local file is ignored by Git.
+  -->
+  <PropertyGroup Label="Local VBS Enclave configuration">
+    <VbsImplementationLibraryRoot>PATH_TO_GLOBAL_NUGET_CACHE\microsoft.windows.implementationlibrary\1.0.240803.1</VbsImplementationLibraryRoot>
+    <VbsEnclaveSdkRoot>PATH_TO_GLOBAL_NUGET_CACHE\microsoft.windows.vbsenclave.sdk\0.0.2-prerelease.250520.3</VbsEnclaveSdkRoot>
+    <VbsEnclaveCodeGeneratorRoot>PATH_TO_GLOBAL_NUGET_CACHE\microsoft.windows.vbsenclave.codegenerator\0.1.0-prerelease.250731.6</VbsEnclaveCodeGeneratorRoot>
+    <VeiidPath>PATH_TO_WINDOWS_SDK_X64_BIN\veiid.exe</VeiidPath>
+    <SignToolPath>PATH_TO_WINDOWS_SDK_X64_BIN\signtool.exe</SignToolPath>
+    <EnclaveSigningThumbprint>REPLACE_WITH_LOCAL_TEST_SIGNING_CERTIFICATE_THUMBPRINT</EnclaveSigningThumbprint>
+  </PropertyGroup>
+</Project>

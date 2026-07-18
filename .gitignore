@@ -49,6 +49,8 @@ results/
 # Local notes / markdown docs
 *.md
 !/README.md
+!tee/vbs/README.md
+!tee/vbs/PHASE1_COMMAND_LOG.md
 Paper/
 .skills/
 
@@ -73,3 +75,12 @@ data/generated/*
 tee/witness/
 
 *.pem
+
+# Windows VBS Enclave local configuration and build outputs
+tee/vbs/TrustCircuitVbs.Local.props
+tee/vbs/.vs/
+tee/vbs/packages/
+tee/vbs/x64/
+tee/vbs/**/x64/
+tee/vbs/**/Generated Files/
+tee/vbs/**/*.vcxproj.user
