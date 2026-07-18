@@ -446,3 +446,366 @@ git status --short
 Result: success. Both Debug and Release smoke tests passed again with
 `Result = 200`. Final status contains the intended `.gitignore` and `tee/vbs`
 changes; the pre-existing untracked `PROJECT_STATE.json` remains untouched.
+
+## Follow-up verification after stale failure report
+
+### Re-read repository instructions and architecture constraints
+
+```powershell
+Get-Content -Raw .\AGENTS.md
+Get-Content -Raw .\PROJECT_STATE.json
+Get-Content -Raw `
+  'C:\Users\hpgba\.codex\skills\trustcircuit-architect\SKILL.md'
+```
+
+Result: success. Phase 1 remains the active scope; Phase 2 `HashBuffer` and all
+legacy Nitro/SGX benchmark relocation work are explicitly deferred. The
+Microsoft sample remains read-only.
+
+### Recompare effective Debug|x64 project declarations
+
+```powershell
+$projects=@(
+  'D:\Dev\VbsEnclaveTooling\SampleApps\HelloWorld\MySecretVBSEnclave\MySecretVBSEnclave.vcxproj',
+  'D:\1\TrustCircuit\tee\vbs\TrustCircuitEnclave\TrustCircuitEnclave.vcxproj')
+foreach($path in $projects){
+  [xml]$xml=Get-Content -Raw -LiteralPath $path
+  Write-Output "===== $path ====="
+  Write-Output '--- Imports ---'
+  $xml.Project.SelectNodes('.//*[local-name()="Import"]') |
+    ForEach-Object { $_.OuterXml }
+  Write-Output '--- Unconditional and Debug|x64 PropertyGroups ---'
+  $xml.Project.PropertyGroup |
+    Where-Object {
+      -not $_.Condition -or
+      $_.Condition -eq "'`$(Configuration)|`$(Platform)'=='Debug|x64'"
+    } | ForEach-Object { $_.OuterXml }
+  Write-Output '--- Debug|x64 ItemDefinitionGroup ---'
+  $xml.Project.ItemDefinitionGroup |
+    Where-Object {
+      $_.Condition -eq "'`$(Configuration)|`$(Platform)'=='Debug|x64'"
+    } | ForEach-Object { $_.OuterXml }
+  Write-Output '--- Source items ---'
+  $xml.Project.ItemGroup.ClCompile | ForEach-Object { $_.OuterXml }
+}
+```
+
+Result: success. The current project retains the sample's Debug x64 compiler,
+runtime, `/ENCLAVE /INTEGRITYCHECK /GUARD:MIXED`, no-default-library, enclave
+library list, EDL code generator, SDK targets, and VEIID-then-SignTool flow.
+Intentional differences are project/EDL names, x64-only scope, explicit local
+configuration imports, explicit output/intermediate paths, and stricter
+post-build error handling. Crucially, `AdditionalDependencies` now replaces
+rather than appends desktop defaults.
+
+### Locate final linker command logs
+
+```powershell
+$sampleRoot='D:\Dev\VbsEnclaveTooling\SampleApps\HelloWorld'
+$oursRoot='D:\1\TrustCircuit\tee\vbs'
+Get-ChildItem -LiteralPath $sampleRoot -Recurse `
+  -Filter link.command.1.tlog -File | Select-Object -ExpandProperty FullName
+Get-ChildItem -LiteralPath $oursRoot -Recurse `
+  -Filter link.command.1.tlog -File | Select-Object -ExpandProperty FullName
+```
+
+Result: success. Debug enclave linker logs were found for both the reference
+and TrustCircuit; TrustCircuit also has separate host and Release logs.
+
+### Compare final Debug x64 enclave linker command lines
+
+```powershell
+$logs=@(
+  'D:\Dev\VbsEnclaveTooling\SampleApps\HelloWorld\_build\x64\Debug\temp\MySecretVBSEnclave\MySecret.9431fa8d.tlog\link.command.1.tlog',
+  'D:\1\TrustCircuit\tee\vbs\TrustCircuitEnclave\x64\Debug\TrustCir.7F5158EF.tlog\link.command.1.tlog')
+foreach($log in $logs){
+  Write-Output "===== $log ====="
+  Get-Content -Raw -Encoding Unicode -LiteralPath $log
+}
+```
+
+Result: success. Both final commands use `/MACHINE:X64`, `/ENCLAVE`,
+`/INTEGRITYCHECK`, `/GUARD:MIXED`, `/NODEFAULTLIB`, non-incremental linking,
+the same VBS SDK/code-generator versions, and the same enclave CRT/runtime
+libraries. Differences are only source/object names, package-cache roots, and
+output paths. Generated `Exports.obj` and `veil_abi_Exports.obj` are linked in
+both builds.
+
+### Clean and inspect generated paths (first attempt)
+
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' `
+  .\tee\vbs\TrustCircuitVbs.sln /m /t:Clean `
+  /p:Configuration=Debug /p:Platform=x64 /v:minimal
+$targets=@(
+  (Resolve-Path .\tee\vbs).Path + '\x64\Debug',
+  (Resolve-Path .\tee\vbs).Path + '\TrustCircuitHost\Generated Files',
+  (Resolve-Path .\tee\vbs).Path + '\TrustCircuitEnclave\Generated Files',
+  (Resolve-Path .\tee\vbs).Path + '\TrustCircuitHost\x64\Debug',
+  (Resolve-Path .\tee\vbs).Path + '\TrustCircuitEnclave\x64\Debug')
+foreach($target in $targets){
+  [pscustomobject]@{
+    Path=$target
+    Exists=Test-Path -LiteralPath $target
+    Files=if(Test-Path -LiteralPath $target){
+      @(Get-ChildItem -LiteralPath $target -Recurse -File).Count
+    }else{0}
+  }
+} | Format-Table -AutoSize
+```
+
+Result: PowerShell rejected the trailing pipeline after `foreach` during parse,
+so no command, including MSBuild Clean, executed. The corrected form collects
+rows before formatting.
+
+### Run MSBuild Clean and inspect generated paths
+
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' `
+  .\tee\vbs\TrustCircuitVbs.sln /m /t:Clean `
+  /p:Configuration=Debug /p:Platform=x64 /v:minimal
+if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+$root=(Resolve-Path .\tee\vbs).Path
+$targets=@(
+  $root+'\x64\Debug',
+  $root+'\TrustCircuitHost\Generated Files',
+  $root+'\TrustCircuitEnclave\Generated Files',
+  $root+'\TrustCircuitHost\x64\Debug',
+  $root+'\TrustCircuitEnclave\x64\Debug')
+$rows=foreach($target in $targets){
+  [pscustomobject]@{
+    Path=$target
+    Exists=Test-Path -LiteralPath $target
+    Files=if(Test-Path -LiteralPath $target){
+      @(Get-ChildItem -LiteralPath $target -Recurse -File).Count
+    }else{0}
+  }
+}
+$rows | Format-Table -AutoSize
+```
+
+Result: MSBuild Clean succeeded. The inspection expression accidentally let
+PowerShell concatenate the array operands into one display row, so individual
+paths are rechecked with interpolated absolute strings before any manual
+cleanup.
+
+### Recheck each generated path separately
+
+```powershell
+$vbsRoot=(Resolve-Path .\tee\vbs).Path
+$targets=@(
+  "$vbsRoot\x64\Debug",
+  "$vbsRoot\TrustCircuitHost\Generated Files",
+  "$vbsRoot\TrustCircuitEnclave\Generated Files",
+  "$vbsRoot\TrustCircuitHost\x64\Debug",
+  "$vbsRoot\TrustCircuitEnclave\x64\Debug")
+foreach($target in $targets){
+  $exists=Test-Path -LiteralPath $target
+  $count=if($exists){
+    @(Get-ChildItem -LiteralPath $target -Recurse -File).Count
+  }else{0}
+  Write-Output "Exists=$exists Files=$count Path=$target"
+}
+```
+
+Result: MSBuild removed final Debug binaries but retained generated EDL sources
+and several intermediate tracking files. These are build artifacts, so all
+validated VBS output/intermediate/generated directories are removed before the
+from-scratch rebuild.
+
+### Remove only validated VBS build artifacts
+
+```powershell
+$vbsRoot=(Resolve-Path .\tee\vbs).Path.TrimEnd('\')
+$targets=@(
+  "$vbsRoot\x64",
+  "$vbsRoot\TrustCircuitHost\x64",
+  "$vbsRoot\TrustCircuitEnclave\x64",
+  "$vbsRoot\TrustCircuitHost\Generated Files",
+  "$vbsRoot\TrustCircuitEnclave\Generated Files")
+foreach($target in $targets){
+  if(Test-Path -LiteralPath $target){
+    $resolved=(Resolve-Path -LiteralPath $target).Path
+    if(-not $resolved.StartsWith(
+      "$vbsRoot\", [System.StringComparison]::OrdinalIgnoreCase)){
+      throw "Refusing to remove path outside tee/vbs: $resolved"
+    }
+    Write-Output "Removing generated path: $resolved"
+    Remove-Item -LiteralPath $resolved -Recurse -Force
+  }
+}
+foreach($target in $targets){
+  Write-Output "Exists=$(Test-Path -LiteralPath $target) Path=$target"
+}
+```
+
+Result: success. Only the five validated output, intermediate, and generated
+directories under `D:\1\TrustCircuit\tee\vbs` were deleted. All were confirmed
+absent afterward and are fully reproducible by rebuilding.
+
+### From-scratch Debug x64 rebuild
+
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' `
+  .\tee\vbs\TrustCircuitVbs.sln /m /t:Rebuild `
+  /p:Configuration=Debug /p:Platform=x64 /v:minimal
+```
+
+Result: success. Both EDL interfaces were regenerated. The enclave and host
+were rebuilt as Debug x64, VEIID completed, and SignTool signed the newly built
+DLL. SignTool emitted only its expected VBS compatibility warning.
+
+### Fresh DLL/header/import/signature/path audit (first attempt)
+
+```powershell
+$dumpbin='C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe'
+$signtool='C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe'
+$sample='D:\Dev\VbsEnclaveTooling\SampleApps\HelloWorld\_build\x64\Debug\MySecretVBSEnclave.dll'
+$ours=(Resolve-Path '.\tee\vbs\x64\Debug\TrustCircuitEnclave.dll').Path
+$host=(Resolve-Path '.\tee\vbs\x64\Debug\TrustCircuitHost.exe').Path
+Write-Output '--- Files and exact paths ---'
+Get-Item -LiteralPath $sample,$ours,$host |
+  Select-Object FullName,Length,LastWriteTime
+Write-Output '--- All TrustCircuit enclave DLL candidates ---'
+Get-ChildItem -LiteralPath (Resolve-Path '.\tee\vbs').Path -Recurse `
+  -Filter TrustCircuitEnclave.dll -File | Select-Object FullName,Length
+Write-Output '--- PE architecture/header summary ---'
+foreach($file in @($sample,$ours,$host)){
+  Write-Output "FILE: $file"
+  & $dumpbin /headers $file |
+    Select-String -Pattern `
+      'machine \(x64\)|size of image|subsystem|DLL characteristics'
+}
+Write-Output '--- Imports ---'
+foreach($file in @($sample,$ours)){
+  Write-Output "FILE: $file"
+  & $dumpbin /imports $file |
+    Select-String -Pattern '^\s+[A-Za-z0-9_.-]+\.dll\s*$'
+}
+Write-Output '--- Signature verification ---'
+& $signtool verify /pa /v $ours
+$ourVerify=$LASTEXITCODE
+& $signtool verify /pa /v $sample
+$sampleVerify=$LASTEXITCODE
+Write-Output `
+  "TrustCircuit verify exit=$ourVerify; sample verify exit=$sampleVerify"
+Write-Output '--- Fresh final linker command ---'
+Get-Content -Raw -Encoding Unicode -LiteralPath `
+  '.\tee\vbs\TrustCircuitEnclave\x64\Debug\TrustCir.7F5158EF.tlog\link.command.1.tlog'
+exit 0
+```
+
+Result: partially executed. PowerShell rejected assignment to `$host` because
+variable names are case-insensitive and `$Host` is read-only. Signature checks
+still ran: both newly built and reference DLLs contain signatures from the same
+local development certificate, and both `/pa` checks return untrusted-root
+exit 1 because this self-signed test certificate is not a production-trusted
+root. The diagnostic is rerun with `$hostExe`; build-time signing already
+succeeded independently.
+
+### Fresh DLL/header/import/signature/path audit
+
+```powershell
+$dumpbin='C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe'
+$signtool='C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe'
+$sampleDll='D:\Dev\VbsEnclaveTooling\SampleApps\HelloWorld\_build\x64\Debug\MySecretVBSEnclave.dll'
+$ourDll=(Resolve-Path '.\tee\vbs\x64\Debug\TrustCircuitEnclave.dll').Path
+$hostExe=(Resolve-Path '.\tee\vbs\x64\Debug\TrustCircuitHost.exe').Path
+Write-Output '--- Files and exact paths ---'
+Get-Item -LiteralPath $sampleDll,$ourDll,$hostExe | ForEach-Object {
+  Write-Output `
+    "Path=$($_.FullName) Size=$($_.Length) LastWrite=$($_.LastWriteTime.ToString('o'))"
+}
+Write-Output '--- All TrustCircuit enclave DLL candidates ---'
+Get-ChildItem -LiteralPath (Resolve-Path '.\tee\vbs').Path -Recurse `
+  -Filter TrustCircuitEnclave.dll -File | ForEach-Object {
+    Write-Output "Path=$($_.FullName) Size=$($_.Length)"
+  }
+Write-Output '--- PE architecture/header summary ---'
+foreach($file in @($sampleDll,$ourDll,$hostExe)){
+  Write-Output "FILE: $file"
+  & $dumpbin /headers $file |
+    Select-String -Pattern `
+      'machine \(x64\)|size of image|subsystem|DLL characteristics' |
+    ForEach-Object {$_.Line.Trim()}
+}
+Write-Output '--- Enclave imports ---'
+foreach($file in @($sampleDll,$ourDll)){
+  Write-Output "FILE: $file"
+  & $dumpbin /imports $file |
+    Select-String -Pattern '^\s+[A-Za-z0-9_.-]+\.dll\s*$' |
+    ForEach-Object {$_.Line.Trim()}
+}
+Write-Output '--- Signature verification ---'
+& $signtool verify /pa $ourDll
+$ourVerify=$LASTEXITCODE
+& $signtool verify /pa $sampleDll
+$sampleVerify=$LASTEXITCODE
+Write-Output `
+  "TrustCircuit verify exit=$ourVerify; sample verify exit=$sampleVerify"
+Write-Output '--- Fresh final linker command ---'
+Get-Content -Raw -Encoding Unicode -LiteralPath `
+  '.\tee\vbs\TrustCircuitEnclave\x64\Debug\TrustCir.7F5158EF.tlog\link.command.1.tlog'
+exit 0
+```
+
+Result: the reference DLL is 326,648 bytes; TrustCircuit DLL is 324,600
+bytes, an expected source/metadata-size difference. Both enclave DLLs have
+identical x64 machine, image size, GUI subsystem, DLL characteristics, and only
+`vertdll.dll` plus `ucrtbase_enclave.dll` imports. The host is also x64. Exactly
+one `TrustCircuitEnclave.dll` exists under `tee/vbs`, at the fresh Debug output
+path. The linker command contains all expected enclave flags and generated
+objects. Both `/pa` verifications find a signature but return exit 1 solely
+because their shared self-signed development root is not production-trusted.
+
+### Inspect the command log tail
+
+```powershell
+Get-Content .\tee\vbs\PHASE1_COMMAND_LOG.md -Tail 120
+```
+
+Result: success; used to replace the abbreviated failed command with its exact
+executed form and append the corrected diagnostic.
+
+### Confirm exact host DLL path and run the final Debug smoke test
+
+```powershell
+$expectedDll=(Resolve-Path `
+  '.\tee\vbs\x64\Debug\TrustCircuitEnclave.dll').Path
+Write-Output "Expected DLL path: $expectedDll"
+Select-String -Path '.\tee\vbs\TrustCircuitHost\main.cpp' `
+  -Pattern 'load_image'
+Select-String -Path '.\tee\vbs\tests\smoke.ps1' `
+  -Pattern 'outputDir|Push-Location|hostPath|enclavePath'
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\tee\vbs\tests\smoke.ps1 -Configuration Debug
+$smokeExit=$LASTEXITCODE
+Write-Output "Smoke exit code: $smokeExit"
+exit $smokeExit
+```
+
+Result: success. The resolved DLL is
+`D:\1\TrustCircuit\tee\vbs\x64\Debug\TrustCircuitEnclave.dll`. The host requests
+that filename, and the smoke script changes the working directory to the exact
+fresh output directory before launch. The host created and loaded the enclave,
+printed `Hello World!` and `Result = 200`; the smoke test printed `PASS` and
+exited with code 0.
+
+### Final worktree and legacy-script check
+
+```powershell
+git diff --check
+if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+git status --short
+Get-Item `
+  .\tee\sgx_cost_model.py, `
+  .\tee\sgx_overhead_model.py, `
+  .\tee\worker_sim.py | ForEach-Object {
+    Write-Output "Preserved: $($_.FullName)"
+  }
+```
+
+Result: success. No whitespace error was found. This follow-up changes only
+`tee/vbs/PHASE1_COMMAND_LOG.md`; all three named legacy scripts remain present
+and untouched. Nitro benchmark relocation remains deferred until after the VBS
+path is stable.

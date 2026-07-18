@@ -6,5 +6,55 @@ enclave
             uint32_t val1,
             uint32_t val2
         );
+
+        HRESULT HashBuffer(
+            [in] vector<uint8_t> input,
+            [out] vector<uint8_t> digest
+        );
+
+        HRESULT AggregateDataset(
+            [in] vector<uint8_t> payload,
+            uint32_t function_id,
+            int64_t lower_bound_fixed,
+            int64_t upper_bound_fixed,
+            uint64_t tsc_ticks_per_us,
+            [out] int64_t result_fixed,
+            [out] uint64_t row_count,
+            [out] uint64_t aggregate_us
+        );
+
+        HRESULT ExecuteEncrypted(
+            [in] vector<uint8_t> ciphertext,
+            [in] vector<uint8_t> key,
+            [in] vector<uint8_t> nonce,
+            [in] vector<uint8_t> authentication_tag,
+            [in] vector<uint8_t> aad,
+            [in] vector<uint8_t> expected_data_hash,
+            string request_id,
+            string asset_id,
+            string consumer_id,
+            string policy_hash,
+            string encrypted_payload_path,
+            uint64_t policy_version,
+            uint32_t function_id,
+            uint64_t epsilon_requested_fixed,
+            uint64_t delta_requested_fixed,
+            int64_t lower_bound_fixed,
+            int64_t upper_bound_fixed,
+            uint64_t deadline_unix_ms,
+            uint64_t execution_unix_ms,
+            bool apply_dp,
+            uint64_t tsc_ticks_per_us,
+            [out] int64_t result_fixed,
+            [out] uint64_t row_count,
+            [out] uint64_t actual_privacy_cost_fixed,
+            [out] vector<uint8_t> result_hash,
+            [out] vector<uint8_t> transcript_hash,
+            [out] uint64_t decrypt_us,
+            [out] uint64_t hash_us,
+            [out] uint64_t aggregate_us,
+            [out] uint64_t dp_noise_us,
+            [out] uint64_t transcript_us
+        );
     };
 };

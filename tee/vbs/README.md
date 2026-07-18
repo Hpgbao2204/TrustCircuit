@@ -1,12 +1,12 @@
 # TrustCircuit VBS Enclave - Phase 1
 
-This directory contains the independent x64 Windows VBS Enclave skeleton for
-TrustCircuit. Phase 1 implements only a generated EDL call that multiplies
-`10 * 20` inside `TrustCircuitEnclave.dll` and returns `Result = 200` through
-`TrustCircuitHost.exe`.
+This directory contains the independent x64 Windows VBS Enclave path for
+TrustCircuit. Phase 1 smoke remains available; Phases 2-5 add bounded SHA-256,
+COUNT/MEAN, AES-256-GCM decryption, Gaussian DP, fixed-point privacy accounting,
+and a JSON subprocess protocol.
 
-It does not implement request JSON, hashing, encryption, differential privacy,
-attestation, blockchain settlement, or proof integration.
+It does not yet implement VBS attestation, blockchain settlement, or proof
+integration. See `PROTOCOL.md` for canonical byte layouts and trust limits.
 
 ## Local configuration
 
@@ -62,4 +62,31 @@ PASS: TrustCircuit VBS enclave returned Result = 200
 npm.cmd test
 ```
 
-See `PHASE1_COMMAND_LOG.md` for the exact commands run during implementation.
+## Phase tests
+
+Run in order after a Debug x64 build:
+
+```powershell
+python .\tee\vbs\tests\phase2_hash_buffer.py --configuration Debug -v
+python .\tee\vbs\tests\phase3_aggregates.py --configuration Debug -v
+python .\tee\vbs\tests\phase4_encrypted_path.py --configuration Debug -v
+python .\tee\vbs\tests\phase5_dp_pipeline.py --configuration Debug -v
+```
+
+## End-to-end encrypted DP request
+
+```powershell
+python .\tee\vbs\run_pipeline.py `
+  --configuration Debug `
+  --function MEAN `
+  --rows 100 `
+  --seed 20260719 `
+  --epsilon 1.0 `
+  --delta 0.00001
+```
+
+This command writes a temporary encrypted dataset and request, invokes the host,
+prints exactly the host JSON response, and removes the temporary files.
+
+See `PHASE1_COMMAND_LOG.md` and `IMPLEMENTATION_LOG.md` for exact commands and
+results.
