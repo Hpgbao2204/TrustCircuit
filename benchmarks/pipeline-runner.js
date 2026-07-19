@@ -236,11 +236,11 @@ async function runPipeline({ rows, variant, runIndex, clientCount, seed, teeRows
       });
       return;
     }
-    const assetSignal = BigInt(zk.input[0]);
-    const consumerSignal = BigInt(zk.input[1]);
-    const requestSignal = BigInt(zk.input[2]);
+    const requestSignal = BigInt(zk.input[0]);
+    const assetSignal = BigInt(zk.input[1]);
+    const consumerSignal = BigInt(zk.input[2]);
     const policySignal = BigInt(zk.input[3]);
-    const epsilonSignal = BigInt(zk.input[4]);
+    const epsilonSignal = BigInt(zk.input[7]);
 
     const zkAssetId = ethers.zeroPadValue(ethers.toBeHex(assetSignal % ZK_SCALAR_FIELD), 32);
     const zkRequestId = ethers.zeroPadValue(ethers.toBeHex(requestSignal % ZK_SCALAR_FIELD), 32);
@@ -267,7 +267,19 @@ async function runPipeline({ rows, variant, runIndex, clientCount, seed, teeRows
 
     // bind the request to the proof's public commitments, then verify on-chain
     await recordTx(rows, zkBase, "zk_register_expectation",
-      adapter.registerExpectation(zkRequestId, assetSignal, consumerSignal, policySignal, zkTotalBudget));
+      adapter.registerExpectation(zkRequestId, {
+        requestId: requestSignal,
+        assetId: assetSignal,
+        consumerId: consumerSignal,
+        policyHash: policySignal,
+        policyVersion: BigInt(zk.input[4]),
+        functionId: BigInt(zk.input[5]),
+        resultHash: BigInt(zk.input[6]),
+        maxEpsilon: zkTotalBudget,
+        transcriptHash: BigInt(zk.input[9]),
+        attestationDigest: BigInt(zk.input[10]),
+        attestationExpiresAtUnixMs: 4_102_444_800_000n,
+      }));
     await recordTx(rows, zkBase, "zk_verify_proof",
       adapter.submitCompliance(zkRequestId, zk.a, zk.b, zk.c, zk.input));
 

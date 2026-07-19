@@ -1,0 +1,6 @@
+{
+  "measurement_type": "not_executed",
+  "executed": false,
+  "reason": "hardhat.config.js defines only the local hardhat network; no repository testnet RPC/account configuration exists",
+  "fallback": "local Hardhat chain used for all settlement measurements"
+}

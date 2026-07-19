@@ -22,7 +22,10 @@ const path = require("path");
 const { ethers } = require("hardhat");
 
 const ROOT = path.resolve(__dirname, "..");
-const CALLDATA = path.join(ROOT, "zk", "build", "compliance_2_calldata.txt");
+// benchmark_zk_schemes.js exports both this calldata and the final
+// ComplianceGroth16Verifier.sol from the same Groth16 setup. Using the scaling
+// benchmark's calldata here would pair a proof with a different proving key.
+const CALLDATA = path.join(ROOT, "zk", "build", "cmp_2_groth16_calldata.txt");
 const SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 function loadCalldata() {
@@ -76,9 +79,7 @@ async function tryRaw(raw, a, b, c, input) {
 async function tryAdapter(adapter, requestId, expectation, a, b, c, input) {
   // register expectation (owner) then submit; capture revert reason + gas.
   try {
-    await (await adapter.registerExpectation(
-      requestId, expectation.asset, expectation.consumer, expectation.policy, expectation.maxEpsilon,
-    )).wait();
+    await (await adapter.registerExpectation(requestId, expectation)).wait();
   } catch (e) {
     return { accepted: false, gas: "", reason: `register:${e.shortMessage || e.message}` };
   }
@@ -93,13 +94,25 @@ async function tryAdapter(adapter, requestId, expectation, a, b, c, input) {
 
 async function main() {
   const { a, b, c, input } = loadCalldata();
-  const asset = BigInt(input[0]);
-  const consumer = BigInt(input[1]);
-  const request = BigInt(input[2]);
+  const request = BigInt(input[0]);
+  const asset = BigInt(input[1]);
+  const consumer = BigInt(input[2]);
   const policy = BigInt(input[3]);
-  const epsilon = BigInt(input[4]);
+  const epsilon = BigInt(input[7]);
   const honestRequestId = requestIdForSignal(request);
-  const honestExp = { asset, consumer, policy, maxEpsilon: 5_000_000n };
+  const honestExp = {
+    requestId: request,
+    assetId: asset,
+    consumerId: consumer,
+    policyHash: policy,
+    policyVersion: BigInt(input[4]),
+    functionId: BigInt(input[5]),
+    resultHash: BigInt(input[6]),
+    maxEpsilon: 5_000_000n,
+    transcriptHash: BigInt(input[9]),
+    attestationDigest: BigInt(input[10]),
+    attestationExpiresAtUnixMs: 4_102_444_800_000n,
+  };
 
   const Mock = await ethers.getContractFactory("MockComplianceVerifier");
   const Raw = await ethers.getContractFactory("Groth16Verifier");
@@ -151,7 +164,7 @@ async function main() {
         const ad = await freshAdapter();
         const m = await tryMock(mock, honestRequestId, requestIdForSignal(asset + 7n));
         const r = await tryRaw(raw, a, b, c, input);
-        const ap = await tryAdapter(ad, honestRequestId, { ...honestExp, asset: asset + 7n }, a, b, c, input);
+        const ap = await tryAdapter(ad, honestRequestId, { ...honestExp, assetId: asset + 7n }, a, b, c, input);
         return { m, r, ap };
       },
     },
@@ -161,7 +174,7 @@ async function main() {
         const ad = await freshAdapter();
         const m = await tryMock(mock, honestRequestId, requestIdForSignal(asset));
         const r = await tryRaw(raw, a, b, c, input);
-        const ap = await tryAdapter(ad, honestRequestId, { ...honestExp, consumer: consumer + 9n }, a, b, c, input);
+        const ap = await tryAdapter(ad, honestRequestId, { ...honestExp, consumerId: consumer + 9n }, a, b, c, input);
         return { m, r, ap };
       },
     },
@@ -171,7 +184,7 @@ async function main() {
         const ad = await freshAdapter();
         const m = await tryMock(mock, honestRequestId, requestIdForSignal(asset));
         const r = await tryRaw(raw, a, b, c, input);
-        const ap = await tryAdapter(ad, honestRequestId, { ...honestExp, policy: policy + 1n }, a, b, c, input);
+        const ap = await tryAdapter(ad, honestRequestId, { ...honestExp, policyHash: policy + 1n }, a, b, c, input);
         return { m, r, ap };
       },
     },
@@ -194,7 +207,7 @@ async function main() {
         const r = await tryRaw(raw, a, b, c, input);
         // first submission consumes the proof's nullifier and marks the request
         // verified; resubmitting the SAME proof must be rejected (replay).
-        await (await ad.registerExpectation(honestRequestId, honestExp.asset, honestExp.consumer, honestExp.policy, honestExp.maxEpsilon)).wait();
+        await (await ad.registerExpectation(honestRequestId, honestExp)).wait();
         await (await ad.submitCompliance(honestRequestId, a, b, c, input)).wait();
         let ap;
         try {

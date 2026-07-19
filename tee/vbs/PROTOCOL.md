@@ -1,4 +1,4 @@
-# TrustCircuit VBS protocol (Phases 2-6)
+# TrustCircuit VBS protocol (Phases 2-7)
 
 All strings are UTF-8. All integers in binary canonical data are little-endian.
 Current limits are 1 MiB for `HashBuffer`, 100,000 dataset rows, 128 bytes per
@@ -195,3 +195,63 @@ compact JSON statement contains `format`, `validated`, `transcript_hash`,
 
 Enclave stage timings use TSC with host calibration. They are measurement
 metadata, not trusted security inputs.
+
+## Phase 7 settlement projection
+
+Phase 7 does not alter the enclave transcript above. It deterministically
+projects transcript-bound values into BN254 public signals for Circom and the
+EVM. `phase7_encoding.py` and `scripts/lib/phase7_encoding.js` are independent
+implementations of this projection.
+
+String identifiers are first converted to a 32-byte chain key:
+
+```text
+SHA256(
+  TrustCircuit.SettlementIdentifier.v1 || 00 ||
+  len(field_name):uint32_le || UTF8(field_name) ||
+  len(value):uint32_le || UTF8(value)
+)
+```
+
+`field_name` is exactly `request_id`, `asset_id`, or `consumer_id`. Request and
+asset keys are the `bytes32` identifiers stored on-chain. The consumer digest
+is stored as the access request's consumer-ID field and is also bound to the
+calling EVM address.
+
+Every 32-byte value is projected into the BN254 scalar field as
+`uint256_big_endian(value) mod r`, where:
+
+```text
+r = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+```
+
+`policy_version`, `function_id`, and `actual_privacy_cost_fixed` are unsigned
+integers and are not hashed. The compact validated attestation is serialized as
+recursive key-sorted UTF-8 JSON with no insignificant whitespace, then hashed:
+
+```text
+SHA256(TrustCircuit.ValidatedAttestation.v1 || 00 || canonical_json(statement))
+```
+
+The canonical public-signal order is:
+
+```text
+0  request_id
+1  asset_id
+2  consumer_id
+3  policy_hash
+4  policy_version
+5  function_id
+6  result_hash
+7  actual_privacy_cost_fixed
+8  nullifier
+9  transcript_hash
+10 attestation_digest
+```
+
+The circuit computes two Poseidon context limbs from signals 0–7 and 9–10,
+then enforces `nullifier = Poseidon(context_limb_0, context_limb_1,
+secret_nonce)`. Solidity checks the same public-signal order, matches each
+signal against the registered access/asset/attestation context, enforces the
+attestation expiry, and performs proof verification, budget consumption,
+nullifier update, request completion, and audit emission in one transaction.

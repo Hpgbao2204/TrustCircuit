@@ -32,11 +32,27 @@
     "private_key_must_not_be_shared": true
   },
   "current_status": [
-    "Official VBS HelloWorld sample builds.",
-    "VEIID post-build processing succeeds.",
-    "Development signing succeeds.",
-    "Host loads the enclave and receives Result = 200.",
-    "No TrustCircuit-specific VBS code is implemented yet."
+    "Phase 1 passes: Debug x64 builds, VEIID runs before SignTool, the host loads the enclave, and smoke.ps1 returns Result = 200.",
+    "Phases 2-5 pass: bounded hashing and aggregates, AES-256-GCM decryption, enclave DP noise, and conservative fixed-point accounting.",
+    "Phase 6 passes: enclave transcript binding, real same-machine VBS evidence, external validation, and a compact signed statement.",
+    "Phase 7 passes: the 11-signal canonical context is proven with Groth16 and settled atomically with budget consumption, nullifier update, request completion, and audit emission.",
+    "The measured Phase 8 local experiment suite and 22 independent PDF/PNG paper panels have been generated."
   ],
-  "next_task": "Inspect the existing TrustCircuit repository and produce a no-edit Nitro-to-VBS migration map before implementing an independent VBS skeleton."
+  "phase7": {
+    "public_signals": 11,
+    "proof_system": "Groth16 over BN254",
+    "atomic_settlement": true,
+    "hardhat_tests_passing": 42,
+    "top_level_command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\run_trustcircuit_e2e.ps1"
+  },
+  "phase8": {
+    "raw_results": "results/raw/phase8",
+    "processed_results": "results/processed",
+    "panels": "Paper/figures/panels",
+    "pdf_panels": 22,
+    "png_panels": 22,
+    "public_testnet_executed": false,
+    "public_testnet_reason": "hardhat.config.js contains no public-testnet network or credential configuration"
+  },
+  "next_task": "Update the manuscript from PANEL_MANIFEST.md, CAPTION_NOTES.md, and CLAIM_TO_EVIDENCE_TABLE.md without carrying forward Nitro-specific claims."
 }

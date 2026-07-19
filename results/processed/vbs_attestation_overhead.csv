@@ -1,0 +1,7 @@
+payload_bytes,transcript_us,attestation_generation_us,attestation_validation_host_us,combined_overhead_us,measurement_type
+1024,14.8,2006.2,19779.2,21800.2,measured
+4096,13.0,1954.2,19343.2,21310.4,measured
+16384,11.4,1888.2,19521.0,21420.6,measured
+65536,13.6,1965.4,19189.6,21168.6,measured
+262144,17.6,2113.4,19053.0,21184.0,measured
+800000,23.4,2179.4,19316.2,21519.0,measured

@@ -54,6 +54,7 @@ results/
 !tee/vbs/IMPLEMENTATION_LOG.md
 !tee/vbs/PROTOCOL.md
 !tee/vbs/ATTESTATION_LOG.md
+!tee/vbs/PHASE7_EXPERIMENT_LOG.md
 Paper/
 .skills/
 
@@ -87,3 +88,29 @@ tee/vbs/x64/
 tee/vbs/**/x64/
 tee/vbs/**/Generated Files/
 tee/vbs/**/*.vcxproj.user
+
+# Phase 7/8 reproducibility artifacts requested for the VBS migration.
+!results/
+results/*
+!results/raw/
+results/raw/*
+!results/raw/e2e/
+!results/raw/e2e/**
+!results/raw/phase8/
+!results/raw/phase8/**
+# Per-request VBS bundles are transient test inputs. The manifest and aggregate
+# raw CSV/JSON stay versionable; regenerated bundles remain locally isolated.
+results/raw/phase8/concurrency_bundles/
+results/raw/phase8/fresh_bundles/
+!results/processed/
+!results/processed/**
+
+!Paper/
+Paper/*
+!Paper/figures/
+Paper/figures/*
+!Paper/figures/panels/
+!Paper/figures/panels/*.pdf
+!Paper/figures/panels/*.png
+!Paper/figures/PANEL_MANIFEST.md
+!Paper/figures/CAPTION_NOTES.md

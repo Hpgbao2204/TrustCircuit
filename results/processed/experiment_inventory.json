@@ -1,0 +1,29 @@
+{
+  "schema": "TrustCircuit.ProcessedExperimentInventory.v1",
+  "generated_at": "2026-07-18T23:12:21.062215+00:00",
+  "raw_root": "results/raw/phase8",
+  "processed_files": [
+    "results/processed/e2e_ablation_summary.csv",
+    "results/processed/e2e_stage_breakdown.csv",
+    "results/processed/e2e_gas_breakdown.csv",
+    "results/processed/vbs_performance_summary.csv",
+    "results/processed/vbs_stage_breakdown.csv",
+    "results/processed/vbs_attestation_overhead.csv",
+    "results/processed/dp_error_summary.csv",
+    "results/processed/dp_rounding_summary.csv",
+    "results/processed/dp_composition.csv",
+    "results/processed/budget_exhaustion_summary.csv",
+    "results/processed/protocol_attack_summary.csv",
+    "results/processed/settlement_concurrency_summary.csv",
+    "results/processed/zk_scaling.csv",
+    "results/processed/zk_backends.csv",
+    "results/processed/zk_backend_circulation.csv"
+  ],
+  "measurement_labels": {
+    "measured": "direct structured timing or local-chain receipt",
+    "measured_enclave_tsc": "enclave TSC timing calibrated by the host",
+    "analytical_from_measured_cost": "RDP formula using measured fixed-point cost",
+    "model_calibrated_from_measured_components": "sum/substitution of separately measured components",
+    "not_executed": "dependency/configuration absent; no number fabricated"
+  }
+}

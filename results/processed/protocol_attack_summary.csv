@@ -1,0 +1,13 @@
+measurement_type,category,attack_case,accepted,rejected,rejection_stage,reason,latency_ms,budget_invariant_violation
+measured,context,wrong_request,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'RequestNotFound(""0x2ef4e9b8a742a3111b5154eb7921756a4ea25dfff48a3d82e5c5d0de881b9bcf"")'",14.672800000756979,0
+measured,context,wrong_asset,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(1)',2.770899999886751,0
+measured,context,wrong_consumer_id,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(2)',3.663899999111891,0
+measured,context,wrong_consumer_address,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'WrongConsumer(""0x70997970C51812dc3A010C7d01b50e0d17dc79C8"", ""0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"")'",2.254799999296665,0
+measured,context,wrong_policy,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(3)',2.8069000020623207,0
+measured,context,wrong_function,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(5)',2.775499999523163,0
+measured,context,wrong_result,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(6)',3.464800000190735,0
+measured,tampering,altered_transcript,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(9)',3.1944999992847443,0
+measured,tampering,altered_attestation,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(10)',3.20159999653697,0
+measured,tampering,stale_attestation,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'StaleAttestation(1784416127000, 1)'",4.028099998831749,0
+measured,tampering,tampered_proof,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'InvalidProof(""0xe8cbe568a9638f8f01edb0613e1365476ed32fa3a4cfcffd691ff4dec7b415ff"")'",5.808100000023842,0
+measured,replay,nullifier_replay,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'RequestNotApproved(""0x398e26fb86e4afa8c23e51a6ef7192891de3e22b706993abe37a8b6e82828a5c"")'",8.884100001305342,0

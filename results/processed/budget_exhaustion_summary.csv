@@ -1,0 +1,7 @@
+epsilon_requested,privacy_cost_fixed,requests_attempted,accepted_requests,reverted_requests,budget_invariant_violations,measurement_type
+0.05,186154,32,26,6,0,measured_local_hardhat
+0.1,196379,32,25,7,0,measured_local_hardhat
+0.2,237278,32,21,11,0,measured_local_hardhat
+0.25,267953,32,18,14,0,measured_local_hardhat
+0.5,500578,32,9,23,0,measured_local_hardhat
+1.0,1011807,32,4,28,0,measured_local_hardhat

@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-07-18T23:10:19.421Z",
+  "git_commit": "666dd5c4f4ed3e5b3d25368e5b46fc218690305c",
+  "git_dirty": true,
+  "seed": null,
+  "input_generation": "deterministic fixed Phase 7 witness",
+  "scheme": "groth16",
+  "curve": "bn128",
+  "hash": "poseidon (circomlib)",
+  "ptau_power": 15,
+  "budget_bits": 64,
+  "rule_sizes": [
+    1,
+    2,
+    4,
+    6,
+    8,
+    10
+  ],
+  "base_rules": 2,
+  "prove_reps": 12,
+  "prove_warmups": 2,
+  "circom_version": "circom compiler 2.2.2",
+  "snarkjs_version": "0.7.5",
+  "node": "v22.13.0",
+  "platform": "win32 10.0.26200",
+  "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
+  "cpus": 16,
+  "measurement_type": "measured",
+  "note": "Real Phase 7 Groth16 over BN254 with Poseidon; local Windows measurement after warm-up runs."
+}

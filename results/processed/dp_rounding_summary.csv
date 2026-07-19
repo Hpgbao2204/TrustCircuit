@@ -1,0 +1,7 @@
+epsilon_requested,runs,mean_rounding_gap_fixed,max_rounding_gap_fixed,under_reporting_count,measurement_type
+0.05,8,0.0,0.0,0,measured
+0.1,8,0.0,0.0,0,measured
+0.2,8,0.0,0.0,0,measured
+0.25,8,0.0,0.0,0,measured
+0.5,8,0.0,0.0,0,measured
+1.0,8,0.0,0.0,0,measured

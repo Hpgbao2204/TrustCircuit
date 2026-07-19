@@ -21,6 +21,7 @@ contract BudgetLedger {
     struct Reservation {
         bytes32 assetId;
         uint256 amount;
+        address reserver;
         ReservationStatus status;
     }
 
@@ -38,6 +39,7 @@ contract BudgetLedger {
     error InsufficientBudget(bytes32 assetId, uint256 requested, uint256 remaining);
     error InvalidReservation(bytes32 requestId);
     error InvalidReservationState(bytes32 requestId, ReservationStatus status);
+    error UnauthorizedReservationConsumer(bytes32 requestId, address caller);
 
     function registerBudget(bytes32 assetId, uint256 totalBudget) external {
         if (totalBudget == 0) revert InvalidAmount();
@@ -63,6 +65,7 @@ contract BudgetLedger {
         reservations[requestId] = Reservation({
             assetId: assetId,
             amount: amount,
+            reserver: msg.sender,
             status: ReservationStatus.Reserved
         });
 
@@ -76,6 +79,9 @@ contract BudgetLedger {
         if (reservation.assetId != assetId) revert InvalidReservation(requestId);
         if (reservation.status != ReservationStatus.Reserved) {
             revert InvalidReservationState(requestId, reservation.status);
+        }
+        if (reservation.reserver != msg.sender) {
+            revert UnauthorizedReservationConsumer(requestId, msg.sender);
         }
         if (actualAmount == 0 || actualAmount > reservation.amount) revert InvalidAmount();
 
@@ -93,6 +99,9 @@ contract BudgetLedger {
         if (reservation.assetId != assetId) revert InvalidReservation(requestId);
         if (reservation.status != ReservationStatus.Reserved) {
             revert InvalidReservationState(requestId, reservation.status);
+        }
+        if (reservation.reserver != msg.sender) {
+            revert UnauthorizedReservationConsumer(requestId, msg.sender);
         }
 
         uint256 amount = reservation.amount;

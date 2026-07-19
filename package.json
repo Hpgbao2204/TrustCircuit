@@ -10,6 +10,10 @@
     "gas:loop": "hardhat run scripts/gas-benchmark.js",
     "benchmark": "hardhat run benchmarks/pipeline-runner.js",
     "zk:benchmark": "node zk/scripts/benchmark_zk.js",
+    "phase7:build": "node zk/scripts/build_phase7.js",
+    "phase7:e2e": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_trustcircuit_e2e.ps1",
+    "phase8:experiments": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_all_phase8_experiments.ps1",
+    "phase8:plot": "python scripts/plot_all_results.py",
     "lint": "echo \"TODO: add lint command\""
   },
   "devDependencies": {

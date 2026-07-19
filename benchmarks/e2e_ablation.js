@@ -196,11 +196,11 @@ async function runPipeline(ctx) {
       await recordWork(rows, base, "zk_calldata_missing", () => { throw new Error("run npm run zk:benchmark first"); });
       return;
     }
-    const assetSignal = BigInt(zk.input[0]);
-    const consumerSignal = BigInt(zk.input[1]);
-    const requestSignal = BigInt(zk.input[2]);
+    const requestSignal = BigInt(zk.input[0]);
+    const assetSignal = BigInt(zk.input[1]);
+    const consumerSignal = BigInt(zk.input[2]);
     const policySignal = BigInt(zk.input[3]);
-    const epsilonSignal = BigInt(zk.input[4]);
+    const epsilonSignal = BigInt(zk.input[7]);
     const zkAssetId = ethers.zeroPadValue(ethers.toBeHex(assetSignal % ZK_SCALAR_FIELD), 32);
     const zkRequestId = ethers.zeroPadValue(ethers.toBeHex(requestSignal % ZK_SCALAR_FIELD), 32);
     const zkPolicyHash = ethers.zeroPadValue(ethers.toBeHex(policySignal % ZK_SCALAR_FIELD), 32);
@@ -235,7 +235,19 @@ async function runPipeline(ctx) {
       rows.push({ ...base, stage: "zk_prove", latency_ms: (nowMs() - start).toFixed(4), gas_used: "", success: ok, error_type: ok ? "" : "prove_failed" });
     }
 
-    await recordTx(rows, base, "zk_register_expectation", adapter.registerExpectation(zkRequestId, assetSignal, consumerSignal, policySignal, totalBudget));
+    await recordTx(rows, base, "zk_register_expectation", adapter.registerExpectation(zkRequestId, {
+      requestId: requestSignal,
+      assetId: assetSignal,
+      consumerId: consumerSignal,
+      policyHash: policySignal,
+      policyVersion: BigInt(zk.input[4]),
+      functionId: BigInt(zk.input[5]),
+      resultHash: BigInt(zk.input[6]),
+      maxEpsilon: totalBudget,
+      transcriptHash: BigInt(zk.input[9]),
+      attestationDigest: BigInt(zk.input[10]),
+      attestationExpiresAtUnixMs: 4_102_444_800_000n,
+    }));
     await recordTx(rows, base, "zk_verify_proof", adapter.submitCompliance(zkRequestId, zk.a, zk.b, zk.c, zk.input));
     await recordTx(rows, base, "consumeBudget", contracts.budget.consumeBudget(zkAssetId, zkRequestId, epsilonSignal));
     await recordTx(rows, base, "recordAudit", contracts.audit.recordAudit(zkRequestId, zkAssetId, 6, evidenceHash));
@@ -310,4 +322,9 @@ async function main() {
   console.log(outPath);
 }
 
-main().catch((error) => { console.error(error); process.exitCode = 1; });
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

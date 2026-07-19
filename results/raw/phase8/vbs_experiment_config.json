@@ -1,0 +1,39 @@
+{
+  "schema": "TrustCircuit.Phase8VbsExperimentConfig.v1",
+  "measurement_type": "measured",
+  "timestamp": "2026-07-18T23:08:31.463518+00:00",
+  "git_commit": "666dd5c4f4ed3e5b3d25368e5b46fc218690305c",
+  "git_dirty": true,
+  "os": "Windows-11-10.0.26200-SP0",
+  "processor": "AMD64 Family 25 Model 116 Stepping 1, AuthenticAMD",
+  "logical_cpus": 16,
+  "python": "3.12.10",
+  "configuration": "Debug",
+  "seed": 20260719,
+  "warmups": 1,
+  "performance_reps": 5,
+  "privacy_reps": 8,
+  "payload_rows": [
+    126,
+    510,
+    2046,
+    8190,
+    32766,
+    99998
+  ],
+  "epsilon_grid": [
+    0.05,
+    0.1,
+    0.2,
+    0.25,
+    0.5,
+    1.0
+  ],
+  "concurrency_bundles": 32,
+  "duration_seconds": 19.38420010000118,
+  "sanity": {
+    "performance_success_rate": 1,
+    "privacy_success_rate": 1
+  },
+  "native_baseline_limitation": "The repository has no non-enclave native C++ processor. reference_aggregate_us is the measured Python reference and is never labeled as a native C++ measurement."
+}

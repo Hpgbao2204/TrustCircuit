@@ -10,9 +10,9 @@
  *   exported Solidity verifier for the base circuit
  *
  * Outputs:
- *   results/raw/zk_benchmark.csv
- *   results/summary/zk_benchmark_summary.csv
- *   results/summary/zk_benchmark_config.json
+ *   results/raw/phase8/zk_scaling.csv
+ *   results/processed/zk_scaling.csv
+ *   results/raw/phase8/zk_scaling_config.json
  *   contracts/ComplianceGroth16Verifier.sol   (base circuit, on-chain verify)
  *   zk/build/...                               (intermediate artifacts)
  */
@@ -29,14 +29,15 @@ const CIRCOM = path.join(ROOT, "tools", "circom.exe");
 const SNARKJS_CLI = path.join(ROOT, "node_modules", "snarkjs", "build", "cli.cjs");
 const CIRCOMLIB = path.join(ROOT, "node_modules", "circomlib", "circuits");
 const BUILD = path.join(ROOT, "zk", "build");
-const RAW = path.join(ROOT, "results", "raw", "zk_benchmark.csv");
-const SUMMARY = path.join(ROOT, "results", "summary", "zk_benchmark_summary.csv");
-const CONFIG = path.join(ROOT, "results", "summary", "zk_benchmark_config.json");
+const RAW = path.join(ROOT, "results", "raw", "phase8", "zk_scaling.csv");
+const SUMMARY = path.join(ROOT, "results", "processed", "zk_scaling.csv");
+const CONFIG = path.join(ROOT, "results", "raw", "phase8", "zk_scaling_config.json");
 const SOLIDITY = path.join(ROOT, "contracts", "ComplianceGroth16Verifier.sol");
 
 const RULE_SIZES = [1, 2, 4, 6, 8, 10];
 const BASE_RULES = 2;
 const PROVE_REPS = 12;
+const PROVE_WARMUPS = 2;
 const PTAU_POWER = 15;
 const BUDGET_BITS = 64;
 
@@ -80,7 +81,7 @@ function writeCircuit(nRules) {
   // library copy and own the main component with the chosen rule count.
   const wrapper = `pragma circom 2.1.6;
 include "${path.join(ROOT, "zk", "circuits").replace(/\\/g, "/")}/compliance_lib.circom";
-component main {public [assetId, consumerId, requestId, policyHash, epsilonCost, nullifier, attestationHash]} = ComplianceCheck(${nRules}, ${BUDGET_BITS});
+component main {public [requestId, assetId, consumerId, policyHash, policyVersion, functionId, resultHash, epsilonCost, nullifier, transcriptHash, attestationDigest]} = ComplianceCheck(${nRules}, ${BUDGET_BITS});
 `;
   const p = path.join(BUILD, `compliance_${nRules}.circom`);
   fs.writeFileSync(p, wrapper);
@@ -98,39 +99,53 @@ async function buildInputs(poseidon, nRules, mode) {
   const consumerId = 222n;
   const requestId = 333n;
   const policyHash = 444n;
+  const policyVersion = 1n;
+  const functionId = 2n;
+  const resultHash = 666n;
+  const transcriptHash = 777n;
+  const attestationDigest = 888n;
   const secretNonce = 555n;
   const maxBudget = 5_000_000n;
   let epsilonCost = 500_000n;
   let allowedPolicyHash = policyHash;
 
-  const nullifier = F.toObject(poseidon([consumerId, requestId, secretNonce]));
-  const attestationHash = F.toObject(poseidon([assetId, requestId, policyHash, epsilonCost]));
   const policyField = Array.from({ length: nRules }, (_, i) => BigInt(1000 + i));
 
   if (mode === "invalid_policy") allowedPolicyHash = policyHash + 1n;
   if (mode === "invalid_budget") epsilonCost = maxBudget + 1n;
-  if (mode === "invalid_nullifier") {
-    return base(epsilonCost, allowedPolicyHash, nullifier + 1n, attestationHash, policyField);
-  }
-  // recompute attestation if epsilon changed
-  const att = F.toObject(poseidon([assetId, requestId, policyHash, epsilonCost]));
+  const context0 = F.toObject(poseidon([
+    requestId, assetId, consumerId, policyHash, policyVersion,
+  ]));
+  const context1 = F.toObject(poseidon([
+    functionId, resultHash, epsilonCost, transcriptHash, attestationDigest,
+  ]));
+  let nullifier = F.toObject(poseidon([context0, context1, secretNonce]));
+  if (mode === "invalid_nullifier") nullifier += 1n;
 
-  function base(eps, allowed, nul, attH, pf) {
+  function base(eps, allowed, nul, pf) {
     return {
+      requestId: requestId.toString(),
       assetId: assetId.toString(),
       consumerId: consumerId.toString(),
-      requestId: requestId.toString(),
       policyHash: policyHash.toString(),
+      policyVersion: policyVersion.toString(),
+      functionId: functionId.toString(),
+      resultHash: resultHash.toString(),
       epsilonCost: eps.toString(),
       nullifier: nul.toString(),
-      attestationHash: attH.toString(),
+      transcriptHash: transcriptHash.toString(),
+      attestationDigest: attestationDigest.toString(),
       allowedPolicyHash: allowed.toString(),
       maxBudget: maxBudget.toString(),
       secretNonce: secretNonce.toString(),
       policyField: pf.map((x) => x.toString()),
     };
   }
-  return base(epsilonCost, allowedPolicyHash, nullifier, att, policyField);
+  return base(epsilonCost, allowedPolicyHash, nullifier, policyField);
+}
+
+function gitValue(args) {
+  return sh("git", args).trim();
 }
 
 async function main() {
@@ -192,6 +207,12 @@ async function main() {
     let peakRss = 0;
     let lastProof = null;
     let lastPublic = null;
+    for (let i = 0; i < PROVE_WARMUPS; i++) {
+      const warmed = await snarkjs.groth16.prove(zkey, wtns);
+      if (!(await snarkjs.groth16.verify(vkey, warmed.publicSignals, warmed.proof))) {
+        throw new Error(`warm-up verify failed for ${name}`);
+      }
+    }
     for (let i = 0; i < PROVE_REPS; i++) {
       const t0 = process.hrtime.bigint();
       const { proof, publicSignals } = await snarkjs.groth16.prove(zkey, wtns);
@@ -244,6 +265,7 @@ async function main() {
       r1cs_bytes: fileSize(r1cs),
       peak_rss_mb: peakRss / (1024 * 1024),
       reps: PROVE_REPS,
+      warmups: PROVE_WARMUPS,
       reject_invalid_policy: negatives.invalid_policy,
       reject_invalid_budget: negatives.invalid_budget,
       reject_invalid_nullifier: negatives.invalid_nullifier,
@@ -268,6 +290,11 @@ async function main() {
   fs.writeFileSync(SUMMARY, [headers.join(","), ...rows.map((r) => headers.map((h) => r[h]).join(","))].join("\n") + "\n");
 
   fs.writeFileSync(CONFIG, JSON.stringify({
+    timestamp: new Date().toISOString(),
+    git_commit: gitValue(["rev-parse", "HEAD"]),
+    git_dirty: gitValue(["status", "--porcelain"]).length > 0,
+    seed: null,
+    input_generation: "deterministic fixed Phase 7 witness",
     scheme: "groth16",
     curve: "bn128",
     hash: "poseidon (circomlib)",
@@ -276,12 +303,15 @@ async function main() {
     rule_sizes: RULE_SIZES,
     base_rules: BASE_RULES,
     prove_reps: PROVE_REPS,
+    prove_warmups: PROVE_WARMUPS,
     circom_version: sh(CIRCOM, ["--version"]).trim(),
     snarkjs_version: require(path.join(ROOT, "node_modules", "snarkjs", "package.json")).version,
     node: process.version,
     platform: `${os.platform()} ${os.release()}`,
+    cpu: os.cpus()[0]?.model || "unknown",
     cpus: os.cpus().length,
-    note: "Real Groth16 over BN254 with Poseidon; local Windows measurement.",
+    measurement_type: "measured",
+    note: "Real Phase 7 Groth16 over BN254 with Poseidon; local Windows measurement after warm-up runs.",
   }, null, 2));
 
   console.log(RAW);

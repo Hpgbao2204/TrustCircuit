@@ -1,0 +1,7 @@
+stage,measurement_type,mean_latency_ms,p95_latency_ms
+access,measured,4.697739998996258,5.254740000516176
+budget,measured,2.5228999994695185,2.836199999600649
+tee,measured,146.013,160.4988
+proof,measured,212.42878000065684,221.55937999859452
+settlement,measured,5.632180000841617,6.507900003343821
+audit,measured,0.0,0.0

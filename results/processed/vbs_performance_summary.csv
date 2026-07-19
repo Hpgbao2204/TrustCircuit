@@ -1,0 +1,7 @@
+payload_bytes,rows,runs,reference_name,reference_mean_latency_ms,vbs_mean_latency_ms,vbs_p95_latency_ms,slowdown_vs_python_reference,vbs_throughput_mib_s,reference_throughput_mib_s,host_peak_rss_mib,reference_rss_mib,measurement_type
+1024,126,5,Python reference (native C++ unavailable),0.0028,68.6178,72.2328,26329.3,0.014257223313459366,374.3489583333333,9.0359375,23.8296875,measured
+4096,510,5,Python reference (native C++ unavailable),0.004,70.781,75.8036,17695.25,0.05538567278377783,976.5625,9.07265625,24.0015625,measured
+16384,2046,5,Python reference (native C++ unavailable),0.013,73.4292,80.2812,5648.4,0.2136778702293743,1201.923076923077,9.0921875,25.0171875,measured
+65536,8190,5,Python reference (native C++ unavailable),0.0526,67.7532,76.6326,1293.3807773149863,0.9286780980065401,1203.7666183133342,9.4296875,25.51953125,measured
+262144,32766,5,Python reference (native C++ unavailable),0.198,97.9622,109.1494,498.20640752227547,2.5756914541934415,1267.3706845577306,11.28125,27.71796875,measured
+800000,99998,5,Python reference (native C++ unavailable),0.5988,164.0572,192.8504,274.9216788139346,4.704654603756483,1277.1026183200156,16.83828125,31.04296875,measured

@@ -1,0 +1,186 @@
+{
+  "schema": "TrustCircuit.Phase7E2E.v1",
+  "measurement_type": "measured",
+  "ok": true,
+  "timestamp": "2026-07-18T22:00:53.760Z",
+  "request_key": "0x7a4d0bf1ea0a19d890c29deb675cc2b7ec33610c6d2450e5d84443ed0fd2273c",
+  "asset_key": "0xa9dc274a1baea2ebf49a12f8bcec0f453d83e4e1a56041ef5e22ecbb0e1e1b0a",
+  "consumer_address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "public_signal_order": [
+    "request_id",
+    "asset_id",
+    "consumer_id",
+    "policy_hash",
+    "policy_version",
+    "function_id",
+    "result_hash",
+    "actual_privacy_cost_fixed",
+    "nullifier",
+    "transcript_hash",
+    "attestation_digest"
+  ],
+  "public_signals": {
+    "request_id": "11541811448672077554626778597313539981274761823495241214976947663059022915386",
+    "asset_id": "11165120315364289850370160282594903659396883928298665753557056329101340449543",
+    "consumer_id": "162529423035912452577584037233452608700450988647280975625514238557739110266",
+    "policy_hash": "7345942755489011440187856253067334349170821163510935199411380419879273384256",
+    "policy_version": "1",
+    "function_id": "2",
+    "result_hash": "1367339182527668842004295505031012476430691447117544027229257738993057917457",
+    "actual_privacy_cost_fixed": "1011807",
+    "nullifier": "20053015538462849878225697953445146043750970649012254965153640430132944576756",
+    "transcript_hash": "14276972719730851963716286857849798483526961442590776718999306684184579530204",
+    "attestation_digest": "7078384993029139511201532482577454787055363964761021442545471926307060417479"
+  },
+  "vbs": {
+    "request_id": "phase7-1784412047212",
+    "result": 44.650344,
+    "result_hash": "9432ce4db2b4713c9165fb316012620f20444a77fda45bb002bf9f3e954fea14",
+    "transcript_hash": "b0bd6646e4267f43cb4ea341559f8e60575922482186f6d247f96a73bc13dddf",
+    "attestation_digest": "400a87c6691250c8fadbd5aa1501b2ed489dcf57eb349df02948a1ea5da383c8",
+    "attestation_validated": true,
+    "timings_us": {
+      "aggregate": 4,
+      "attestation": 2167,
+      "attestation_validation_enclave": 961,
+      "attestation_validation_host": 18625,
+      "decrypt": 4,
+      "dp_noise": 6,
+      "enclave_call": 8459,
+      "hash": 121,
+      "host_total": 16558,
+      "process_startup": 70116,
+      "transcript": 12
+    },
+    "client_timings_us": {
+      "attestation_validation_wall": 81792,
+      "dataset_generation": 39,
+      "encryption_and_write": 490,
+      "host_subprocess_wall": 103375
+    }
+  },
+  "proof": {
+    "scheme": "groth16",
+    "curve": "bn254",
+    "verified_offchain": true,
+    "proof_size_bytes": 1406,
+    "proving_key_bytes": 1510193
+  },
+  "settlement": {
+    "transaction_hash": "0x1a6becdc1dd7d0a31ce9af1fa8dcd9fdb50f7a9183b9912a9829e6f310c985d9",
+    "block_number": 14,
+    "gas_used": "488275",
+    "budget_total": "10118070",
+    "budget_reserved": "0",
+    "budget_used": "1011807",
+    "budget_remaining": "9106263",
+    "request_status": 4,
+    "nullifier_used": true,
+    "audit_events": 1
+  },
+  "stages": [
+    {
+      "stage": "groth16_prove",
+      "latency_ms": 2760.4195999987423,
+      "gas_used": "0",
+      "success": true
+    },
+    {
+      "stage": "groth16_verify_offchain",
+      "latency_ms": 15.874899998307228,
+      "gas_used": "0",
+      "success": true
+    },
+    {
+      "stage": "deploy_DataRegistry",
+      "latency_ms": 18.86260000243783,
+      "gas_used": "438043",
+      "success": true
+    },
+    {
+      "stage": "deploy_AccessController",
+      "latency_ms": 9.285599999129772,
+      "gas_used": "707598",
+      "success": true
+    },
+    {
+      "stage": "deploy_BudgetLedger",
+      "latency_ms": 8.198599997907877,
+      "gas_used": "549451",
+      "success": true
+    },
+    {
+      "stage": "deploy_AuditLedger",
+      "latency_ms": 6.925999999046326,
+      "gas_used": "205562",
+      "success": true
+    },
+    {
+      "stage": "deploy_Phase7Groth16Verifier",
+      "latency_ms": 7.551500000059605,
+      "gas_used": "552003",
+      "success": true
+    },
+    {
+      "stage": "deploy_ComplianceVerifier",
+      "latency_ms": 10.370799999684095,
+      "gas_used": "897983",
+      "success": true
+    },
+    {
+      "stage": "deploy_TrustCircuitSettlement",
+      "latency_ms": 10.059299997985363,
+      "gas_used": "905780",
+      "success": true
+    },
+    {
+      "stage": "register_asset",
+      "latency_ms": 3.6686000004410744,
+      "gas_used": "139505",
+      "success": true
+    },
+    {
+      "stage": "register_budget",
+      "latency_ms": 1.693800002336502,
+      "gas_used": "72570",
+      "success": true
+    },
+    {
+      "stage": "request_access",
+      "latency_ms": 2.1282999999821186,
+      "gas_used": "207175",
+      "success": true
+    },
+    {
+      "stage": "approve_request",
+      "latency_ms": 1.850500002503395,
+      "gas_used": "30895",
+      "success": true
+    },
+    {
+      "stage": "reserve_budget",
+      "latency_ms": 2.9470999985933304,
+      "gas_used": "149195",
+      "success": true
+    },
+    {
+      "stage": "register_expectation",
+      "latency_ms": 1.8623999990522861,
+      "gas_used": "283371",
+      "success": true
+    },
+    {
+      "stage": "atomic_settlement",
+      "latency_ms": 8.283100001513958,
+      "gas_used": "488275",
+      "success": true
+    }
+  ],
+  "total_wall_ms": 3894.5273000001907,
+  "environment": {
+    "node": "v22.13.0",
+    "platform": "win32 10.0.26200",
+    "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
+    "logical_cpus": 16
+  }
+}
