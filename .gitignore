@@ -89,6 +89,10 @@ tee/vbs/**/x64/
 tee/vbs/**/Generated Files/
 tee/vbs/**/*.vcxproj.user
 
+# Local Rust build output for the pairing-based CP-ABE benchmark.
+crypto/rabe_benchmark/target/
+!crypto/CPABE_BENCHMARK.md
+
 # Phase 7/8 reproducibility artifacts requested for the VBS migration.
 !results/
 results/*

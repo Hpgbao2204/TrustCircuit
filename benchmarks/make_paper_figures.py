@@ -541,7 +541,7 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.plot_surface(X, Y, Z, cmap="magma", edgecolor="k", linewidth=0.3)
     ax.set_xticks(range(len(sev))); ax.set_xticklabels([str(s) for s in sev])
     ax.set_yticks(range(len(SUBTLE))); ax.set_yticklabels([a[:10] for a in SUBTLE], fontsize=10)
-    ax.set_xlabel("deviation severity", labelpad=10); ax.set_zlabel("detection", labelpad=8)
+    ax.set_xlabel("severity", labelpad=4); ax.set_zlabel("detection", labelpad=8)
     ax.view_init(elev=26, azim=-60)
     paths.append(save(fig, out_dir, "r1_detection_surface_3d"))
 
@@ -997,7 +997,28 @@ def figures_zk_select(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
 # ===========================================================================
 # Group 11: CP-ABE hybrid encryption (policy scaling, payload scaling, security)
 # ===========================================================================
-def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path) -> list[Path]:
+def figure_cpabe_policy_comparison(rows, out_dir: Path) -> Path:
+    pr = sorted(rows, key=lambda row: int(row["policy_attributes"]))
+    attributes = np.array([int(row["policy_attributes"]) for row in pr])
+    kem_enc = np.array([float(row["kem_dem_baseline_encrypt_ms_mean"]) for row in pr])
+    kem_dec = np.array([float(row["kem_dem_baseline_decrypt_ms_mean"]) for row in pr])
+    cpabe_enc = np.array([float(row["full_cpabe_encrypt_ms_mean"]) for row in pr])
+    cpabe_dec = np.array([float(row["full_cpabe_decrypt_ms_mean"]) for row in pr])
+
+    fig, ax = new_fig()
+    ax.plot(attributes, kem_enc, marker="o", color=PALETTE[0], label="encrypt (KEM-DEM baseline)")
+    ax.plot(attributes, kem_dec, marker="s", color=PALETTE[1], label="decrypt (KEM-DEM baseline)")
+    ax.plot(attributes, cpabe_enc, marker="^", linestyle="--", color=PALETTE[2], label="encrypt (Full CP-ABE)")
+    ax.plot(attributes, cpabe_dec, marker="D", linestyle="--", color=PALETTE[4], label="decrypt (Full CP-ABE)")
+    ax.set_xlabel("policy attributes")
+    ax.set_ylabel("latency (ms)")
+    ax.set_xticks(attributes)
+    ax.set_ylim(bottom=0)
+    ax.legend()
+    return save(fig, out_dir, "ab1_policy_time")
+
+
+def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy_rows=None) -> list[Path]:
     paths: list[Path] = []
 
     # --- policy scaling: encrypt/decrypt time + key-encapsulation size ----
@@ -1009,14 +1030,17 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path) -> list[Path
         dec = np.array([float(r["decrypt_ms_mean"]) for r in pr])
         kenc = np.array([int(r["kenc_bytes"]) for r in pr])
 
-        # ab1: enc/dec time vs policy leaves (key-encapsulation cost)
-        fig, ax = new_fig()
-        ax.fill_between(leaves, enc - enc_sd, enc + enc_sd, alpha=0.2, color="#4477aa")
-        ax.plot(leaves, enc, marker="o", color=PALETTE[0], label="encrypt (KEM)")
-        ax.plot(leaves, dec, marker="s", color=PALETTE[1], label="decrypt (KEM + LSSS)")
-        ax.set_xlabel("policy attributes (leaves)"); ax.set_ylabel("key-encapsulation time (ms)")
-        ax.legend()
-        paths.append(save(fig, out_dir, "ab1_policy_time"))
+        # ab1: matched KEM-DEM baseline versus real pairing-based CP-ABE.
+        if cpabe_policy_rows:
+            paths.append(figure_cpabe_policy_comparison(cpabe_policy_rows, out_dir))
+        else:
+            fig, ax = new_fig()
+            ax.fill_between(leaves, enc - enc_sd, enc + enc_sd, alpha=0.2, color="#4477aa")
+            ax.plot(leaves, enc, marker="o", color=PALETTE[0], label="encrypt (KEM)")
+            ax.plot(leaves, dec, marker="s", color=PALETTE[1], label="decrypt (KEM + LSSS)")
+            ax.set_xlabel("policy attributes (leaves)"); ax.set_ylabel("key-encapsulation time (ms)")
+            ax.legend()
+            paths.append(save(fig, out_dir, "ab1_policy_time"))
 
         # ab2: key-encapsulation size grows linearly with policy size
         fig, ax = new_fig()
@@ -1195,7 +1219,15 @@ def main() -> None:
     abe_sec_path = Path("results/raw/abe_security.csv")
     abe_sec = read_csv(abe_sec_path) if abe_sec_path.exists() else []
     if abe_policy or abe_payload or abe_sec:
-        produced += figures_abe(abe_policy, abe_payload, abe_sec, args.out_dir / "abe")
+        cpabe_policy_path = s / "cpabe_policy_summary.csv"
+        cpabe_policy_rows = read_csv(cpabe_policy_path) if cpabe_policy_path.exists() else []
+        produced += figures_abe(
+            abe_policy,
+            abe_payload,
+            abe_sec,
+            args.out_dir / "abe",
+            cpabe_policy_rows,
+        )
     # SOTA capability comparison (closest systems)
     cap_path = s / "sota_capability.csv"
     if cap_path.exists():

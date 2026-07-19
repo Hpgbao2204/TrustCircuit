@@ -14,6 +14,8 @@
     "phase7:e2e": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_trustcircuit_e2e.ps1",
     "phase8:experiments": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_all_phase8_experiments.ps1",
     "phase8:plot": "python scripts/plot_all_results.py",
+    "abe:cpabe:benchmark": "python crypto/run_cpabe_policy_benchmark.py",
+    "abe:cpabe:plot": "python crypto/plot_cpabe_policy.py",
     "lint": "echo \"TODO: add lint command\""
   },
   "devDependencies": {

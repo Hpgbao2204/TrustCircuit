@@ -1,0 +1,13 @@
+[package]
+name = "trustcircuit_cpabe_benchmark"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+rabe = { version = "=0.4.2", default-features = false, features = ["borsh"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
