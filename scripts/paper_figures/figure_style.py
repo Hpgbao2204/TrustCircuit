@@ -9,7 +9,9 @@ import matplotlib.pyplot as plt
 
 
 REPO = Path(__file__).resolve().parents[2]
-OUT_DIR = REPO / "Paper" / "figures" / "redesigned_panels"
+OUT_DIR = REPO / "Paper" / "figures" / "redesigned_panels_v2"
+FIGURE_SCALE = (1.28, 1.18)
+ANNOTATION_SIZE = 10.0
 
 COLORS = {
     "blue": "#286F9E",
@@ -47,43 +49,56 @@ STAGE_COLORS = {
 
 
 def apply_style() -> None:
-    """Reset Matplotlib and apply a compact IEEE-friendly style."""
+    """Reset Matplotlib and apply the large, legible paper-figure style."""
     plt.rcdefaults()
     plt.rcParams.update(
         {
-            "figure.figsize": (7.15, 4.65),
+            "figure.figsize": (10.5, 6.1),
             "figure.dpi": 120,
-            "font.size": 9.0,
-            "axes.titlesize": 10.5,
-            "axes.labelsize": 9.3,
-            "axes.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+            "font.size": 12.5,
+            "axes.titlesize": 17.5,
+            "axes.titleweight": "normal",
+            "axes.titlepad": 10.0,
+            "axes.labelsize": 14.5,
+            "axes.labelpad": 8.0,
+            "axes.linewidth": 1.0,
             "axes.axisbelow": True,
             "axes.spines.top": False,
             "axes.spines.right": False,
-            "xtick.labelsize": 8.2,
-            "ytick.labelsize": 8.2,
-            "xtick.major.width": 0.7,
-            "ytick.major.width": 0.7,
-            "legend.fontsize": 7.8,
+            "xtick.labelsize": 11.5,
+            "ytick.labelsize": 11.5,
+            "xtick.major.width": 0.9,
+            "ytick.major.width": 0.9,
+            "xtick.major.size": 4.5,
+            "ytick.major.size": 4.5,
+            "legend.fontsize": 10.8,
             "legend.frameon": True,
             "legend.framealpha": 0.92,
             "legend.edgecolor": "#CCD3D8",
             "grid.color": "#D7DDE1",
-            "grid.linewidth": 0.55,
-            "grid.alpha": 0.7,
-            "lines.linewidth": 1.6,
-            "lines.markersize": 5.0,
-            "patch.linewidth": 0.7,
+            "grid.linewidth": 0.75,
+            "grid.alpha": 0.58,
+            "lines.linewidth": 2.0,
+            "lines.markersize": 6.2,
+            "patch.linewidth": 0.9,
             "savefig.format": "pdf",
+            "text.usetex": False,
             "pdf.fonttype": 42,
             "ps.fonttype": 42,
         }
     )
 
 
-def new_figure(*, figsize: tuple[float, float] = (7.15, 4.65)):
+def new_figure(
+    *,
+    figsize: tuple[float, float] = (8.2, 5.15),
+    projection: str | None = None,
+):
     apply_style()
-    fig, ax = plt.subplots(figsize=figsize)
+    scaled = (figsize[0] * FIGURE_SCALE[0], figsize[1] * FIGURE_SCALE[1])
+    subplot_kw = {"projection": projection} if projection else None
+    fig, ax = plt.subplots(figsize=scaled, subplot_kw=subplot_kw)
     return fig, ax
 
 
@@ -94,7 +109,7 @@ def finish_axis(ax, *, grid: str = "y") -> None:
 
 
 def save_pdf(fig, filename: str) -> Path:
-    if not re.fullmatch(r"fig[1-6][a-e]_[a-z0-9_]+\.pdf", filename):
+    if not re.fullmatch(r"fig[1-8][a-f]_[a-z0-9_]+\.pdf", filename):
         raise ValueError(f"Unexpected panel filename: {filename}")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUT_DIR / filename
@@ -102,7 +117,7 @@ def save_pdf(fig, filename: str) -> Path:
         fig.savefig(
             path,
             bbox_inches="tight",
-            pad_inches=0.06,
+            pad_inches=0.10,
             metadata={
                 "Creator": "TrustCircuit redesigned figure generator",
                 "Title": filename,
@@ -122,7 +137,7 @@ def short_variant(value: str) -> str:
         "access_only": "Access only",
         "no_budget": "No budget",
         "no_zk": "No ZK",
-        "no_tee": "No TEE*",
+        "no_tee": "No TEE",
         "full_trustcircuit": "Full TC",
     }.get(value, value.replace("_", " ").title())
 

@@ -541,7 +541,7 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.plot_surface(X, Y, Z, cmap="magma", edgecolor="k", linewidth=0.3)
     ax.set_xticks(range(len(sev))); ax.set_xticklabels([str(s) for s in sev])
     ax.set_yticks(range(len(SUBTLE))); ax.set_yticklabels([a[:10] for a in SUBTLE], fontsize=10)
-    ax.set_xlabel("severity", labelpad=10); ax.set_zlabel("detection", labelpad=8)
+    ax.set_xlabel("deviation severity", labelpad=10); ax.set_zlabel("detection", labelpad=8)
     ax.view_init(elev=26, azim=-60)
     paths.append(save(fig, out_dir, "r1_detection_surface_3d"))
 
@@ -549,14 +549,14 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     fig, ax = new_fig()
     for i, a in enumerate(SUBTLE):
         ax.plot(sev, [det[(a, s)] for s in sev], marker="o", color=PALETTE[i], label=a.replace("_", " "))
-    ax.set_xlabel("attack severity"); ax.set_ylabel("detection rate"); ax.set_ylim(0, 1.05); ax.legend()
+    ax.set_xlabel("deviation severity"); ax.set_ylabel("detection rate"); ax.set_ylim(0, 1.05); ax.legend()
     paths.append(save(fig, out_dir, "r2_subtle_detection"))
 
     # r3: attack success vs severity
     fig, ax = new_fig()
     for i, a in enumerate(SUBTLE):
         ax.plot(sev, [suc[(a, s)] for s in sev], marker="s", color=PALETTE[i], label=a.replace("_", " "))
-    ax.set_xlabel("attack severity"); ax.set_ylabel("attack success rate"); ax.set_ylim(0, 1.05); ax.legend()
+    ax.set_xlabel("deviation severity"); ax.set_ylabel("evasion rate"); ax.set_ylim(0, 1.05); ax.legend()
     paths.append(save(fig, out_dir, "r3_attack_success"))
 
     # r4: detection heatmap attack x severity

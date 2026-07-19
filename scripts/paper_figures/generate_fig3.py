@@ -1,15 +1,16 @@
-"""Figure 3: DP utility, accountant parity, composition, and budget state."""
+"""Figure 3: smooth DP utility, parity, composition, and budget panels."""
 
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import BoundaryNorm
 
 from .data_loading import groups, indexed, processed, values
-from .figure_style import COLORS, PALETTE, finish_axis, new_figure, save_pdf
-from .plot_helpers import distribution_boxes
-from .statistics import ecdf
+from .figure_style import ANNOTATION_SIZE, COLORS, PALETTE, finish_axis, new_figure, save_pdf
+from .plot_helpers import percentile_ribbon, smooth_line, style_secondary_axis
+from .statistics import pchip, smooth_empirical_cdf
 
 
 def _epsilon_keys(rows) -> list[str]:
@@ -19,18 +20,21 @@ def _epsilon_keys(rows) -> list[str]:
 def panel_a(trials) -> None:
     grouped = groups(trials, "epsilon_requested")
     keys = _epsilon_keys(trials)
-    fig, ax = new_figure()
+    fig, ax = new_figure(figsize=(8.45, 5.25))
     for i, key in enumerate(keys):
-        data = values(grouped[key], "relative_error") * 100
-        x, y = ecdf(data)
+        data = np.sort(values(grouped[key], "relative_error") * 100)
+        empirical_y = np.arange(1, len(data) + 1) / len(data)
+        guide_x, guide_y = smooth_empirical_cdf(data)
         p50, p95 = np.percentile(data, [50, 95])
-        ax.step(x, y, where="post", color=PALETTE[i], linewidth=1.8,
-                label=fr"$\epsilon$={float(key):g}: {p50:.2f}/{p95:.2f}%")
-        ax.scatter([p50, p95], [0.5, 0.95], s=[22, 30], color=PALETTE[i],
-                   edgecolor="white", linewidth=0.5, zorder=4)
+        ax.plot(guide_x, guide_y, color=PALETTE[i], linewidth=1.8,
+                label=fr"$\epsilon$={float(key):g} ({p50:.2f}/{p95:.2f}%)")
+        ax.plot(data, empirical_y, linestyle="none", marker=".", markersize=3.2,
+                color=PALETTE[i], alpha=0.65)
+        ax.plot([p50, p95], [0.5, 0.95], linestyle="none", marker="D", markersize=4,
+                color=PALETTE[i], markeredgecolor="white", markeredgewidth=0.5)
     ax.set_xlabel("Relative error (%)")
     ax.set_ylabel("Empirical cumulative probability")
-    ax.set_title("Relative-error ECDF across privacy settings")
+    ax.set_title("Relative-error empirical distributions")
     ax.set_ylim(0, 1.02)
     ax.legend(title="ε: p50 / p95", loc="lower right", ncol=2)
     finish_axis(ax, grid="both")
@@ -38,177 +42,217 @@ def panel_a(trials) -> None:
 
 
 def panel_b(trials, error_summary) -> None:
-    grouped = groups(trials, "epsilon_requested")
-    keys = _epsilon_keys(trials)
-    datasets = [values(grouped[k], "relative_error") * 100 for k in keys]
-    x = np.arange(len(keys), dtype=float)
-    colors = [PALETTE[i] for i in range(len(keys))]
-    fig, ax = new_figure()
-    distribution_boxes(ax, datasets, x, colors, salt=80)
-    ax.set_xticks(x, [f"{float(k):g}" for k in keys])
+    rows = sorted(error_summary, key=lambda r: float(r["epsilon_requested"]))
+    epsilon = values(rows, "epsilon_requested")
+    p50 = values(rows, "median_relative_error") * 100
+    p95 = values(rows, "p95_relative_error") * 100
+    low = values(rows, "bootstrap_ci95_low_relative_error") * 100
+    high = values(rows, "bootstrap_ci95_high_relative_error") * 100
+    trial_groups = groups(trials, "epsilon_requested")
+    throughput = np.array([
+        np.median(values(trial_groups[r["epsilon_requested"]], "throughput_req_s")) for r in rows
+    ])
+
+    fig, ax = new_figure(figsize=(8.45, 5.2))
+    percentile_ribbon(ax, epsilon, low, high, color=COLORS["blue"], label="95% CI",
+                      log_x=True)
+    smooth_line(ax, epsilon, p50, color=COLORS["blue"], label="relative error p50", log_x=True)
+    smooth_line(ax, epsilon, p95, color=COLORS["red"], label="relative error p95", marker="D",
+                linestyle="--", log_x=True)
+    ax.set_xscale("log")
+    ax.set_xticks(epsilon, [f"{v:g}" for v in epsilon])
     ax.set_xlabel(r"Requested $\epsilon$")
     ax.set_ylabel("Relative error (%)")
-    ax.set_title("DP error distribution and measured release throughput")
-
+    ax.set_title("DP utility and release throughput")
     ax2 = ax.twinx()
-    throughput = np.array([np.median(values(grouped[k], "throughput_req_s")) for k in keys])
-    ax2.plot(x, throughput, color=COLORS["red"], marker="o", markerfacecolor="white",
-             linewidth=1.3, label="p50 throughput")
-    ax2.set_ylabel("Throughput (requests/s)", color=COLORS["red"])
-    ax2.tick_params(axis="y", colors=COLORS["red"])
-    ax2.spines["right"].set_visible(True)
-    ax2.spines["right"].set_color(COLORS["red"])
-    handles = [
-        plt.Line2D([], [], marker="D", linestyle="none", color=COLORS["dark"], label="error p50"),
-        plt.Line2D([], [], marker="^", linestyle="none", color=COLORS["red"], label="error p95"),
-        plt.Line2D([], [], marker="o", markerfacecolor="white", color=COLORS["red"], label="throughput p50"),
-    ]
-    ax.legend(handles=handles, loc="upper right", ncol=3)
+    smooth_line(ax2, epsilon, throughput, color=COLORS["green"], label="throughput p50",
+                marker="s", log_x=True)
+    ax2.set_ylabel("Throughput (requests/s)", color=COLORS["green"])
+    style_secondary_axis(ax2, COLORS["green"])
+    handles1, labels1 = ax.get_legend_handles_labels()
+    handles2, labels2 = ax2.get_legend_handles_labels()
+    ax.legend(handles1 + handles2, labels1 + labels2, loc="upper right")
     finish_axis(ax)
-    save_pdf(fig, "fig3b_dp_error_distribution.pdf")
+    save_pdf(fig, "fig3b_dp_error_trend.pdf")
 
 
 def panel_c(rounding) -> None:
-    exact = values(rounding, "exact_conservative_cost_micro_epsilon")
-    fixed = values(rounding, "vbs_cost_fixed")
+    exact = values(rounding, "exact_conservative_cost_micro_epsilon") / 1e6
     margin = values(rounding, "rounding_margin_micro_epsilon")
+    offsets = values(rounding, "offset_micro_epsilon")
     under = values(rounding, "under_reporting")
-    lo = min(exact.min(), fixed.min())
-    hi = max(exact.max(), fixed.max())
+    q50, q95 = np.percentile(margin, [50, 95])
+    bins = np.digitize(margin, [1 / 3, 2 / 3])
+    colors = np.array([COLORS["blue"], COLORS["orange"], COLORS["red"]])[bins]
 
-    fig, ax = new_figure()
-    ax.fill_between([lo, hi], [lo, hi], [lo, lo], color=COLORS["red"], alpha=0.09,
-                    label="under-reporting region")
-    margin_colors = plt.get_cmap("viridis")((margin - margin.min()) / max(np.ptp(margin), 1))
-    ax.scatter(exact, fixed, c=margin_colors, s=27, alpha=0.8,
-               edgecolor="white", linewidth=0.35)
-    ax.plot([lo, hi], [lo, hi], linestyle="--", color=COLORS["dark"], linewidth=1.2,
-            label="exact parity")
+    fig, ax = new_figure(figsize=(8.45, 5.2))
+    ax.axhspan(-0.12, 0, color=COLORS["red"], alpha=0.12, label="under-reporting region")
+    ax.vlines(exact, 0, margin, colors=colors, linewidth=0.7, alpha=0.45)
+    ax.scatter(exact, margin, c=colors, s=22, edgecolor="white", linewidth=0.35, zorder=4)
+    ax.axhline(0, color=COLORS["dark"], linestyle="--", linewidth=1.2, label="exact parity")
+    ax.axhline(q50, color=COLORS["blue"], linestyle=":", linewidth=1.2, label=f"margin p50={q50:.3f} µε")
+    ax.axhline(q95, color=COLORS["red"], linestyle=":", linewidth=1.2, label=f"margin p95={q95:.3f} µε")
     max_i = int(np.argmax(margin))
-    ax.annotate(f"max rounding margin\n{margin[max_i]:.3f} µε",
-                (exact[max_i], fixed[max_i]), xytext=(-92, 20), textcoords="offset points",
-                arrowprops={"arrowstyle": "->", "color": COLORS["dark"]}, fontsize=7.2)
-    ax.set_xlabel("Exact conservative privacy cost (µε)")
-    ax.set_ylabel("VBS fixed-point cost (µε)")
-    ax.set_title("Accountant parity at fixed-point boundaries")
-    ax.text(0.02, 0.90, f"color: rounding margin {margin.min():.3f}–{margin.max():.3f} µε",
-            transform=ax.transAxes, fontsize=6.8, color=COLORS["gray"])
-    ax.text(0.02, 0.96, f"n={len(rounding)} · under-reports={int(under.sum())}", transform=ax.transAxes,
-            va="top", fontsize=7.4, bbox={"facecolor": "white", "edgecolor": "#CCD3D8", "alpha": 0.9})
-    ax.legend(loc="lower right")
+    ax.annotate(f"maximum {margin[max_i]:.3f} µε", (exact[max_i], margin[max_i]),
+                xytext=(-80, -34), textcoords="offset points",
+                arrowprops={"arrowstyle": "->", "color": COLORS["dark"]},
+                fontsize=ANNOTATION_SIZE)
+    ax.set_xlabel("Exact conservative privacy cost (ε)")
+    ax.set_ylabel("VBS conservative margin (µε)")
+    ax.set_ylim(-0.12, 1.08)
+    ax.set_title("Fixed-point accountant parity residuals")
+    handles, labels = ax.get_legend_handles_labels()
+    handles.append(plt.Line2D([], [], marker="o", linestyle="none", color=COLORS["green"],
+                              label=f"under-reports: {int(under.sum())}"))
+    labels.append(f"under-reports: {int(under.sum())}")
+    ax.legend(handles, labels, loc="lower right", ncol=2)
     finish_axis(ax, grid="both")
     save_pdf(fig, "fig3c_accountant_parity.pdf")
 
 
-def panel_d(composition, budget_summary) -> None:
+def panel_d(composition) -> None:
     grouped = groups(composition, "epsilon_requested")
     keys = _epsilon_keys(composition)
-    budget_fixed = 5_000_000.0
-    budget_eps = budget_fixed / 1_000_000.0
-    fig, ax = new_figure(figsize=(7.25, 4.75))
-    for i, key in enumerate(keys):
-        rows = sorted(grouped[key], key=lambda r: int(r["releases"]))
-        releases = values(rows, "releases")
-        reference = values(rows, "rdp_reference_epsilon")
-        fixed = values(rows, "conservative_fixed_epsilon")
-        ax.step(releases, fixed, where="post", color=PALETTE[i], linewidth=1.6,
-                label=fr"$\epsilon$={float(key):g}")
-        ax.step(releases, reference, where="post", color=PALETTE[i], linewidth=0.9,
-                linestyle="--", alpha=0.62)
-        crossing = np.where(fixed > budget_eps)[0]
-        if len(crossing):
-            j = crossing[0]
-            ax.scatter(releases[j], fixed[j], marker="X", s=32, color=PALETTE[i], zorder=5)
-    ax.axhline(budget_eps, color=COLORS["red"], linestyle=":", linewidth=1.5,
-               label=f"ledger budget = {budget_eps:g} ε")
-    ax.set_xlabel("Cumulative releases")
-    ax.set_ylabel(r"Cumulative privacy loss ($\epsilon$)")
-    ax.set_title("Analytical composition and conservative fixed-point charge")
-    ax.set_xlim(1, 32)
-    ax.set_yscale("log")
-    method_handles = [
-        plt.Line2D([], [], color=COLORS["gray"], linestyle="-", label="fixed-point charge"),
-        plt.Line2D([], [], color=COLORS["gray"], linestyle="--", label="RDP reference"),
-        plt.Line2D([], [], marker="X", linestyle="none", color=COLORS["gray"], label="first over budget"),
+    budget = 5.0
+    epsilon = np.asarray([float(key) for key in keys])
+    release_axis = np.asarray(sorted({int(r["releases"]) for r in composition}), dtype=float)
+    fixed = np.vstack([
+        values(sorted(grouped[key], key=lambda r: int(r["releases"])),
+               "conservative_fixed_epsilon")
+        for key in keys
+    ])
+    reference = np.vstack([
+        values(sorted(grouped[key], key=lambda r: int(r["releases"])),
+               "rdp_reference_epsilon")
+        for key in keys
+    ])
+    gap = fixed - reference
+    epsilon_position = np.log10(epsilon)
+    release_grid, epsilon_grid = np.meshgrid(release_axis, epsilon_position)
+    color_bounds = np.linspace(float(gap.min()), float(gap.max()), 9)
+    cmap = plt.get_cmap("coolwarm", len(color_bounds) - 1)
+    norm = BoundaryNorm(color_bounds, cmap.N, clip=True)
+
+    fig, ax = new_figure(figsize=(9.4, 6.25), projection="3d")
+    ax.plot_surface(
+        release_grid,
+        epsilon_grid,
+        fixed,
+        facecolors=cmap(norm(gap)),
+        edgecolor="#455A64",
+        linewidth=0.32,
+        antialiased=True,
+        shade=False,
+        alpha=0.88,
+    )
+    ax.scatter(
+        release_grid.ravel(), epsilon_grid.ravel(), fixed.ravel(),
+        c=gap.ravel(), cmap=cmap, norm=norm, s=14, edgecolors="white", linewidths=0.35,
+        depthshade=False,
+    )
+    budget_plane = np.full_like(fixed, budget)
+    ax.plot_surface(release_grid, epsilon_grid, budget_plane, color=COLORS["red"],
+                    alpha=0.10, linewidth=0)
+    ax.plot_wireframe(release_grid, epsilon_grid, budget_plane, color=COLORS["red"],
+                      linewidth=0.55, alpha=0.45, rstride=1, cstride=5)
+    ax.set_xlabel("Cumulative releases", labelpad=10)
+    ax.set_ylabel(r"Requested $\epsilon$", labelpad=12)
+    ax.set_zlabel(r"Conservative cumulative loss ($\epsilon$)", labelpad=10)
+    ax.set_yticks(epsilon_position, [f"{value:g}" for value in epsilon])
+    ax.set_xticks([1, 8, 16, 24, 32])
+    ax.set_zlim(0, float(fixed.max()) * 1.03)
+    ax.set_title(r"Privacy-composition surface across requested $\epsilon$ and releases")
+    ax.view_init(elev=27, azim=-58)
+    ax.set_box_aspect((1.55, 1.0, 0.88))
+    colorbar = fig.colorbar(
+        ScalarMappable(norm=norm, cmap=cmap),
+        ax=ax,
+        boundaries=color_bounds,
+        ticks=color_bounds[::2],
+        pad=0.12,
+        shrink=0.66,
+        aspect=18,
+    )
+    colorbar.set_label(r"Fixed charge $-$ RDP reference ($\epsilon$)")
+    handles = [
+        plt.Line2D([], [], marker="o", linestyle="none", color=COLORS["dark"],
+                   markerfacecolor="white", label="stored observations"),
+        plt.Line2D([], [], color=COLORS["red"], linestyle="-", label=r"ledger budget $\epsilon=5$"),
     ]
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles + method_handles, labels + [h.get_label() for h in method_handles],
-              loc="upper left", ncol=3)
-    finish_axis(ax, grid="both")
+    ax.legend(handles=handles, loc="upper left")
     save_pdf(fig, "fig3d_privacy_composition.pdf")
 
 
 def panel_e(trajectory) -> None:
-    selected = "0.25"
-    rows = sorted([r for r in trajectory if float(r["epsilon_requested"]) == float(selected)],
+    rows = sorted([r for r in trajectory if float(r["epsilon_requested"]) == 0.25],
                   key=lambda r: int(r["request_index"]))
     if not rows:
         raise ValueError("Budget trajectory has no epsilon=0.25 rows")
     x = values(rows, "request_index")
-    total = values(rows, "budget_total_fixed") / 1_000_000
-    used = values(rows, "budget_used_fixed") / 1_000_000
-    reserved = values(rows, "budget_reserved_fixed") / 1_000_000
-    remaining = values(rows, "budget_remaining_fixed") / 1_000_000
+    total = values(rows, "budget_total_fixed") / 1e6
+    used = values(rows, "budget_used_fixed") / 1e6
+    reserved = values(rows, "budget_reserved_fixed") / 1e6
     accepted = values(rows, "accepted").astype(bool)
     reverted = values(rows, "reverted").astype(bool)
-    residual = total - used - reserved - remaining
+    dense_x, dense_used = pchip(x, used, clamp_min=0)
+    _, dense_reserved = pchip(x, reserved, clamp_min=0)
+    dense_total = np.full_like(dense_x, total[0])
+    dense_available = np.maximum(dense_total - dense_used - dense_reserved, 0)
 
-    fig, ax = new_figure()
-    ax.fill_between(x, 0, used, step="post", color=COLORS["blue"], alpha=0.78, label="used")
-    ax.fill_between(x, used, used + reserved, step="post", color=COLORS["orange"], alpha=0.85,
-                    label="reserved")
-    ax.fill_between(x, used + reserved, total, step="post", color=COLORS["green"], alpha=0.35,
-                    label="available")
-    ax.step(x, used, where="post", color=COLORS["dark"], linewidth=1.0)
-    ax.scatter(x[accepted], total[accepted] * 1.015, marker="v", color=COLORS["green"], s=24,
-               clip_on=False, label="accepted request")
-    ax.scatter(x[reverted], total[reverted] * 1.015, marker="x", color=COLORS["red"], s=30,
-               clip_on=False, label="reverted request")
+    fig, ax = new_figure(figsize=(8.5, 5.25))
+    ax.fill_between(dense_x, 0, dense_used, color=COLORS["blue"], alpha=0.78, label="used")
+    ax.fill_between(dense_x, dense_used, dense_used + dense_reserved, color=COLORS["orange"],
+                    alpha=0.82, label="reserved")
+    ax.fill_between(dense_x, dense_used + dense_reserved, dense_total, color=COLORS["green"],
+                    alpha=0.35, label="available")
+    ax.plot(x, used, linestyle="none", marker="o", color=COLORS["dark"], markersize=3.6)
+    ax.plot(x[accepted], total[accepted] * 1.015, linestyle="none", marker="v", color=COLORS["green"],
+            markersize=5, clip_on=False, label="accepted")
+    ax.plot(x[reverted], total[reverted] * 1.015, linestyle="none", marker="x", color=COLORS["red"],
+            markersize=5, clip_on=False, label="reverted")
     first_revert = np.where(reverted)[0][0]
-    ax.annotate(f"budget exhausted after {int(np.sum(accepted))} accepts",
-                (x[first_revert], used[first_revert]), xytext=(-112, -48), textcoords="offset points",
-                arrowprops={"arrowstyle": "->", "color": COLORS["red"]}, fontsize=7.2)
-    ax.set_xlabel("Request index (unsmoothed event order)")
-    ax.set_ylabel("Privacy budget (ε, fixed-point units)")
-    ax.set_title(r"Ledger budget trajectory at requested $\epsilon=0.25$")
+    ax.annotate("exhaustion boundary", (x[first_revert], used[first_revert]), xytext=(-92, -42),
+                textcoords="offset points", arrowprops={"arrowstyle": "->", "color": COLORS["red"]},
+                fontsize=ANNOTATION_SIZE)
     ax.set_xlim(1, 32)
     ax.set_ylim(0, total.max() * 1.08)
-    ax.text(0.995, 0.04, f"max invariant residual={np.max(np.abs(residual)):.0f} µε · violations=0",
-            transform=ax.transAxes, ha="right", fontsize=7.0, color=COLORS["dark"])
+    ax.set_xlabel("Request index")
+    ax.set_ylabel("Privacy budget (ε)")
+    ax.set_title(r"Budget trajectory at requested $\epsilon=0.25$")
     ax.legend(loc="center right", ncol=2)
     finish_axis(ax)
     save_pdf(fig, "fig3e_budget_trajectory.pdf")
 
 
 def generate() -> list[str]:
-    trials = processed(
-        "dp_vbs_trials.csv", ["epsilon_requested", "relative_error", "throughput_req_s", "ok"]
+    trials = processed("dp_vbs_trials.csv", ["epsilon_requested", "relative_error", "throughput_req_s"])
+    error_summary = processed(
+        "dp_error_summary.csv",
+        ["epsilon_requested", "median_relative_error", "p95_relative_error",
+         "bootstrap_ci95_low_relative_error", "bootstrap_ci95_high_relative_error"],
     )
-    error_summary = processed("dp_error_summary.csv", ["epsilon_requested", "p95_relative_error"])
     rounding = processed(
         "dp_rounding_margin.csv",
-        ["exact_conservative_cost_micro_epsilon", "vbs_cost_fixed", "rounding_margin_micro_epsilon",
-         "under_reporting"],
+        ["exact_conservative_cost_micro_epsilon", "rounding_margin_micro_epsilon",
+         "offset_micro_epsilon", "under_reporting"],
     )
     composition = processed(
         "dp_composition.csv",
         ["epsilon_requested", "releases", "rdp_reference_epsilon", "conservative_fixed_epsilon"],
     )
-    budget_summary = processed("budget_exhaustion_summary.csv", ["epsilon_requested", "accepted_requests"])
     trajectory = processed(
         "budget_exhaustion_trajectory.csv",
         ["epsilon_requested", "request_index", "accepted", "reverted", "budget_total_fixed",
-         "budget_used_fixed", "budget_reserved_fixed", "budget_remaining_fixed"],
+         "budget_used_fixed", "budget_reserved_fixed"],
     )
     panel_a(trials)
     panel_b(trials, error_summary)
     panel_c(rounding)
-    panel_d(composition, budget_summary)
+    panel_d(composition)
     panel_e(trajectory)
     return [
-        "fig3a_relative_error_ecdf.pdf", "fig3b_dp_error_distribution.pdf",
-        "fig3c_accountant_parity.pdf", "fig3d_privacy_composition.pdf",
-        "fig3e_budget_trajectory.pdf",
+        "fig3a_relative_error_ecdf.pdf", "fig3b_dp_error_trend.pdf", "fig3c_accountant_parity.pdf",
+        "fig3d_privacy_composition.pdf", "fig3e_budget_trajectory.pdf",
     ]
 
 
