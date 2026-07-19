@@ -1,101 +1,55 @@
 # Draft technical caption notes
 
-These are manuscript support notes, not final prose. Numeric claims must come
-from the cited CSV files. Every final panel is an independent 12 x 8 inch PDF
-plus a 600-dpi PNG preview. Flat and zero results are retained and disclosed.
+Every panel is an independent 12 x 8 inch vector PDF plus a 600-dpi PNG. The plotting code reads raw/processed CSV files and keeps direct observations, analytical relations, model-calibrated estimates, and literature-reported values distinct.
 
-## Figure 3 - End-to-end ablation
+## Figure 3 -- End-to-end system performance
 
-- **3a:** Six lifecycle variants, five runs each. Points show means and ranges
-  show one standard deviation. The log scale preserves the directly observed
-  separation rather than compressing it. `No TEE*` is model-calibrated from
-  measured components; the other variants are direct local measurements.
-- **3b:** End-to-end latency uses the same runs and classification as 3a.
-  Deployment is excluded; each variant includes only the stages it retains.
-- **3c:** The stacked bar is the full TrustCircuit path. VBS includes processor
-  execution and external evidence validation; proof includes proof generation
-  and expectation registration. Small access/budget/audit values are retained.
-- **3d:** Gas values come from local Hardhat receipts and support relative
-  attribution only. They are not public-network fees.
+- **3a:** Boxplots show retained throughput observations for six ablations; black circles and open triangles mark p50 and p95. Each variant has one warm-up and 30 retained local observations. The `no_tee` configuration is model-calibrated from measured components and must remain labelled as such.
+- **3b:** The same retained runs show end-to-end latency distributions. Deployment is excluded from timed lifecycle windows; stages absent from an ablation are not imputed.
+- **3c:** Absolute and normalized stacked stage composition retains access, budget, TEE, proof, settlement, and audit contributions for every ablation.
+- **3d:** The Pareto view uses median latency and mean local-Hardhat gas. Marker area encodes p95 host working set and color encodes p95 normalized host CPU; neither counter is enclave-only memory.
 
-## Figure 4 - VCP scaling and proof backends
+## Figure 4 -- Proof-system scalability
 
-- **4a:** The Phase 7 circuit has 11 public signals. Constraint counts are exact
-  compiler outputs for 1, 2, 4, 6, 8, and 10 rules.
-- **4b:** Each circuit has two warm-ups followed by 12 Groth16 proving runs.
-  Points show means and ranges show one standard deviation.
-- **4c:** Proof bundles are plotted as unsmoothed observations because their
-  serialized size fluctuates slightly; the proving-key line shows its measured
-  growth with rules.
-- **4d:** Groth16, PLONK, and fflonk implement the same two-rule relation.
-  Backend prove/verify timings are measured, while full-circulation throughput
-  is model-calibrated by adding separately measured common stages.
+- **4a:** Compiler-derived constraint counts and measured witness sizes grow with policy-rule count.
+- **4b:** Boxplots use 30 retained per-run proving and verification samples after two excluded warm-ups. The logarithmic axis is used because proving and verification have materially different scales.
+- **4c:** Proof size, proving-key size, and p95 prover working set are shown as separate log-scaled point-range views. No key/proof point is smoothed.
+- **4d:** Groth16, PLONK, and fflonk use the same Phase 7 relation. Backend prove/verify observations and verifier gas are local; the full-circulation throughput is model-calibrated from separately measured common components and is labelled accordingly.
 
-## Figure 5 - Differential privacy and budget accounting
+## Figure 5 -- Differential privacy and budget behavior
 
-- **5a:** Thirty non-warm-up VBS MEAN releases per epsilon use the same seeded
-  1,000-row bounded dataset. Noise is enclave-generated, so the plot reports
-  mean and standard deviation rather than exact result equality.
-- **5b:** The unsmoothed staircase shows analytical RDP/fixed-point composition
-  across 1-32 releases. Each per-release charge is the conservative measured
-  fixed-point value for that epsilon.
-- **5c:** Ninety-six real VBS requests sample offsets of -0.49 and +0.49
-  micro-epsilon around 48 fixed-point boundaries. The ECDF includes ten exact
-  zero margins, median 0.4207, maximum 0.9983 micro-epsilon, and zero
-  under-reports (`results/processed/dp_rounding_summary.csv`).
-- **5d:** A local ledger with total epsilon budget 5.0 is queried 32 times for
-  each epsilon. Solid staircases show remaining budget; same-color dashed
-  staircases show cumulative accepted requests. Rejections leave budget flat.
+- **5a:** Thirty retained VBS MEAN releases per epsilon form the relative-error distributions. The diamond trend is analytical RDP reference output, not an additional measured sample.
+- **5b:** Conservative fixed-point cost is composed analytically over 1--32 releases; the staircase is not a stochastic privacy experiment.
+- **5c:** Ninety-six boundary requests are compared with an analytical oracle. The ECDF shows the measured rounding-margin distribution; zero under-reporting is annotated rather than drawn as a flat series.
+- **5d:** Local-Hardhat budget trajectories show remaining fixed-point budget and cumulative accepted requests across repeated queries for the epsilon grid. Rejections leave the ledger state unchanged.
 
-## Figure 6 - Native and VBS processor behavior
+## Figure 6 -- Native and Windows VBS execution
 
-- **6a:** `TrustCircuitNative.exe` and `TrustCircuitHost.exe` receive the same
-  request JSON, AES key, nonce, AAD, ciphertext, and TCVBSDS1 payload. Execution
-  order alternates. Each of six payload sizes has one warm-up and 30 paired
-  measurements. Lines are medians; bands are empirical 2.5-97.5 percentiles.
-  Deterministic aggregate and result-hash parity is 100%.
-- **6b:** The slowdown is computed per paired observation as VBS Enclave wall
-  time divided by Native wall time, then summarized without smoothing. Both
-  processes are Debug x64 C++20/v143 with the same MSVC runtime configuration.
-- **6c:** Throughput uses plaintext payload bytes divided by the same process
-  wall times as 6a. Legend labels are only `Native` and `VBS Enclave`.
-- **6d:** Enclave TSC stages separate decrypt, aggregate, DP, transcript, and
-  evidence generation. Paired performance requests disable DP noise so exact
-  aggregate parity is possible; the observed DP stage is zero and is labeled.
-- **6e:** Peak RSS is sampled for the Native executable and VBS host process.
-  It is not a separate secure-kernel or enclave-memory measurement.
-- **6f:** At the largest 800,000-byte payload, 30 observations per stage show
-  transcript hashing, in-enclave evidence generation, and external validation.
-  Mean shares of validated VBS wall time are 0.010%, 0.843%, and 33.319%,
-  respectively. External validation intentionally launches the validation path
-  separately and therefore remains a distinct distribution.
+- **6a:** Native and VBS Enclave receive byte-identical encrypted inputs. Six payload sizes have one warm-up and 30 retained paired runs; bands are bootstrap 95% intervals around the retained medians.
+- **6b:** Per-pair VBS/Native slowdown and incremental process CPU time are shown as distributions. Process startup is retained as a separate raw field.
+- **6c:** Payload throughput is computed from the same process wall times used in 6a, with no Python baseline mixed into the legend.
+- **6d:** VBS decrypt, aggregate, DP-noise, transcript, and evidence-generation stages are shown in absolute and normalized forms. Deterministic parity runs intentionally disable DP noise.
+- **6e:** Peak normalized host CPU and peak working set are plotted for Native and VBS Enclave; marker size is payload. These are host-process counters and do not measure secure-kernel or enclave-only memory.
+- **6f:** At the largest payload, transcript, evidence-generation, and external-validation latency distributions are paired with their percentage contribution to validated VBS wall time.
 
-## Figure 7 - Robustness and concurrency
+## Figure 7 -- Security and concurrency
 
-- **7a:** The heatmap is backed by named passing tests in Phase 4, Phase 6, and
-  the Hardhat suite. A colored cell means the earliest tested rejecting layer.
-  Blank later cells do not mean that a later layer would accept the attack.
-- **7b:** Transcript tampering, evidence substitution, stale evidence, proof
-  tampering, and replay each have 30 measured local rejection latencies and a
-  100% rejection rate. The distribution is operational overhead, not security
-  strength.
-- **7c:** At concurrency 1/2/4/8/16/32, capacity is half the batch except at
-  one request. Bars show mean accepted/reverted counts across 30 local same-block
-  trials per level.
-- **7d:** Boxplots show the 30 observed mean settlement latencies per level.
-  Across all 180 trials, the budget-invariant violation count is exactly zero;
-  that flat zero is reported here and in processed tables rather than drawn.
+- **7a:** The heatmap marks the first rejecting layer backed by named Phase 4/6 and Hardhat tests. Blank later cells are not acceptance claims.
+- **7b:** Thirty rejection trials per listed attack case show operational rejection-latency distributions. Latency is not a security-strength score.
+- **7c:** Local same-block trials show accepted/reverted requests and achieved throughput at concurrency 1--32.
+- **7d:** Settlement-latency distributions are paired with host CPU/working-set saturation. The budget-invariant violation count is zero across the retained trials and is stated as an annotation rather than a zero curve.
 
-## Reproducibility and limitations
+## Figure 8 -- Controlled comparative evaluation
 
-- VBS/Native metadata, seeds, compiler, OS, CPU, warm-ups, repetitions, and
-  sanity checks are in `results/raw/phase8/vbs_experiment_config.json`.
-- Chain metadata and run counts are in
-  `results/raw/phase8/chain_experiment_config.json`.
-- Figure 7a test commands and output hashes are in
-  `results/raw/phase8/attack_binding_matrix_config.json`.
-- The Native/VBS comparison is Debug x64 and includes process startup. A
-  Release build and persistent-host benchmark are separate future experiments.
-- No public-testnet panel is claimed. `hardhat.config.js` has no public RPC or
-  account configuration; the explicit status remains in
-  `results/raw/phase8/testnet/public_testnet_status.json`.
+- **8a:** The heatmap describes explicit capabilities of Access Ledger, TEE-only, ZK Release, Local DP Ledger, and TrustCircuit. These are neutral local baselines, not reproductions of external authors' implementations.
+- **8b:** Each configuration has one warm-up and 30 retained locally measured samples on the same 1,000-row bounded MEAN workload (`epsilon=0.5`, `delta=1e-5`). Access Ledger and ZK Release use the same request schema/context but intentionally omit the capabilities listed in `COMPARISON_METHODOLOGY.md`.
+- **8c:** Median latency and mean local-Hardhat gas are compared with marker area for host working set and color for the analytical capability-coverage score. No public-network fee is implied.
+- **8d:** Directly measured proof, attestation, budget, and other lifecycle contributions are decomposed across the five configurations. A zero contribution means that the baseline deliberately omits that component, not that the component is free in TrustCircuit.
+
+## Reproducibility and limits
+
+- Run metadata, seeds, compiler/tool versions, OS/CPU, warm-ups, repetitions, config hashes, and resource definitions are in `results/raw/phase8/*_config.json`.
+- Raw per-sample rows remain under `results/raw/phase8`; processed summaries add bootstrap confidence intervals without replacing raw observations.
+- No public testnet result is claimed. The local validator/certificate is a same-machine development trust anchor, not production remote attestation.
+- The VCP proves only its encoded relation; these plots do not establish arbitrary program correctness, legal compliance, or resistance to all hardware side channels.
+

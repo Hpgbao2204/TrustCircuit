@@ -29,9 +29,21 @@ class VbsPipelineError(RuntimeError):
     pass
 
 
-def _run_with_peak_rss(
+def _safe_private_bytes(process: psutil.Process) -> int:
+    try:
+        full = process.memory_full_info()
+        for field in ("private", "uss"):
+            value = getattr(full, field, None)
+            if isinstance(value, int):
+                return value
+    except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
+        pass
+    return 0
+
+
+def _run_with_process_metrics(
     command: list[str], *, cwd: Path, timeout: float
-) -> tuple[subprocess.CompletedProcess[str], int]:
+) -> tuple[subprocess.CompletedProcess[str], dict[str, int | float]]:
     started = time.monotonic()
     process = subprocess.Popen(
         command,
@@ -40,23 +52,70 @@ def _run_with_peak_rss(
         stderr=subprocess.PIPE,
         text=True,
     )
-    peak_rss = 0
+    peak_working_set = 0
+    peak_private_bytes = 0
+    peak_normalized_cpu_percent = 0.0
+    logical_cpus = max(os.cpu_count() or 1, 1)
     monitored = psutil.Process(process.pid)
+    previous_sample = started
+    previous_cpu_seconds = 0.0
+    last_cpu_seconds = 0.0
+    sample_count = 0
     while process.poll() is None:
-        if time.monotonic() - started > timeout:
+        sampled_at = time.monotonic()
+        if sampled_at - started > timeout:
             process.kill()
             process.communicate()
             raise subprocess.TimeoutExpired(command, timeout)
         try:
-            peak_rss = max(peak_rss, monitored.memory_info().rss)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            memory = monitored.memory_info()
+            peak_working_set = max(peak_working_set, int(memory.rss))
+            peak_private_bytes = max(
+                peak_private_bytes, _safe_private_bytes(monitored)
+            )
+            cpu_times = monitored.cpu_times()
+            last_cpu_seconds = float(cpu_times.user + cpu_times.system)
+            interval = sampled_at - previous_sample
+            if interval > 0:
+                normalized = (
+                    (last_cpu_seconds - previous_cpu_seconds)
+                    / interval
+                    / logical_cpus
+                    * 100.0
+                )
+                peak_normalized_cpu_percent = max(
+                    peak_normalized_cpu_percent,
+                    min(max(normalized, 0.0), 100.0),
+                )
+            previous_sample = sampled_at
+            previous_cpu_seconds = last_cpu_seconds
+            sample_count += 1
+        except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
             pass
         time.sleep(0.001)
     stdout, stderr = process.communicate()
+    wall_ms = (time.monotonic() - started) * 1000.0
     return (
         subprocess.CompletedProcess(command, process.returncode, stdout, stderr),
-        peak_rss,
+        {
+            "wall_ms": wall_ms,
+            "process_cpu_time_ms": last_cpu_seconds * 1000.0,
+            "normalized_peak_cpu_percent": peak_normalized_cpu_percent,
+            "peak_working_set_bytes": peak_working_set,
+            "peak_private_bytes": peak_private_bytes,
+            "resource_sample_count": sample_count,
+        },
     )
+
+
+def _run_with_peak_rss(
+    command: list[str], *, cwd: Path, timeout: float
+) -> tuple[subprocess.CompletedProcess[str], int]:
+    """Compatibility wrapper for callers that only need working-set RSS."""
+    completed, metrics = _run_with_process_metrics(
+        command, cwd=cwd, timeout=timeout
+    )
+    return completed, int(metrics["peak_working_set_bytes"])
 
 
 def host_path(vbs_root: Path, configuration: str) -> Path:
@@ -82,13 +141,26 @@ def execute_synthetic_request(
     consumer_id: str,
     policy_hash: str | None = None,
     policy_version: int = 1,
+    processor: str = "vbs",
+    validate_attestation_evidence: bool = True,
     timeout: float = 30,
 ) -> dict[str, Any]:
     if rows <= 0 or rows > 100_000:
         raise VbsPipelineError("rows must be between 1 and 100000")
     if function_name not in {"COUNT", "MEAN"}:
         raise VbsPipelineError("function must be COUNT or MEAN")
+    if processor not in {"vbs", "native"}:
+        raise VbsPipelineError("processor must be vbs or native")
+    if processor == "native" and validate_attestation_evidence:
+        raise VbsPipelineError("Native execution has no VBS evidence to validate")
     host = host_path(vbs_root, configuration)
+    processor_binary = (
+        host
+        if processor == "vbs"
+        else vbs_root / "x64" / configuration / "TrustCircuitNative.exe"
+    )
+    if not processor_binary.is_file():
+        raise VbsPipelineError(f"missing processor executable: {processor_binary}")
     function_id = 1 if function_name == "COUNT" else 2
     generator = random.Random(seed)
 
@@ -149,9 +221,9 @@ def execute_synthetic_request(
             json.dumps(request, separators=(",", ":")), encoding="utf-8"
         )
         host_started = time.perf_counter_ns()
-        completed, host_peak_rss_bytes = _run_with_peak_rss(
-            [str(host), str(request_path)],
-            cwd=host.parent,
+        completed, host_process_metrics = _run_with_process_metrics(
+            [str(processor_binary), str(request_path)],
+            cwd=processor_binary.parent,
             timeout=timeout,
         )
         host_process_us = (time.perf_counter_ns() - host_started) // 1000
@@ -168,14 +240,19 @@ def execute_synthetic_request(
                 + (f": {diagnostic}" if diagnostic else "")
             )
 
-        validation_started = time.perf_counter_ns()
-        validated = attach_validated_attestation(
-            host,
-            request,
-            execution,
-            working_directory=directory,
-        )
-        validation_us = (time.perf_counter_ns() - validation_started) // 1000
+        validation_us = 0
+        validated = execution
+        if validate_attestation_evidence:
+            validation_started = time.perf_counter_ns()
+            validated = attach_validated_attestation(
+                host,
+                request,
+                execution,
+                working_directory=directory,
+            )
+            validation_us = (
+                time.perf_counter_ns() - validation_started
+            ) // 1000
 
         public_request = {
             key: value
@@ -200,7 +277,23 @@ def execute_synthetic_request(
                 "plaintext_bytes": len(plaintext),
                 "ciphertext_bytes": len(ciphertext),
                 "python_rss_bytes": python_rss_bytes,
-                "host_peak_rss_bytes": host_peak_rss_bytes,
+                "host_peak_rss_bytes": int(
+                    host_process_metrics["peak_working_set_bytes"]
+                ),
+                "host_peak_private_bytes": int(
+                    host_process_metrics["peak_private_bytes"]
+                ),
+                "host_process_cpu_time_ms": float(
+                    host_process_metrics["process_cpu_time_ms"]
+                ),
+                "host_normalized_peak_cpu_percent": float(
+                    host_process_metrics["normalized_peak_cpu_percent"]
+                ),
+                "host_resource_sample_count": int(
+                    host_process_metrics["resource_sample_count"]
+                ),
+                "processor": processor,
+                "attestation_validated": validate_attestation_evidence,
             },
             "client_timings_us": client_timings,
         }

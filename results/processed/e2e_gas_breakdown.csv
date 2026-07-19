@@ -1,6 +1,6 @@
 stage,measurement_type,mean_gas
-access,measured_local_hardhat,376845.4
-budget,measured_local_hardhat,221760.2
-proof,measured_local_hardhat,283366.2
-settlement,measured_local_hardhat,488243.8
+access,measured_local_hardhat,376849.4
+budget,measured_local_hardhat,221762.2
+proof,measured_local_hardhat,283373.8
+settlement,measured_local_hardhat,488259.4
 audit,measured_local_hardhat,0.0

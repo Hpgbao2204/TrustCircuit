@@ -1,0 +1,6 @@
+measurement_type,configuration,access_authorization,encrypted_confidential_execution,native_attestation_validation,differential_privacy_release,cumulative_privacy_budget,zero_knowledge_binding,replay_protection,atomic_audit_settlement,security_coverage_score
+functional_definition,TEE-only,0,1,1,1,0,0,0,0,3
+functional_definition,Access Ledger,1,0,0,0,0,0,0,0,1
+functional_definition,ZK Release,0,0,0,0,0,1,1,0,2
+functional_definition,Local DP Ledger,0,0,0,1,1,0,0,0,2
+functional_definition,TrustCircuit,1,1,1,1,1,1,1,1,8

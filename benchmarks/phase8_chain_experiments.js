@@ -6,6 +6,7 @@
 "use strict";
 
 const fs = require("fs");
+const crypto = require("crypto");
 const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
@@ -16,6 +17,10 @@ const {
   buildProofInput,
   contextFields,
 } = require("../scripts/lib/phase7_encoding");
+const {
+  ProcessResourceSampler,
+  monotonicMs,
+} = require("./process_metrics");
 
 const ROOT = path.resolve(__dirname, "..");
 const RAW = path.join(ROOT, "results", "raw", "phase8");
@@ -25,15 +30,33 @@ const ZKEY = path.join(ROOT, "zk", "build", "phase7_final.zkey");
 const VKEY = path.join(ROOT, "zk", "build", "phase7_vkey.json");
 const CONCURRENCY_LEVELS = [1, 2, 4, 8, 16, 32];
 const EXPERIMENT_SEED = 20260719;
+const WARMUP_REPS = 1;
+const ABLATION_REPS = 30;
 const ATTACK_LATENCY_REPS = 30;
 const CONCURRENCY_REPS = 30;
+const COMPARISON_REPS = 30;
+
+const CONFIG_IDENTITY = {
+  schema: "TrustCircuit.Phase8ChainExperimentConfig.v2",
+  seed: EXPERIMENT_SEED,
+  warmups: WARMUP_REPS,
+  ablation_repetitions: ABLATION_REPS,
+  attack_repetitions: ATTACK_LATENCY_REPS,
+  concurrency_repetitions: CONCURRENCY_REPS,
+  comparison_repetitions: COMPARISON_REPS,
+  concurrency_levels: CONCURRENCY_LEVELS,
+};
+const CONFIG_HASH = crypto
+  .createHash("sha256")
+  .update(JSON.stringify(CONFIG_IDENTITY))
+  .digest("hex");
 
 function gitValue(args) {
   return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
 }
 
 function nowMs() {
-  return Number(process.hrtime.bigint()) / 1e6;
+  return monotonicMs();
 }
 
 function hex(value) {
@@ -162,6 +185,7 @@ async function prepareProofs() {
       poseidon,
       202607190000n + BigInt(index)
     );
+    const proofSampler = new ProcessResourceSampler().start();
     const proveStarted = nowMs();
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(
       proofInput.input,
@@ -176,6 +200,7 @@ async function prepareProofs() {
       proof
     );
     const verifyMs = nowMs() - verifyStarted;
+    const proofResources = proofSampler.stop();
     if (!verified) throw new Error(`off-chain proof verification failed at ${index}`);
     const calldata = JSON.parse(
       `[${await snarkjs.groth16.exportSolidityCallData(proof, publicSignals)}]`
@@ -195,11 +220,19 @@ async function prepareProofs() {
     });
     proofRows.push({
       measurement_type: "measured",
+      timestamp_utc: new Date().toISOString(),
+      config_hash: CONFIG_HASH,
       index,
       request_id: bundle.request.request_id,
       prove_time_ms: proveMs,
       verify_time_ms: verifyMs,
       proof_bundle_bytes: Buffer.byteLength(JSON.stringify({ proof, publicSignals })),
+      process_cpu_time_ms: proofResources.process_cpu_time_ms,
+      normalized_peak_cpu_percent: proofResources.normalized_peak_cpu_percent,
+      peak_working_set_bytes: proofResources.peak_working_set_bytes,
+      peak_private_bytes: proofResources.peak_private_bytes ?? "",
+      resource_sample_count: proofResources.resource_sample_count,
+      failure_status: "",
       verified: 1,
     });
     process.stdout.write(`[phase8-chain] proof ${index + 1}/${paths.length}\n`);
@@ -345,7 +378,13 @@ async function setupFullRequest(system, prepared, metric, options = {}) {
 }
 
 function newMetric() {
-  return { latency_ms: 0, gas: 0n, stage_latency: {}, stage_gas: {} };
+  return {
+    latency_ms: 0,
+    gas: 0n,
+    stage_latency: {},
+    stage_gas: {},
+    process_resources: null,
+  };
 }
 
 async function runFullAblation(prepared, substituteTee) {
@@ -386,14 +425,17 @@ async function runAblations(referencePrepared) {
     "no_tee",
     "full_trustcircuit",
   ];
-  for (let run = 0; run < 5; run += 1) {
+  for (let iteration = 0; iteration < WARMUP_REPS + ABLATION_REPS; iteration += 1) {
+    const isWarmup = iteration < WARMUP_REPS;
+    const run = isWarmup ? iteration : iteration - WARMUP_REPS;
     for (let variantIndex = 0; variantIndex < variants.length; variantIndex += 1) {
       const variant = variants[variantIndex];
       const item = ["no_budget", "no_zk", "no_tee", "full_trustcircuit"].includes(variant)
-        ? await createFreshPrepared(`ablation_${variant}`, run * 10 + variantIndex)
+        ? await createFreshPrepared(`ablation_${variant}`, iteration * 10 + variantIndex)
         : referencePrepared;
       const metric = newMetric();
       let measurementType = "measured";
+      const resourceSampler = new ProcessResourceSampler().start();
       if (variant === "baseline_minimal") {
         metric.latency_ms = item.bundle.client_timings_us.reference_aggregate / 1000;
         metric.stage_latency.compute = metric.latency_ms;
@@ -476,10 +518,14 @@ async function runAblations(referencePrepared) {
       } else {
         Object.assign(metric, await runFullAblation(item, false));
       }
+      metric.process_resources = resourceSampler.stop();
       rows.push({
         measurement_type: measurementType,
+        timestamp_utc: new Date().toISOString(),
+        config_hash: CONFIG_HASH,
         variant,
         run,
+        is_warmup: isWarmup ? 1 : 0,
         total_latency_ms: metric.latency_ms,
         throughput_req_s: 1000 / Math.max(metric.latency_ms, 0.001),
         total_gas: metric.gas.toString(),
@@ -494,6 +540,13 @@ async function runAblations(referencePrepared) {
         proof_gas: String(metric.stage_gas.proof || 0n),
         settlement_gas: String(metric.stage_gas.settlement || 0n),
         audit_gas: String(metric.stage_gas.audit || 0n),
+        process_cpu_time_ms: metric.process_resources.process_cpu_time_ms,
+        normalized_peak_cpu_percent:
+          metric.process_resources.normalized_peak_cpu_percent,
+        peak_working_set_bytes: metric.process_resources.peak_working_set_bytes,
+        peak_private_bytes: metric.process_resources.peak_private_bytes ?? "",
+        resource_sample_count: metric.process_resources.resource_sample_count,
+        failure_status: "",
         success: 1,
       });
       process.stdout.write(`[phase8-chain] ablation ${variant} run=${run}\n`);
@@ -542,14 +595,23 @@ async function runProtocolAttacks() {
       } catch (error) {
         rows.push({
           measurement_type: "measured",
+          timestamp_utc: new Date().toISOString(),
+          config_hash: CONFIG_HASH,
           category: testCase.category,
           attack_case: testCase.name,
           run,
+          is_warmup: 0,
           accepted: 0,
           rejected: 1,
           rejection_stage: "setup",
           reason: errorReason(error),
           latency_ms: metric.latency_ms,
+          process_cpu_time_ms: "",
+          normalized_peak_cpu_percent: "",
+          peak_working_set_bytes: "",
+          peak_private_bytes: "",
+          resource_sample_count: 0,
+          failure_status: errorReason(error),
           budget_invariant_violation: 0,
         });
         continue;
@@ -574,6 +636,7 @@ async function runProtocolAttacks() {
           .settle(requestKey, evidence, a, item.b, item.c, item.signals);
         await primeTx.wait();
       }
+      const resourceSampler = new ProcessResourceSampler().start();
       const started = nowMs();
       try {
         const tx = await system.settlement
@@ -584,19 +647,30 @@ async function runProtocolAttacks() {
       } catch (error) {
         reason = errorReason(error);
       }
+      const processResources = resourceSampler.stop();
       const budgetState = await system.budget.getBudget(setup.context.assetKey);
       const invariantViolation =
         budgetState.reserved + budgetState.used > budgetState.total ? 1 : 0;
       rows.push({
         measurement_type: "measured",
+        timestamp_utc: new Date().toISOString(),
+        config_hash: CONFIG_HASH,
         category: testCase.category,
         attack_case: testCase.name,
         run,
+        is_warmup: 0,
         accepted: accepted ? 1 : 0,
         rejected: accepted ? 0 : 1,
         rejection_stage: accepted ? "none" : "settlement",
         reason,
         latency_ms: nowMs() - started,
+        process_cpu_time_ms: processResources.process_cpu_time_ms,
+        normalized_peak_cpu_percent:
+          processResources.normalized_peak_cpu_percent,
+        peak_working_set_bytes: processResources.peak_working_set_bytes,
+        peak_private_bytes: processResources.peak_private_bytes ?? "",
+        resource_sample_count: processResources.resource_sample_count,
+        failure_status: accepted ? "" : reason,
         budget_invariant_violation: invariantViolation,
       });
     }
@@ -624,6 +698,7 @@ async function runConcurrency() {
       const requestKeys = Array.from({ length: concurrency }, (_, index) =>
         ethers.id(`phase8-concurrency-${concurrency}-${run}-${index}`)
       );
+    const resourceSampler = new ProcessResourceSampler().start();
     const batchStarted = nowMs();
     const startingNonce = await provider.getNonce();
     await network.provider.send("evm_setAutomine", [false]);
@@ -666,10 +741,14 @@ async function runConcurrency() {
       budgetState.budgetRemaining !== budgetState.total - budgetState.reserved - budgetState.used
         ? 1
         : 0;
+      const processResources = resourceSampler.stop();
       rows.push({
         measurement_type: "measured_local_hardhat",
+        timestamp_utc: new Date().toISOString(),
+        config_hash: CONFIG_HASH,
         concurrency,
         run,
+        is_warmup: 0,
         capacity,
         accepted,
         reverted,
@@ -685,6 +764,13 @@ async function runConcurrency() {
         budget_reserved_fixed: budgetState.reserved.toString(),
         budget_remaining_fixed: budgetState.budgetRemaining.toString(),
         budget_invariant_violations: invariantViolations,
+        process_cpu_time_ms: processResources.process_cpu_time_ms,
+        normalized_peak_cpu_percent:
+          processResources.normalized_peak_cpu_percent,
+        peak_working_set_bytes: processResources.peak_working_set_bytes,
+        peak_private_bytes: processResources.peak_private_bytes ?? "",
+        resource_sample_count: processResources.resource_sample_count,
+        failure_status: "",
       });
     }
     process.stdout.write(`[phase8-chain] concurrency=${concurrency} reps=${CONCURRENCY_REPS}\n`);
@@ -720,6 +806,7 @@ async function runBudgetExhaustion() {
       const requestKey = ethers.id(`phase8-budget-${epsilon}-${requestIndex}`);
       let accepted = 0;
       let reason = "";
+      const resourceSampler = new ProcessResourceSampler().start();
       const started = nowMs();
       try {
         await (await budget.reserveBudget(assetKey, requestKey, cost)).wait();
@@ -729,8 +816,11 @@ async function runBudgetExhaustion() {
         reason = errorReason(error);
       }
       const state = await budget.getBudget(assetKey);
+      const processResources = resourceSampler.stop();
       rows.push({
         measurement_type: "measured_local_hardhat",
+        timestamp_utc: new Date().toISOString(),
+        config_hash: CONFIG_HASH,
         epsilon_requested: epsilon,
         privacy_cost_fixed: cost.toString(),
         request_index: requestIndex,
@@ -744,24 +834,420 @@ async function runBudgetExhaustion() {
         budget_remaining_fixed: state.budgetRemaining.toString(),
         budget_invariant_violations:
           state.used + state.reserved > state.total ? 1 : 0,
+        process_cpu_time_ms: processResources.process_cpu_time_ms,
+        normalized_peak_cpu_percent:
+          processResources.normalized_peak_cpu_percent,
+        peak_working_set_bytes: processResources.peak_working_set_bytes,
+        peak_private_bytes: processResources.peak_private_bytes ?? "",
+        resource_sample_count: processResources.resource_sample_count,
+        failure_status: accepted ? "" : reason,
       });
     }
   }
   writeCsv(path.join(RAW, "budget_exhaustion.csv"), rows);
 }
 
+const COMPARISON_CONFIGURATIONS = [
+  "TEE-only",
+  "Access Ledger",
+  "ZK Release",
+  "Local DP Ledger",
+  "TrustCircuit",
+];
+
+const COMPARISON_CAPABILITIES = {
+  "Access Ledger": {
+    access_authorization: 1,
+    encrypted_confidential_execution: 0,
+    native_attestation_validation: 0,
+    differential_privacy_release: 0,
+    cumulative_privacy_budget: 0,
+    zero_knowledge_binding: 0,
+    replay_protection: 0,
+    atomic_audit_settlement: 0,
+  },
+  "TEE-only": {
+    access_authorization: 0,
+    encrypted_confidential_execution: 1,
+    native_attestation_validation: 1,
+    differential_privacy_release: 1,
+    cumulative_privacy_budget: 0,
+    zero_knowledge_binding: 0,
+    replay_protection: 0,
+    atomic_audit_settlement: 0,
+  },
+  "ZK Release": {
+    access_authorization: 0,
+    encrypted_confidential_execution: 0,
+    native_attestation_validation: 0,
+    differential_privacy_release: 0,
+    cumulative_privacy_budget: 0,
+    zero_knowledge_binding: 1,
+    replay_protection: 1,
+    atomic_audit_settlement: 0,
+  },
+  "Local DP Ledger": {
+    access_authorization: 0,
+    encrypted_confidential_execution: 0,
+    native_attestation_validation: 0,
+    differential_privacy_release: 1,
+    cumulative_privacy_budget: 1,
+    zero_knowledge_binding: 0,
+    replay_protection: 0,
+    atomic_audit_settlement: 0,
+  },
+  TrustCircuit: {
+    access_authorization: 1,
+    encrypted_confidential_execution: 1,
+    native_attestation_validation: 1,
+    differential_privacy_release: 1,
+    cumulative_privacy_budget: 1,
+    zero_knowledge_binding: 1,
+    replay_protection: 1,
+    atomic_audit_settlement: 1,
+  },
+};
+
+function securityCoverage(configuration) {
+  const capabilities = COMPARISON_CAPABILITIES[configuration];
+  return Object.values(capabilities).reduce((sum, value) => sum + value, 0);
+}
+
+function comparisonBundlePath(variant, iteration) {
+  return path.join(
+    RAW,
+    "comparison_bundles",
+    `${variant}_${String(iteration).padStart(2, "0")}.json`
+  );
+}
+
+function createComparisonProcessorSample(variant, iteration) {
+  const output = comparisonBundlePath(variant, iteration);
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  execFileSync(
+    "python",
+    [
+      path.join(ROOT, "scripts", "prepare_phase8_comparison_sample.py"),
+      "--variant",
+      variant,
+      "--output",
+      output,
+      "--configuration",
+      "Debug",
+      "--rows",
+      "1000",
+      "--run",
+      String(iteration),
+      "--seed",
+      String(EXPERIMENT_SEED),
+      "--epsilon",
+      "0.5",
+      "--delta",
+      "0.00001",
+    ],
+    { cwd: ROOT, stdio: ["ignore", "ignore", "inherit"] }
+  );
+  return JSON.parse(fs.readFileSync(output, "utf8"));
+}
+
+async function proveComparisonBundle(bundle, secret) {
+  const poseidon = await buildPoseidon();
+  const proofInput = buildProofInput(
+    bundle.request,
+    bundle.execution,
+    poseidon,
+    secret
+  );
+  const proveStarted = nowMs();
+  const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+    proofInput.input,
+    WASM,
+    ZKEY
+  );
+  const proveMs = nowMs() - proveStarted;
+  const verificationKey = JSON.parse(fs.readFileSync(VKEY, "utf8"));
+  const verifyStarted = nowMs();
+  const verified = await snarkjs.groth16.verify(
+    verificationKey,
+    publicSignals,
+    proof
+  );
+  const verifyMs = nowMs() - verifyStarted;
+  if (!verified) throw new Error("comparison proof did not verify");
+  const calldata = JSON.parse(
+    `[${await snarkjs.groth16.exportSolidityCallData(proof, publicSignals)}]`
+  );
+  return {
+    bundle,
+    proofInput,
+    proof,
+    publicSignals,
+    a: calldata[0],
+    b: calldata[1],
+    c: calldata[2],
+    signals: calldata[3],
+    proveMs,
+    verifyMs,
+  };
+}
+
+function processorResources(bundle) {
+  const reference = bundle.reference || {};
+  return {
+    process_cpu_time_ms: Number(reference.host_process_cpu_time_ms || 0),
+    normalized_peak_cpu_percent: Number(
+      reference.host_normalized_peak_cpu_percent || 0
+    ),
+    peak_working_set_bytes: Number(reference.host_peak_rss_bytes || 0),
+    peak_private_bytes: Number(reference.host_peak_private_bytes || 0),
+  };
+}
+
+function maxResource(parent, child, field) {
+  const values = [parent?.[field], child?.[field]]
+    .map(Number)
+    .filter(Number.isFinite);
+  return values.length ? Math.max(...values) : "";
+}
+
+async function runComparisons() {
+  const rows = [];
+  for (let iteration = 0; iteration < WARMUP_REPS + COMPARISON_REPS; iteration += 1) {
+    const isWarmup = iteration < WARMUP_REPS;
+    const run = isWarmup ? iteration : iteration - WARMUP_REPS;
+    let sharedPrepared = null;
+    for (let configurationIndex = 0; configurationIndex < COMPARISON_CONFIGURATIONS.length; configurationIndex += 1) {
+      const configuration = COMPARISON_CONFIGURATIONS[configurationIndex];
+      await network.provider.send("hardhat_reset");
+      const metric = newMetric();
+      let processorBundle = null;
+      let directLatencyMs = 0;
+      let proofOverheadMs = 0;
+      let attestationOverheadMs = 0;
+      let budgetOverheadMs = 0;
+      let failureStatus = "";
+
+      let accessSystem = null;
+      let proofSystem = null;
+      let fullSystem = null;
+      if (configuration === "Access Ledger") {
+        accessSystem = {
+          registry: await deployContract("DataRegistry"),
+          access: await deployContract("AccessController"),
+          audit: await deployContract("AuditLedger"),
+        };
+      } else if (configuration === "ZK Release") {
+        const native = await deployContract("Phase7Groth16Verifier");
+        proofSystem = {
+          adapter: await deployContract("ComplianceVerifier", await native.getAddress()),
+        };
+      } else if (configuration === "TrustCircuit") {
+        fullSystem = await deploySystem();
+      }
+
+      const resourceSampler = new ProcessResourceSampler().start();
+      const directStarted = nowMs();
+      try {
+        if (configuration === "Access Ledger") {
+          const [, consumer] = await ethers.getSigners();
+          if (!sharedPrepared) throw new Error("TEE-only shared comparison sample was not prepared");
+          const context = preparedContext(sharedPrepared);
+          await transaction(metric, "access", accessSystem.registry.registerAssetV2(
+            context.assetKey,
+            hex(123n),
+            context.dataHash,
+            context.policyHash,
+            context.values.policy_version
+          ));
+          await transaction(metric, "access", accessSystem.access.connect(consumer).requestAccessV2(
+            context.requestKey,
+            context.assetKey,
+            context.values.consumer_id,
+            hex(321n),
+            context.policyHash,
+            context.values.policy_version,
+            context.values.function_id,
+            context.values.actual_privacy_cost_fixed
+          ));
+          await transaction(metric, "access", accessSystem.access.approveRequest(context.requestKey));
+          await transaction(metric, "access", accessSystem.access.completeRequest(context.requestKey));
+          await transaction(metric, "audit", accessSystem.audit.recordAudit(
+            context.requestKey,
+            context.assetKey,
+            6,
+            context.evidence.attestationDigest
+          ));
+        } else if (configuration === "TEE-only") {
+          processorBundle = createComparisonProcessorSample("tee_only", iteration);
+          const poseidon = await buildPoseidon();
+          sharedPrepared = {
+            bundle: processorBundle,
+            proofInput: buildProofInput(
+              processorBundle.request,
+              processorBundle.execution,
+              poseidon,
+              202607196000n + BigInt(iteration)
+            ),
+          };
+          attestationOverheadMs = (
+            Number(processorBundle.execution.timings_us.attestation || 0) +
+            Number(processorBundle.client_timings_us.attestation_validation_wall || 0)
+          ) / 1000;
+        } else if (configuration === "Local DP Ledger") {
+          processorBundle = createComparisonProcessorSample(
+            "local_dp_ledger",
+            iteration
+          );
+          budgetOverheadMs = Number(
+            processorBundle.local_budget.accounting_latency_us || 0
+          ) / 1000;
+        } else if (configuration === "ZK Release") {
+          if (!sharedPrepared) throw new Error("TEE-only shared comparison sample was not prepared");
+          const item = await proveComparisonBundle(
+            sharedPrepared.bundle,
+            202607198000n + BigInt(iteration)
+          );
+          const context = preparedContext(item);
+          const expected = {
+            ...context.expected,
+            attestationExpiresAtUnixMs: BigInt(Date.now() + 300_000),
+          };
+          await transaction(metric, "proof", proofSystem.adapter.registerExpectation(
+            context.requestKey,
+            expected
+          ));
+          await transaction(metric, "proof", proofSystem.adapter.submitCompliance(
+            context.requestKey,
+            item.a,
+            item.b,
+            item.c,
+            item.signals
+          ));
+          proofOverheadMs = item.proveMs + item.verifyMs +
+            Number(metric.stage_latency.proof || 0);
+        } else {
+          processorBundle = createComparisonProcessorSample("trustcircuit", iteration);
+          const item = await proveComparisonBundle(
+            processorBundle,
+            202607197000n + BigInt(iteration)
+          );
+          const setup = await setupFullRequest(fullSystem, item, metric);
+          await transaction(
+            metric,
+            "settlement",
+            fullSystem.settlement.connect(setup.consumer).settle(
+              setup.context.requestKey,
+              setup.context.evidence,
+              item.a,
+              item.b,
+              item.c,
+              item.signals
+            )
+          );
+          proofOverheadMs = item.proveMs + item.verifyMs +
+            Number(metric.stage_latency.proof || 0);
+          attestationOverheadMs = (
+            Number(processorBundle.execution.timings_us.attestation || 0) +
+            Number(processorBundle.client_timings_us.attestation_validation_wall || 0)
+          ) / 1000;
+          budgetOverheadMs = Number(metric.stage_latency.budget || 0);
+        }
+      } catch (error) {
+        failureStatus = errorReason(error);
+      }
+      directLatencyMs = nowMs() - directStarted;
+      const parentResources = resourceSampler.stop();
+      const childResources = processorBundle
+        ? processorResources(processorBundle)
+        : null;
+      const capabilities = COMPARISON_CAPABILITIES[configuration];
+      const otherLifecycleMs = Math.max(
+        directLatencyMs - proofOverheadMs - attestationOverheadMs - budgetOverheadMs,
+        0
+      );
+      rows.push({
+        measurement_type: "locally_measured",
+        timestamp_utc: new Date().toISOString(),
+        config_hash: CONFIG_HASH,
+        configuration,
+        run,
+        is_warmup: isWarmup ? 1 : 0,
+        rows: 1000,
+        function_id: 2,
+        epsilon_requested: 0.5,
+        delta_requested: 0.00001,
+        total_latency_ms: directLatencyMs,
+        throughput_req_s: 1000 / Math.max(directLatencyMs, 0.001),
+        total_gas: metric.gas.toString(),
+        proof_overhead_ms: proofOverheadMs,
+        attestation_overhead_ms: attestationOverheadMs,
+        budget_overhead_ms: budgetOverheadMs,
+        other_lifecycle_ms: otherLifecycleMs,
+        process_startup_ms: processorBundle
+          ? Number(processorBundle.client_timings_us.host_subprocess_wall || 0) / 1000 -
+            Number(processorBundle.execution.timings_us.host_total || 0) / 1000
+          : 0,
+        process_cpu_time_ms:
+          Number(parentResources.process_cpu_time_ms || 0) +
+          Number(childResources?.process_cpu_time_ms || 0),
+        normalized_peak_cpu_percent: maxResource(
+          parentResources,
+          childResources,
+          "normalized_peak_cpu_percent"
+        ),
+        peak_working_set_bytes: maxResource(
+          parentResources,
+          childResources,
+          "peak_working_set_bytes"
+        ),
+        peak_private_bytes: maxResource(
+          parentResources,
+          childResources,
+          "peak_private_bytes"
+        ),
+        security_coverage_score: securityCoverage(configuration),
+        security_coverage_total: Object.keys(capabilities).length,
+        success: failureStatus ? 0 : 1,
+        failure_status: failureStatus,
+      });
+      process.stdout.write(
+        `[phase8-chain] comparison ${configuration} iteration=${iteration}\n`
+      );
+    }
+  }
+  writeCsv(path.join(RAW, "comparison_performance.csv"), rows);
+  writeCsv(
+    path.join(RAW, "comparison_capabilities.csv"),
+    COMPARISON_CONFIGURATIONS.map((configuration) => ({
+      measurement_type: "functional_definition",
+      configuration,
+      ...COMPARISON_CAPABILITIES[configuration],
+      security_coverage_score: securityCoverage(configuration),
+    }))
+  );
+}
+
 async function main() {
+  const comparisonOnly =
+    process.argv.includes("--comparison-only") ||
+    process.env.TRUSTCIRCUIT_COMPARISON_ONLY === "1";
   for (const required of [BUNDLES, WASM, ZKEY, VKEY]) {
     if (!fs.existsSync(required)) throw new Error(`missing required artifact: ${required}`);
   }
   const started = nowMs();
-  const prepared = await prepareProofs();
-  await runConcurrency();
-  await runProtocolAttacks();
-  await runAblations(prepared[0]);
-  await runBudgetExhaustion();
+  let prepared = [];
+  if (!comparisonOnly) {
+    prepared = await prepareProofs();
+  }
+  await runComparisons();
+  if (!comparisonOnly) {
+    await runConcurrency();
+    await runProtocolAttacks();
+    await runAblations(prepared[0]);
+    await runBudgetExhaustion();
+  }
   const config = {
-    schema: "TrustCircuit.Phase8ChainExperimentConfig.v1",
+    schema: "TrustCircuit.Phase8ChainExperimentConfig.v2",
     measurement_type: "measured_local_hardhat",
     timestamp: new Date().toISOString(),
     git_commit: gitValue(["rev-parse", "HEAD"]),
@@ -775,12 +1261,22 @@ async function main() {
     concurrency_levels: CONCURRENCY_LEVELS,
     concurrency_repetitions: CONCURRENCY_REPS,
     attack_latency_repetitions: ATTACK_LATENCY_REPS,
-    ablation_runs: Math.min(5, prepared.length),
+    config_hash: CONFIG_HASH,
+    ablation_runs: ABLATION_REPS,
+    comparison_runs: COMPARISON_REPS,
+    comparison_only: comparisonOnly,
     proof_runs: prepared.length,
     node: process.version,
     platform: `${os.platform()} ${os.release()}`,
     cpu: os.cpus()[0]?.model || "unknown",
     logical_cpus: os.cpus().length,
+    resource_counters: {
+      process_cpu_time_ms: "Node.js process user+system CPU-time delta",
+      normalized_peak_cpu_percent: "5 ms sampled CPU-time delta normalized by logical CPU count; blocking operations use the normalized run average as a lower-resolution fallback",
+      peak_working_set_bytes: "Windows PeakWorkingSet64 for the benchmark process",
+      peak_private_bytes: "maximum observed Windows PrivateMemorySize64 endpoint for the benchmark process",
+      scope: "benchmark/host process; never enclave-only memory",
+    },
     duration_seconds: (nowMs() - started) / 1000,
     public_testnet: {
       executed: false,

@@ -25,7 +25,7 @@ sys.path.insert(0, str(VBS_ROOT))
 from phase7_encoding import encode_phase7_context  # noqa: E402
 from attestation_validator import attach_validated_attestation  # noqa: E402
 from pipeline_client import (  # noqa: E402
-    _run_with_peak_rss,
+    _run_with_process_metrics,
     execute_synthetic_request,
     host_path,
 )
@@ -99,12 +99,10 @@ def native_path(vbs_root: Path, configuration: str) -> Path:
 
 def invoke_json_processor(
     binary: Path, request_path: Path
-) -> tuple[dict[str, Any], int, int]:
-    started = time.perf_counter_ns()
-    completed, peak_rss = _run_with_peak_rss(
+) -> tuple[dict[str, Any], dict[str, int | float]]:
+    completed, process_metrics = _run_with_process_metrics(
         [str(binary), str(request_path)], cwd=binary.parent, timeout=30
     )
-    wall_us = (time.perf_counter_ns() - started) // 1000
     try:
         response = json.loads(completed.stdout)
     except json.JSONDecodeError as error:
@@ -114,7 +112,7 @@ def invoke_json_processor(
             f"{binary.name} rejected paired benchmark input: "
             f"{completed.stderr.strip()}"
         )
-    return response, int(wall_us), int(peak_rss)
+    return response, process_metrics
 
 
 def exact_privacy_cost_epsilon(
@@ -143,6 +141,10 @@ def main() -> int:
     parser.add_argument("--concurrency-bundles", type=int, default=32)
     parser.add_argument("--seed", type=int, default=20260719)
     args = parser.parse_args()
+    if args.performance_reps < 30 or args.privacy_reps < 30:
+        parser.error(
+            "Phase 8 retains at least 30 measured runs for performance and privacy experiments"
+        )
     if min(
         args.performance_reps,
         args.privacy_reps,
@@ -157,6 +159,22 @@ def main() -> int:
     started = time.perf_counter()
     vbs_host = host_path(VBS_ROOT, args.configuration)
     native_host = native_path(VBS_ROOT, args.configuration)
+    config_identity = {
+        "schema": "TrustCircuit.Phase8MeasurementConfig.v2",
+        "configuration": args.configuration,
+        "performance_reps": args.performance_reps,
+        "privacy_reps": args.privacy_reps,
+        "warmups": args.warmups,
+        "concurrency_bundles": args.concurrency_bundles,
+        "seed": args.seed,
+        "payload_rows": PAYLOAD_ROWS,
+        "epsilon_grid": EPSILON_GRID,
+    }
+    config_hash = hashlib.sha256(
+        json.dumps(config_identity, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+    ).hexdigest()
     performance_rows: list[dict[str, Any]] = []
     for rows in PAYLOAD_ROWS:
         for run in range(args.warmups + args.performance_reps):
@@ -218,15 +236,11 @@ def main() -> int:
                     else (("vbs", vbs_host), ("native", native_host))
                 )
                 executions: dict[str, dict[str, Any]] = {}
-                walls: dict[str, int] = {}
-                peaks: dict[str, int] = {}
+                process_metrics: dict[str, dict[str, int | float]] = {}
                 for name, binary in order:
-                    execution, wall_us, peak_rss = invoke_json_processor(
-                        binary, request_path
-                    )
+                    execution, metrics = invoke_json_processor(binary, request_path)
                     executions[name] = execution
-                    walls[name] = wall_us
-                    peaks[name] = peak_rss
+                    process_metrics[name] = metrics
 
                 validation_started = time.perf_counter_ns()
                 validated_vbs = attach_validated_attestation(
@@ -253,11 +267,15 @@ def main() -> int:
                     raise RuntimeError("Native/VBS deterministic parity failed")
                 native_timing = native["timings_us"]
                 vbs_timing = vbs["timings_us"]
-                native_wall = walls["native"]
-                vbs_wall = walls["vbs"]
+                native_metrics = process_metrics["native"]
+                vbs_metrics = process_metrics["vbs"]
+                native_wall = int(round(float(native_metrics["wall_ms"]) * 1000))
+                vbs_wall = int(round(float(vbs_metrics["wall_ms"]) * 1000))
                 performance_rows.append(
                     {
                         "measurement_type": "measured_paired",
+                        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                        "config_hash": config_hash,
                         "configuration": args.configuration,
                         "run": run,
                         "is_warmup": int(warmup),
@@ -271,7 +289,25 @@ def main() -> int:
                         "payload_sha256": payload_sha256,
                         "native_process_wall_us": native_wall,
                         "vbs_process_wall_us": vbs_wall,
+                        "native_process_startup_us": max(
+                            native_wall - int(native_timing["host_total"]), 0
+                        ),
+                        "vbs_process_startup_us": max(
+                            vbs_wall - int(vbs_timing["host_total"]), 0
+                        ),
                         "vbs_validation_wall_us": int(validation_wall_us),
+                        "native_process_cpu_time_ms": native_metrics[
+                            "process_cpu_time_ms"
+                        ],
+                        "vbs_process_cpu_time_ms": vbs_metrics[
+                            "process_cpu_time_ms"
+                        ],
+                        "native_normalized_peak_cpu_percent": native_metrics[
+                            "normalized_peak_cpu_percent"
+                        ],
+                        "vbs_normalized_peak_cpu_percent": vbs_metrics[
+                            "normalized_peak_cpu_percent"
+                        ],
                         "native_host_total_us": native_timing["host_total"],
                         "vbs_host_total_us": vbs_timing["host_total"],
                         "native_decrypt_us": native_timing["decrypt"],
@@ -293,8 +329,24 @@ def main() -> int:
                         "vbs_attestation_validation_enclave_us": vbs_timing[
                             "attestation_validation_enclave"
                         ],
-                        "native_peak_rss_bytes": peaks["native"],
-                        "vbs_peak_rss_bytes": peaks["vbs"],
+                        "native_peak_rss_bytes": native_metrics[
+                            "peak_working_set_bytes"
+                        ],
+                        "vbs_peak_rss_bytes": vbs_metrics[
+                            "peak_working_set_bytes"
+                        ],
+                        "native_peak_private_bytes": native_metrics[
+                            "peak_private_bytes"
+                        ],
+                        "vbs_peak_private_bytes": vbs_metrics[
+                            "peak_private_bytes"
+                        ],
+                        "native_resource_sample_count": native_metrics[
+                            "resource_sample_count"
+                        ],
+                        "vbs_resource_sample_count": vbs_metrics[
+                            "resource_sample_count"
+                        ],
                         "native_result_fixed": native["result_fixed"],
                         "vbs_result_fixed": vbs["result_fixed"],
                         "result_hash_match": int(
@@ -314,6 +366,7 @@ def main() -> int:
                         "vbs_slowdown_vs_native": vbs_wall / native_wall,
                         "native_ok": int(native["ok"] is True),
                         "vbs_ok": int(vbs["ok"] is True),
+                        "failure_status": "",
                     }
                 )
         print(f"[phase8-vbs] payload rows={rows} complete", flush=True)
@@ -346,6 +399,8 @@ def main() -> int:
             privacy_rows.append(
                 {
                     "measurement_type": "measured",
+                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                    "config_hash": config_hash,
                     "epsilon_requested": epsilon,
                     "delta_requested": 0.00001,
                     "run": run,
@@ -362,7 +417,30 @@ def main() -> int:
                     "host_wall_us": pipeline["client_timings_us"][
                         "host_subprocess_wall"
                     ],
+                    "host_process_startup_us": max(
+                        int(pipeline["client_timings_us"]["host_subprocess_wall"])
+                        - int(execution["timings_us"]["host_total"]),
+                        0,
+                    ),
+                    "host_process_cpu_time_ms": reference[
+                        "host_process_cpu_time_ms"
+                    ],
+                    "host_normalized_peak_cpu_percent": reference[
+                        "host_normalized_peak_cpu_percent"
+                    ],
+                    "host_peak_working_set_bytes": reference[
+                        "host_peak_rss_bytes"
+                    ],
+                    "host_peak_private_bytes": reference[
+                        "host_peak_private_bytes"
+                    ],
+                    "throughput_req_s": 1_000_000
+                    / max(
+                        int(pipeline["client_timings_us"]["host_subprocess_wall"]),
+                        1,
+                    ),
                     "ok": int(execution["ok"] is True),
+                    "failure_status": "",
                 }
             )
         print(f"[phase8-vbs] epsilon={epsilon} complete", flush=True)
@@ -411,6 +489,8 @@ def main() -> int:
             boundary_rows.append(
                 {
                     "measurement_type": "measured_with_analytical_margin",
+                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                    "config_hash": config_hash,
                     "boundary_index": boundary_index,
                     "boundary_center_fixed": center_fixed,
                     "offset_micro_epsilon": offset_micro,
@@ -534,6 +614,25 @@ def main() -> int:
         "payload_rows": PAYLOAD_ROWS,
         "epsilon_grid": EPSILON_GRID,
         "concurrency_bundles": args.concurrency_bundles,
+        "config_hash": config_hash,
+        "process_execution_mode": "one_process_per_request",
+        "process_startup_definition": (
+            "external process wall time minus the processor-reported host_total; "
+            "reported separately and never attributed to the enclave call"
+        ),
+        "resource_counters": {
+            "collector": "psutil sampled from the Python parent process",
+            "sample_interval_ms": 1,
+            "normalized_peak_cpu_percent": (
+                "maximum sampled process CPU-time delta divided by wall-time "
+                "delta and logical CPU count, clipped to [0,100]"
+            ),
+            "peak_working_set_bytes": "maximum sampled process RSS",
+            "peak_private_bytes": (
+                "maximum sampled psutil memory_full_info.private on Windows"
+            ),
+            "scope": "host process; not enclave-only memory",
+        },
         "duration_seconds": time.perf_counter() - started,
         "sanity": {
             "performance_success_rate": statistics.mean(

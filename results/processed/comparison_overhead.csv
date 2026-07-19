@@ -1,0 +1,21 @@
+configuration,stage,samples,mean_latency_ms,median_latency_ms,p95_latency_ms,bootstrap_ci95_low_ms,bootstrap_ci95_high_ms,measurement_type
+TEE-only,proof_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+TEE-only,attestation_overhead_ms,30,85.23923333333333,84.437,103.10805,82.07948166666667,88.49674166666668,locally_measured
+TEE-only,budget_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+TEE-only,other_lifecycle_ms,30,615.6085333336503,587.3951000008136,704.1951000000269,595.2322759169413,638.9145148336785,locally_measured
+Access Ledger,proof_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+Access Ledger,attestation_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+Access Ledger,budget_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+Access Ledger,other_lifecycle_ms,30,9.52947333343327,9.035050000064075,12.348804999236018,8.963250666684472,10.093222500095143,locally_measured
+ZK Release,proof_overhead_ms,30,293.4551666667685,281.4425500007346,392.0505749996752,279.5811004173166,309.02382433317445,locally_measured
+ZK Release,attestation_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+ZK Release,budget_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+ZK Release,other_lifecycle_ms,30,365.13782333334285,325.38544999901205,467.8321850011125,342.6605866661342,388.36585391694217,locally_measured
+Local DP Ledger,proof_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+Local DP Ledger,attestation_overhead_ms,30,0.0,0.0,0.0,0.0,0.0,locally_measured
+Local DP Ledger,budget_overhead_ms,30,0.0014333333333333333,0.001,0.002,0.0012666666666666666,0.0016,locally_measured
+Local DP Ledger,other_lifecycle_ms,30,174.43428333325832,173.51310000026226,189.418880000855,171.61159624969534,177.33530591664575,locally_measured
+TrustCircuit,proof_overhead_ms,30,250.7114266667515,240.93240000121295,307.76858499888334,240.449800583447,262.9646516665692,locally_measured
+TrustCircuit,attestation_overhead_ms,30,83.45009999999999,82.235,95.52165000000001,79.9527675,87.4450925,locally_measured
+TrustCircuit,budget_overhead_ms,30,3.4713599998503923,3.317999999038875,4.492599999252707,3.292941166839252,3.650125916162506,locally_measured
+TrustCircuit,other_lifecycle_ms,30,643.4544699999979,601.5899999986589,751.8400299987718,615.6926224998102,671.9743331661558,locally_measured

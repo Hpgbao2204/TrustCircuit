@@ -1,6 +1,7 @@
 {
-  "timestamp": "2026-07-18T23:12:20.814Z",
-  "git_commit": "666dd5c4f4ed3e5b3d25368e5b46fc218690305c",
+  "schema": "TrustCircuit.Phase8ZkBackendConfig.v2",
+  "timestamp": "2026-07-19T11:03:53.542Z",
+  "git_commit": "b82df429db76d5162bfcc57865ffa5279f1f3482",
   "git_dirty": true,
   "seed": null,
   "input_generation": "deterministic fixed Phase 7 witness",
@@ -14,8 +15,9 @@
   "rules": 2,
   "budget_bits": 64,
   "ptau_power": 16,
-  "reps": 12,
+  "reps": 30,
   "warmups": 2,
+  "config_hash": "565e52fcb30bb38bdcd69403a8afa8ec4be437e3945b73ce230e5a366c14defb",
   "circom_version": "circom compiler 2.2.2",
   "snarkjs_version": "0.7.5",
   "node": "v22.13.0",
@@ -23,5 +25,7 @@
   "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
   "cpus": 16,
   "measurement_type": "measured",
+  "execution_mode": "persistent Node.js process; per-operation process startup is zero and setup is excluded",
+  "resource_scope": "Node.js prover process; not enclave memory",
   "note": "Same Phase 7 compliance circuit instantiated under Groth16/PLONK/fflonk; local Windows measurement after warm-up runs."
 }

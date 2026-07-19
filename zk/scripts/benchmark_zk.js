@@ -18,11 +18,13 @@
  */
 
 const fs = require("fs");
+const crypto = require("crypto");
 const path = require("path");
 const os = require("os");
 const { execFileSync } = require("child_process");
 const snarkjs = require("snarkjs");
 const { buildPoseidon } = require("circomlibjs");
+const { ProcessResourceSampler } = require("../../benchmarks/process_metrics");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const CIRCOM = path.join(ROOT, "tools", "circom.exe");
@@ -30,16 +32,25 @@ const SNARKJS_CLI = path.join(ROOT, "node_modules", "snarkjs", "build", "cli.cjs
 const CIRCOMLIB = path.join(ROOT, "node_modules", "circomlib", "circuits");
 const BUILD = path.join(ROOT, "zk", "build");
 const RAW = path.join(ROOT, "results", "raw", "phase8", "zk_scaling.csv");
+const RAW_RUNS = path.join(ROOT, "results", "raw", "phase8", "zk_scaling_runs.csv");
 const SUMMARY = path.join(ROOT, "results", "processed", "zk_scaling.csv");
 const CONFIG = path.join(ROOT, "results", "raw", "phase8", "zk_scaling_config.json");
 const SOLIDITY = path.join(ROOT, "contracts", "ComplianceGroth16Verifier.sol");
 
 const RULE_SIZES = [1, 2, 4, 6, 8, 10];
 const BASE_RULES = 2;
-const PROVE_REPS = 12;
+const PROVE_REPS = 30;
 const PROVE_WARMUPS = 2;
 const PTAU_POWER = 15;
 const BUDGET_BITS = 64;
+const CONFIG_HASH = crypto.createHash("sha256").update(JSON.stringify({
+  schema: "TrustCircuit.Phase8ZkScalingConfig.v2",
+  rule_sizes: RULE_SIZES,
+  prove_reps: PROVE_REPS,
+  prove_warmups: PROVE_WARMUPS,
+  ptau_power: PTAU_POWER,
+  budget_bits: BUDGET_BITS,
+})).digest("hex");
 
 function sh(cmd, args) {
   return execFileSync(cmd, args, { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1 << 26 }).toString();
@@ -174,6 +185,7 @@ async function main() {
 
   const poseidon = await buildPoseidon();
   const rows = [];
+  const runRows = [];
 
   for (const nRules of RULE_SIZES) {
     console.log(`[zk] circuit nRules=${nRules}`);
@@ -205,28 +217,62 @@ async function main() {
     const verifyTimes = [];
     let proofBytes = 0;
     let peakRss = 0;
+    let peakPrivateBytes = 0;
     let lastProof = null;
     let lastPublic = null;
-    for (let i = 0; i < PROVE_WARMUPS; i++) {
-      const warmed = await snarkjs.groth16.prove(zkey, wtns);
-      if (!(await snarkjs.groth16.verify(vkey, warmed.publicSignals, warmed.proof))) {
-        throw new Error(`warm-up verify failed for ${name}`);
-      }
-    }
-    for (let i = 0; i < PROVE_REPS; i++) {
+    for (let iteration = 0; iteration < PROVE_WARMUPS + PROVE_REPS; iteration++) {
+      const isWarmup = iteration < PROVE_WARMUPS;
+      const run = isWarmup ? iteration : iteration - PROVE_WARMUPS;
+      const resourceSampler = new ProcessResourceSampler().start();
       const t0 = process.hrtime.bigint();
       const { proof, publicSignals } = await snarkjs.groth16.prove(zkey, wtns);
       const t1 = process.hrtime.bigint();
-      proveTimes.push(Number(t1 - t0) / 1e6);
+      const proveMs = Number(t1 - t0) / 1e6;
       lastProof = proof;
       lastPublic = publicSignals;
       const v0 = process.hrtime.bigint();
       const ok = await snarkjs.groth16.verify(vkey, publicSignals, proof);
       const v1 = process.hrtime.bigint();
-      verifyTimes.push(Number(v1 - v0) / 1e6);
+      const verifyMs = Number(v1 - v0) / 1e6;
+      const processResources = resourceSampler.stop();
       if (!ok) throw new Error(`verify failed for ${name}`);
-      peakRss = Math.max(peakRss, process.memoryUsage().rss);
+      if (!isWarmup) {
+        proveTimes.push(proveMs);
+        verifyTimes.push(verifyMs);
+      }
+      peakRss = Math.max(peakRss, processResources.peak_working_set_bytes);
+      peakPrivateBytes = Math.max(
+        peakPrivateBytes,
+        Number(processResources.peak_private_bytes || 0)
+      );
       proofBytes = Buffer.byteLength(JSON.stringify({ proof, publicSignals }));
+      runRows.push({
+        measurement_type: "locally_measured",
+        timestamp_utc: new Date().toISOString(),
+        config_hash: CONFIG_HASH,
+        scheme: "groth16",
+        curve: "bn128",
+        circuit: name,
+        n_rules: nRules,
+        run,
+        is_warmup: isWarmup ? 1 : 0,
+        constraints,
+        witness_size_bytes: fileSize(wtns),
+        public_inputs: publicSignals.length,
+        proof_size_bytes: proofBytes,
+        prove_time_ms: proveMs,
+        verify_time_ms: verifyMs,
+        process_startup_ms: 0,
+        process_cpu_time_ms: processResources.process_cpu_time_ms,
+        normalized_peak_cpu_percent:
+          processResources.normalized_peak_cpu_percent,
+        peak_working_set_bytes: processResources.peak_working_set_bytes,
+        peak_private_bytes: processResources.peak_private_bytes ?? "",
+        resource_sample_count: processResources.resource_sample_count,
+        throughput_proofs_s: 1000 / Math.max(proveMs + verifyMs, 0.001),
+        verified: 1,
+        failure_status: "",
+      });
     }
 
     // negative cases: witness generation / verification must fail
@@ -253,6 +299,7 @@ async function main() {
       circuit: name,
       n_rules: nRules,
       constraints,
+      witness_size_bytes: fileSize(wtns),
       public_inputs: lastPublic ? lastPublic.length : 0,
       proof_size_bytes: proofBytes,
       prove_time_ms_mean: mean(proveTimes),
@@ -264,6 +311,7 @@ async function main() {
       verification_key_bytes: fileSize(vkeyPath),
       r1cs_bytes: fileSize(r1cs),
       peak_rss_mb: peakRss / (1024 * 1024),
+      peak_private_mb: peakPrivateBytes / (1024 * 1024),
       reps: PROVE_REPS,
       warmups: PROVE_WARMUPS,
       reject_invalid_policy: negatives.invalid_policy,
@@ -285,11 +333,20 @@ async function main() {
   // write raw csv
   const headers = Object.keys(rows[0]);
   fs.writeFileSync(RAW, [headers.join(","), ...rows.map((r) => headers.map((h) => r[h]).join(","))].join("\n") + "\n");
+  const runHeaders = Object.keys(runRows[0]);
+  fs.writeFileSync(
+    RAW_RUNS,
+    [
+      runHeaders.join(","),
+      ...runRows.map((row) => runHeaders.map((header) => row[header]).join(",")),
+    ].join("\n") + "\n"
+  );
 
   // summary == same rows here (one row per circuit); keep both for the pipeline
   fs.writeFileSync(SUMMARY, [headers.join(","), ...rows.map((r) => headers.map((h) => r[h]).join(","))].join("\n") + "\n");
 
   fs.writeFileSync(CONFIG, JSON.stringify({
+    schema: "TrustCircuit.Phase8ZkScalingConfig.v2",
     timestamp: new Date().toISOString(),
     git_commit: gitValue(["rev-parse", "HEAD"]),
     git_dirty: gitValue(["status", "--porcelain"]).length > 0,
@@ -304,6 +361,7 @@ async function main() {
     base_rules: BASE_RULES,
     prove_reps: PROVE_REPS,
     prove_warmups: PROVE_WARMUPS,
+    config_hash: CONFIG_HASH,
     circom_version: sh(CIRCOM, ["--version"]).trim(),
     snarkjs_version: require(path.join(ROOT, "node_modules", "snarkjs", "package.json")).version,
     node: process.version,
@@ -311,6 +369,8 @@ async function main() {
     cpu: os.cpus()[0]?.model || "unknown",
     cpus: os.cpus().length,
     measurement_type: "measured",
+    execution_mode: "persistent Node.js process; process startup is zero for each retained operation and setup is excluded",
+    resource_scope: "Node.js prover process; not enclave memory",
     note: "Real Phase 7 Groth16 over BN254 with Poseidon; local Windows measurement after warm-up runs.",
   }, null, 2));
 

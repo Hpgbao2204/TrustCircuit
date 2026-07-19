@@ -21,11 +21,13 @@
  */
 
 const fs = require("fs");
+const crypto = require("crypto");
 const path = require("path");
 const os = require("os");
 const { execFileSync } = require("child_process");
 const snarkjs = require("snarkjs");
 const { buildPoseidon } = require("circomlibjs");
+const { ProcessResourceSampler } = require("../../benchmarks/process_metrics");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const CIRCOM = path.join(ROOT, "tools", "circom.exe");
@@ -33,13 +35,14 @@ const SNARKJS_CLI = path.join(ROOT, "node_modules", "snarkjs", "build", "cli.cjs
 const CIRCOMLIB = path.join(ROOT, "node_modules", "circomlib", "circuits");
 const BUILD = path.join(ROOT, "zk", "build");
 const RAW = path.join(ROOT, "results", "raw", "phase8", "zk_backends.csv");
+const RAW_RUNS = path.join(ROOT, "results", "raw", "phase8", "zk_backend_runs.csv");
 const SUMMARY = path.join(ROOT, "results", "processed", "zk_backends.csv");
 const CONFIG = path.join(ROOT, "results", "raw", "phase8", "zk_backends_config.json");
 
 const PTAU_POWER = 16;
 const BUDGET_BITS = 64;
 const RULES = 2;
-const REPS = 12;
+const REPS = 30;
 const WARMUPS = 2;
 
 const SCHEMES = [
@@ -47,6 +50,14 @@ const SCHEMES = [
   { name: "plonk", setupModel: "universal", solidity: "CompliancePlonkVerifier.sol" },
   { name: "fflonk", setupModel: "universal", solidity: "ComplianceFflonkVerifier.sol" },
 ];
+const CONFIG_HASH = crypto.createHash("sha256").update(JSON.stringify({
+  schema: "TrustCircuit.Phase8ZkBackendConfig.v2",
+  schemes: SCHEMES.map((scheme) => scheme.name),
+  rules: RULES,
+  reps: REPS,
+  warmups: WARMUPS,
+  ptau_power: PTAU_POWER,
+})).digest("hex");
 
 function gitValue(args) {
   return execFileSync("git", args, {
@@ -122,6 +133,7 @@ component main {public [requestId, assetId, consumerId, policyHash, policyVersio
   await snarkjs.wtns.calculate(input, wasm, wtns);
 
   const rows = [];
+  const runRows = [];
   for (const scheme of SCHEMES) {
     console.log(`[zk-cmp] scheme=${scheme.name}`);
     const zkey = path.join(BUILD, `${name}_${scheme.name}.zkey`);
@@ -140,26 +152,61 @@ component main {public [requestId, assetId, consumerId, policyHash, policyVersio
       const vkey = JSON.parse(fs.readFileSync(vkeyPath, "utf8"));
 
       const proveTimes = [], verifyTimes = [];
-      let proofBytes = 0, peakRss = 0, lastProof = null, lastPublic = null;
-      for (let i = 0; i < WARMUPS; i++) {
-        const warmed = await snarkjs[scheme.name].prove(zkey, wtns);
-        if (!(await snarkjs[scheme.name].verify(vkey, warmed.publicSignals, warmed.proof))) {
-          throw new Error(`warm-up verify failed for ${scheme.name}`);
-        }
-      }
-      for (let i = 0; i < REPS; i++) {
+      let proofBytes = 0, peakRss = 0, peakPrivateBytes = 0;
+      let lastProof = null, lastPublic = null;
+      for (let iteration = 0; iteration < WARMUPS + REPS; iteration++) {
+        const isWarmup = iteration < WARMUPS;
+        const run = isWarmup ? iteration : iteration - WARMUPS;
+        const resourceSampler = new ProcessResourceSampler().start();
         const t0 = process.hrtime.bigint();
         const { proof, publicSignals } = await snarkjs[scheme.name].prove(zkey, wtns);
         const t1 = process.hrtime.bigint();
-        proveTimes.push(Number(t1 - t0) / 1e6);
+        const proveMs = Number(t1 - t0) / 1e6;
         const v0 = process.hrtime.bigint();
         const ok = await snarkjs[scheme.name].verify(vkey, publicSignals, proof);
         const v1 = process.hrtime.bigint();
-        verifyTimes.push(Number(v1 - v0) / 1e6);
+        const verifyMs = Number(v1 - v0) / 1e6;
+        const processResources = resourceSampler.stop();
         if (!ok) throw new Error(`verify failed for ${scheme.name}`);
-        peakRss = Math.max(peakRss, process.memoryUsage().rss);
+        if (!isWarmup) {
+          proveTimes.push(proveMs);
+          verifyTimes.push(verifyMs);
+        }
+        peakRss = Math.max(peakRss, processResources.peak_working_set_bytes);
+        peakPrivateBytes = Math.max(
+          peakPrivateBytes,
+          Number(processResources.peak_private_bytes || 0)
+        );
         proofBytes = Buffer.byteLength(JSON.stringify({ proof, publicSignals }));
         lastProof = proof; lastPublic = publicSignals;
+        runRows.push({
+          measurement_type: "locally_measured",
+          timestamp_utc: new Date().toISOString(),
+          config_hash: CONFIG_HASH,
+          scheme: scheme.name,
+          setup_model: scheme.setupModel,
+          curve: "bn128",
+          run,
+          is_warmup: isWarmup ? 1 : 0,
+          constraints,
+          witness_size_bytes: fileSize(wtns),
+          public_inputs: publicSignals.length,
+          proof_size_bytes: proofBytes,
+          proving_key_bytes: fileSize(zkey),
+          verification_key_bytes: fileSize(vkeyPath),
+          prove_time_ms: proveMs,
+          verify_time_ms: verifyMs,
+          process_startup_ms: 0,
+          process_cpu_time_ms: processResources.process_cpu_time_ms,
+          normalized_peak_cpu_percent:
+            processResources.normalized_peak_cpu_percent,
+          peak_working_set_bytes: processResources.peak_working_set_bytes,
+          peak_private_bytes: processResources.peak_private_bytes ?? "",
+          resource_sample_count: processResources.resource_sample_count,
+          throughput_proofs_s: 1000 / Math.max(proveMs + verifyMs, 0.001),
+          verified: 1,
+          failure_status: "",
+        });
       }
 
       // export Solidity verifier + calldata
@@ -180,6 +227,7 @@ component main {public [requestId, assetId, consumerId, policyHash, policyVersio
         setup_model: scheme.setupModel,
         curve: "bn128",
         constraints,
+        witness_size_bytes: fileSize(wtns),
         public_inputs: lastPublic.length,
         proof_size_bytes: proofBytes,
         prove_time_ms_mean: mean(proveTimes).toFixed(3),
@@ -188,6 +236,7 @@ component main {public [requestId, assetId, consumerId, policyHash, policyVersio
         proving_key_bytes: fileSize(zkey),
         verification_key_bytes: fileSize(vkeyPath),
         peak_rss_mb: (peakRss / (1024 * 1024)).toFixed(1),
+        peak_private_mb: (peakPrivateBytes / (1024 * 1024)).toFixed(1),
         reps: REPS,
         warmups: WARMUPS,
         calldata_exported: calldataOk,
@@ -207,7 +256,14 @@ component main {public [requestId, assetId, consumerId, policyHash, policyVersio
   const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => r[h]).join(","))].join("\n") + "\n";
   fs.writeFileSync(RAW, csv);
   fs.writeFileSync(SUMMARY, csv);
+  const runHeaders = Object.keys(runRows[0]);
+  const runCsv = [
+    runHeaders.join(","),
+    ...runRows.map((row) => runHeaders.map((header) => row[header]).join(",")),
+  ].join("\n") + "\n";
+  fs.writeFileSync(RAW_RUNS, runCsv);
   fs.writeFileSync(CONFIG, JSON.stringify({
+    schema: "TrustCircuit.Phase8ZkBackendConfig.v2",
     timestamp: new Date().toISOString(),
     git_commit: gitValue(["rev-parse", "HEAD"]),
     git_dirty: gitValue(["status", "--porcelain"]).length > 0,
@@ -215,11 +271,14 @@ component main {public [requestId, assetId, consumerId, policyHash, policyVersio
     input_generation: "deterministic fixed Phase 7 witness",
     schemes: SCHEMES.map((s) => s.name), curve: "bn128", hash: "poseidon",
     rules: RULES, budget_bits: BUDGET_BITS, ptau_power: PTAU_POWER, reps: REPS, warmups: WARMUPS,
+    config_hash: CONFIG_HASH,
     circom_version: sh(CIRCOM, ["--version"]).trim(),
     snarkjs_version: require(path.join(ROOT, "node_modules", "snarkjs", "package.json")).version,
     node: process.version, platform: `${os.platform()} ${os.release()}`,
     cpu: os.cpus()[0]?.model || "unknown", cpus: os.cpus().length,
     measurement_type: "measured",
+    execution_mode: "persistent Node.js process; per-operation process startup is zero and setup is excluded",
+    resource_scope: "Node.js prover process; not enclave memory",
     note: "Same Phase 7 compliance circuit instantiated under Groth16/PLONK/fflonk; local Windows measurement after warm-up runs.",
   }, null, 2));
   console.log(RAW);

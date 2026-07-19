@@ -1,4 +1,4 @@
-scheme,setup_model,curve,constraints,public_inputs,proof_size_bytes,prove_time_ms_mean,prove_time_ms_std,verify_time_ms_mean,proving_key_bytes,verification_key_bytes,peak_rss_mb,reps,warmups,calldata_exported
-groth16,per-circuit,bn128,3445,11,892,132.929,11.416,11.106,1510173,4758,691.7,12,2,true
-plonk,universal,bn128,3445,11,2263,3417.671,34.695,10.283,25578072,2041,758.9,12,2,true
-fflonk,universal,bn128,3445,11,2265,4107.779,50.399,7.133,31870012,1104,1140.4,12,2,true
+scheme,setup_model,curve,constraints,witness_size_bytes,public_inputs,proof_size_bytes,prove_time_ms_mean,prove_time_ms_std,verify_time_ms_mean,proving_key_bytes,verification_key_bytes,peak_rss_mb,peak_private_mb,reps,warmups,calldata_exported
+groth16,per-circuit,bn128,3445,110668,11,889,166.376,15.274,14.852,1510173,4756,714.1,2149.2,30,2,true
+plonk,universal,bn128,3445,110668,11,2271,4948.777,83.613,12.646,25578072,2041,842.9,915.7,30,2,true
+fflonk,universal,bn128,3445,110668,11,2265,5513.344,388.143,9.167,31870012,1104,1252.7,1303.6,30,2,true

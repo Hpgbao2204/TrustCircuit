@@ -1,8 +1,8 @@
 {
-  "schema": "TrustCircuit.Phase8ChainExperimentConfig.v1",
+  "schema": "TrustCircuit.Phase8ChainExperimentConfig.v2",
   "measurement_type": "measured_local_hardhat",
-  "timestamp": "2026-07-19T09:34:47.089Z",
-  "git_commit": "a6ff00e7aa23dc39c631ffee777a71d38e596bd3",
+  "timestamp": "2026-07-19T11:15:39.958Z",
+  "git_commit": "b82df429db76d5162bfcc57865ffa5279f1f3482",
   "git_dirty": true,
   "seed": 20260719,
   "warmups": {
@@ -20,13 +20,23 @@
   ],
   "concurrency_repetitions": 30,
   "attack_latency_repetitions": 30,
-  "ablation_runs": 5,
-  "proof_runs": 32,
+  "config_hash": "ea091c96144cb733288085c0aa09e1893c72f7a689eb8649f66e8f0d052be86c",
+  "ablation_runs": 30,
+  "comparison_runs": 30,
+  "comparison_only": true,
+  "proof_runs": 0,
   "node": "v22.13.0",
   "platform": "win32 10.0.26200",
   "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
   "logical_cpus": 16,
-  "duration_seconds": 72.22490150000061,
+  "resource_counters": {
+    "process_cpu_time_ms": "Node.js process user+system CPU-time delta",
+    "normalized_peak_cpu_percent": "5 ms sampled CPU-time delta normalized by logical CPU count; blocking operations use the normalized run average as a lower-resolution fallback",
+    "peak_working_set_bytes": "Windows PeakWorkingSet64 for the benchmark process",
+    "peak_private_bytes": "maximum observed Windows PrivateMemorySize64 endpoint for the benchmark process",
+    "scope": "benchmark/host process; never enclave-only memory"
+  },
+  "duration_seconds": 156.13198870000056,
   "public_testnet": {
     "executed": false,
     "reason": "hardhat.config.js defines only the local hardhat network; no repository testnet RPC/account configuration exists"
