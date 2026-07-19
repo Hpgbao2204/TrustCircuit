@@ -1,6 +1,6 @@
 {
   "schema": "TrustCircuit.ProcessedExperimentInventory.v1",
-  "generated_at": "2026-07-18T23:12:21.062215+00:00",
+  "generated_at": "2026-07-19T09:35:10.187326+00:00",
   "raw_root": "results/raw/phase8",
   "processed_files": [
     "results/processed/e2e_ablation_summary.csv",
@@ -10,10 +10,15 @@
     "results/processed/vbs_stage_breakdown.csv",
     "results/processed/vbs_attestation_overhead.csv",
     "results/processed/dp_error_summary.csv",
+    "results/processed/dp_rounding_margin.csv",
     "results/processed/dp_rounding_summary.csv",
     "results/processed/dp_composition.csv",
+    "results/processed/budget_exhaustion_trajectory.csv",
     "results/processed/budget_exhaustion_summary.csv",
+    "results/processed/protocol_attack_latency.csv",
     "results/processed/protocol_attack_summary.csv",
+    "results/processed/attack_binding_matrix.csv",
+    "results/processed/settlement_concurrency_trials.csv",
     "results/processed/settlement_concurrency_summary.csv",
     "results/processed/zk_scaling.csv",
     "results/processed/zk_backends.csv",
@@ -21,7 +26,11 @@
   ],
   "measurement_labels": {
     "measured": "direct structured timing or local-chain receipt",
+    "measured_paired": "paired Native/VBS executions over byte-identical payloads",
     "measured_enclave_tsc": "enclave TSC timing calibrated by the host",
+    "measured_with_analytical_margin": "measured fixed-point output minus its unsmoothed analytical value",
+    "measured_local_hardhat": "direct local Hardhat receipt or high-resolution wall timing",
+    "functional_test_evidence": "first-rejecting-layer classification backed by named passing tests",
     "analytical_from_measured_cost": "RDP formula using measured fixed-point cost",
     "model_calibrated_from_measured_components": "sum/substitution of separately measured components",
     "not_executed": "dependency/configuration absent; no number fabricated"

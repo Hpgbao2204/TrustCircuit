@@ -1,0 +1,51 @@
+{
+  "schema": "TrustCircuit.AttackLayerAudit.v1",
+  "measurement_type": "functional_test_evidence",
+  "timestamp": "2026-07-19T09:35:09.936658+00:00",
+  "git_commit": "a6ff00e7aa23dc39c631ffee777a71d38e596bd3",
+  "git_dirty": true,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "layers": [
+    "enclave",
+    "attestation_validator",
+    "circuit_adapter",
+    "solidity_settlement"
+  ],
+  "cases": 25,
+  "suites": [
+    {
+      "name": "phase4",
+      "command": [
+        "python",
+        "D:\\1\\TrustCircuit\\tee\\vbs\\tests\\phase4_encrypted_path.py",
+        "--configuration",
+        "Debug",
+        "-v"
+      ],
+      "exit_code": 0,
+      "output_sha256": "8fb54ef7549c6fc578d12f90950e8ac76c90bd88e88718b67e24cbb978bb1da7"
+    },
+    {
+      "name": "phase6",
+      "command": [
+        "python",
+        "D:\\1\\TrustCircuit\\tee\\vbs\\tests\\phase6_attestation.py",
+        "--configuration",
+        "Debug",
+        "-v"
+      ],
+      "exit_code": 0,
+      "output_sha256": "1ab4cf8eb74c88e1190f415dc9da0f52b33f9bd7fbee483d68856cc4d64fd885"
+    },
+    {
+      "name": "hardhat",
+      "command": [
+        "npm.cmd",
+        "test"
+      ],
+      "exit_code": 0,
+      "output_sha256": "1263f4ce766cd48674b104972a5e7595638391b52cc67c0300b798c2eabf318b"
+    }
+  ],
+  "interpretation": "A one marks the earliest layer whose named rejection test passed; zero cells are not claims that later layers accepted the attack."
+}

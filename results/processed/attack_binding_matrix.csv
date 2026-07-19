@@ -1,0 +1,26 @@
+measurement_type,attack_case,first_rejecting_layer,source_suite,source_test,test_passed,enclave,attestation_validator,circuit_adapter,solidity_settlement
+functional_test_evidence,ciphertext_tampering,enclave,phase4,test_ciphertext_tampering_is_rejected,1,1,0,0,0
+functional_test_evidence,nonce_tampering,enclave,phase4,test_nonce_tampering_is_rejected,1,1,0,0,0
+functional_test_evidence,authentication_tag_tampering,enclave,phase4,test_authentication_tag_tampering_is_rejected,1,1,0,0,0
+functional_test_evidence,aad_context_tampering,enclave,phase4,test_aad_tampering_is_rejected,1,1,0,0,0
+functional_test_evidence,committed_hash_tampering,enclave,phase4,test_wrong_committed_data_hash_is_rejected,1,1,0,0,0
+functional_test_evidence,request_id_substitution,attestation_validator,phase6,test_changed_request_id_is_rejected,1,0,1,0,0
+functional_test_evidence,asset_id_substitution,attestation_validator,phase6,test_changed_asset_id_is_rejected,1,0,1,0,0
+functional_test_evidence,consumer_id_substitution,attestation_validator,phase6,test_changed_consumer_id_is_rejected,1,0,1,0,0
+functional_test_evidence,policy_hash_substitution,attestation_validator,phase6,test_changed_policy_hash_is_rejected,1,0,1,0,0
+functional_test_evidence,policy_version_substitution,attestation_validator,phase6,test_changed_policy_version_is_rejected,1,0,1,0,0
+functional_test_evidence,function_id_substitution,attestation_validator,phase6,test_changed_function_id_is_rejected,1,0,1,0,0
+functional_test_evidence,result_hash_substitution,attestation_validator,phase6,test_changed_result_hash_is_rejected,1,0,1,0,0
+functional_test_evidence,transcript_substitution,attestation_validator,phase6,test_substituted_transcript_is_rejected,1,0,1,0,0
+functional_test_evidence,enclave_identity_substitution,attestation_validator,phase6,test_wrong_enclave_identity_is_rejected,1,0,1,0,0
+functional_test_evidence,attestation_substitution,attestation_validator,phase6,test_substituted_native_evidence_is_rejected,1,0,1,0,0
+functional_test_evidence,stale_attestation,attestation_validator,phase6,test_stale_evidence_is_rejected,1,0,1,0,0
+functional_test_evidence,public_asset_mismatch,circuit_adapter,hardhat,rejects wrong asset,1,0,0,1,0
+functional_test_evidence,public_consumer_mismatch,circuit_adapter,hardhat,rejects wrong consumer,1,0,0,1,0
+functional_test_evidence,public_policy_mismatch,circuit_adapter,hardhat,rejects wrong policy,1,0,0,1,0
+functional_test_evidence,public_result_mismatch,circuit_adapter,hardhat,rejects wrong result,1,0,0,1,0
+functional_test_evidence,over_budget,circuit_adapter,hardhat,rejects over-budget settlement,1,0,0,1,0
+functional_test_evidence,proof_tampering,circuit_adapter,hardhat,rejects a tampered Groth16 proof,1,0,0,1,0
+functional_test_evidence,nullifier_replay,circuit_adapter,hardhat,rejects a replay,1,0,0,1,0
+functional_test_evidence,caller_substitution,solidity_settlement,hardhat,rejects a wrong consumer address,1,0,0,0,1
+functional_test_evidence,request_key_substitution,solidity_settlement,hardhat,rejects a wrong request,1,0,0,0,1

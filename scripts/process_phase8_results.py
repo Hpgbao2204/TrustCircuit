@@ -54,9 +54,14 @@ def group_by(rows: list[dict[str, str]], key: str) -> dict[str, list[dict[str, s
 def summarize_ablation() -> list[Path]:
     raw = read_csv("e2e_ablation.csv")
     summary: list[dict[str, Any]] = []
+    stage_matrix_rows: list[dict[str, Any]] = []
+    gas_matrix_rows: list[dict[str, Any]] = []
+    stage_names = ("access", "budget", "tee", "proof", "settlement", "audit")
+    gas_stage_names = ("access", "budget", "proof", "settlement", "audit")
     for variant, rows in group_by(raw, "variant").items():
         latencies = [float(row["total_latency_ms"]) for row in rows]
         gas = [float(row["total_gas"]) for row in rows]
+        throughputs = [float(row["throughput_req_s"]) for row in rows]
         summary.append(
             {
                 "variant": variant,
@@ -66,13 +71,39 @@ def summarize_ablation() -> list[Path]:
                 "std_latency_ms": statistics.stdev(latencies) if len(latencies) > 1 else 0,
                 "p50_latency_ms": percentile(latencies, 50),
                 "p95_latency_ms": percentile(latencies, 95),
-                "mean_throughput_req_s": statistics.mean(
-                    float(row["throughput_req_s"]) for row in rows
-                ),
+                "mean_throughput_req_s": statistics.mean(throughputs),
+                "std_throughput_req_s": statistics.stdev(throughputs)
+                if len(throughputs) > 1
+                else 0,
+                "p50_throughput_req_s": percentile(throughputs, 50),
+                "p95_throughput_req_s": percentile(throughputs, 95),
                 "mean_total_gas": statistics.mean(gas),
                 "success_rate": statistics.mean(float(row["success"]) for row in rows),
             }
         )
+        for stage in stage_names:
+            values = [float(row[f"{stage}_latency_ms"]) for row in rows]
+            stage_matrix_rows.append(
+                {
+                    "variant": variant,
+                    "stage": stage,
+                    "runs": len(rows),
+                    "mean_latency_ms": statistics.mean(values),
+                    "p95_latency_ms": percentile(values, 95),
+                    "measurement_type": rows[0]["measurement_type"],
+                }
+            )
+        for stage in gas_stage_names:
+            values = [float(row[f"{stage}_gas"]) for row in rows]
+            gas_matrix_rows.append(
+                {
+                    "variant": variant,
+                    "stage": stage,
+                    "runs": len(rows),
+                    "mean_gas": statistics.mean(values),
+                    "measurement_type": rows[0]["measurement_type"],
+                }
+            )
     variant_order = {
         name: index
         for index, name in enumerate(
@@ -88,7 +119,6 @@ def summarize_ablation() -> list[Path]:
     }
     summary.sort(key=lambda row: variant_order[row["variant"]])
     full = [row for row in raw if row["variant"] == "full_trustcircuit"]
-    stage_names = ("access", "budget", "tee", "proof", "settlement", "audit")
     stage_rows = [
         {
             "stage": stage,
@@ -102,7 +132,6 @@ def summarize_ablation() -> list[Path]:
         }
         for stage in stage_names
     ]
-    gas_stage_names = ("access", "budget", "proof", "settlement", "audit")
     gas_rows = [
         {
             "stage": stage,
@@ -117,43 +146,80 @@ def summarize_ablation() -> list[Path]:
         write_csv("e2e_ablation_summary.csv", summary),
         write_csv("e2e_stage_breakdown.csv", stage_rows),
         write_csv("e2e_gas_breakdown.csv", gas_rows),
+        write_csv("e2e_stage_by_variant.csv", stage_matrix_rows),
+        write_csv("e2e_gas_by_variant.csv", gas_matrix_rows),
     ]
 
 
 def summarize_vbs() -> list[Path]:
-    raw = [row for row in read_csv("vbs_performance.csv") if row["is_warmup"] == "0"]
+    raw = [
+        row
+        for row in read_csv("native_vbs_performance.csv")
+        if row["is_warmup"] == "0"
+    ]
     summary: list[dict[str, Any]] = []
     stages: list[dict[str, Any]] = []
-    overhead: list[dict[str, Any]] = []
-    for payload, rows in sorted(group_by(raw, "payload_bytes").items(), key=lambda item: int(item[0])):
+    overhead_trials: list[dict[str, Any]] = []
+    for payload, rows in sorted(
+        group_by(raw, "payload_bytes").items(), key=lambda item: int(item[0])
+    ):
+        native = [float(row["native_process_wall_us"]) / 1000 for row in rows]
         vbs = [float(row["vbs_process_wall_us"]) / 1000 for row in rows]
-        reference = [float(row["reference_aggregate_us"]) / 1000 for row in rows]
+        native_throughput = [
+            float(row["native_payload_throughput_mib_s"]) for row in rows
+        ]
+        vbs_throughput = [
+            float(row["vbs_payload_throughput_mib_s"]) for row in rows
+        ]
+        slowdowns = [float(row["vbs_slowdown_vs_native"]) for row in rows]
+        native_rss = [
+            float(row["native_peak_rss_bytes"]) / (1024 * 1024) for row in rows
+        ]
+        vbs_rss = [
+            float(row["vbs_peak_rss_bytes"]) / (1024 * 1024) for row in rows
+        ]
         summary.append(
             {
                 "payload_bytes": int(payload),
                 "rows": int(rows[0]["rows"]),
                 "runs": len(rows),
-                "reference_name": "Python reference (native C++ unavailable)",
-                "reference_mean_latency_ms": statistics.mean(reference),
+                "native_mean_latency_ms": statistics.mean(native),
+                "native_std_latency_ms": statistics.stdev(native),
+                "native_p2_5_latency_ms": percentile(native, 2.5),
+                "native_p50_latency_ms": percentile(native, 50),
+                "native_p95_latency_ms": percentile(native, 95),
+                "native_p97_5_latency_ms": percentile(native, 97.5),
                 "vbs_mean_latency_ms": statistics.mean(vbs),
+                "vbs_std_latency_ms": statistics.stdev(vbs),
+                "vbs_p2_5_latency_ms": percentile(vbs, 2.5),
+                "vbs_p50_latency_ms": percentile(vbs, 50),
                 "vbs_p95_latency_ms": percentile(vbs, 95),
-                "slowdown_vs_python_reference": statistics.mean(
-                    float(row["vbs_slowdown_vs_python_reference"]) for row in rows
+                "vbs_p97_5_latency_ms": percentile(vbs, 97.5),
+                "slowdown_mean": statistics.mean(slowdowns),
+                "slowdown_p2_5": percentile(slowdowns, 2.5),
+                "slowdown_p50": percentile(slowdowns, 50),
+                "slowdown_p95": percentile(slowdowns, 95),
+                "slowdown_p97_5": percentile(slowdowns, 97.5),
+                "native_throughput_mean_mib_s": statistics.mean(native_throughput),
+                "native_throughput_p2_5_mib_s": percentile(native_throughput, 2.5),
+                "native_throughput_p50_mib_s": percentile(native_throughput, 50),
+                "native_throughput_p97_5_mib_s": percentile(native_throughput, 97.5),
+                "vbs_throughput_mean_mib_s": statistics.mean(vbs_throughput),
+                "vbs_throughput_p2_5_mib_s": percentile(vbs_throughput, 2.5),
+                "vbs_throughput_p50_mib_s": percentile(vbs_throughput, 50),
+                "vbs_throughput_p97_5_mib_s": percentile(vbs_throughput, 97.5),
+                "native_rss_mean_mib": statistics.mean(native_rss),
+                "native_rss_p2_5_mib": percentile(native_rss, 2.5),
+                "native_rss_p50_mib": percentile(native_rss, 50),
+                "native_rss_p97_5_mib": percentile(native_rss, 97.5),
+                "vbs_rss_mean_mib": statistics.mean(vbs_rss),
+                "vbs_rss_p2_5_mib": percentile(vbs_rss, 2.5),
+                "vbs_rss_p50_mib": percentile(vbs_rss, 50),
+                "vbs_rss_p97_5_mib": percentile(vbs_rss, 97.5),
+                "result_parity_rate": statistics.mean(
+                    float(row["result_parity"]) for row in rows
                 ),
-                "vbs_throughput_mib_s": statistics.mean(
-                    float(row["vbs_payload_throughput_mib_s"]) for row in rows
-                ),
-                "reference_throughput_mib_s": statistics.mean(
-                    float(row["reference_payload_throughput_mib_s"]) for row in rows
-                ),
-                "host_peak_rss_mib": statistics.mean(
-                    float(row["host_peak_rss_bytes"]) / (1024 * 1024) for row in rows
-                ),
-                "reference_rss_mib": statistics.mean(
-                    float(row["python_reference_rss_bytes"]) / (1024 * 1024)
-                    for row in rows
-                ),
-                "measurement_type": "measured",
+                "measurement_type": "measured_paired",
             }
         )
         for stage in (
@@ -168,42 +234,50 @@ def summarize_vbs() -> list[Path]:
                     "payload_bytes": int(payload),
                     "stage": stage,
                     "mean_latency_us": statistics.mean(
-                        float(row[f"{stage}_us"]) for row in rows
+                        float(row[f"vbs_{stage}_us"]) for row in rows
+                    ),
+                    "p50_latency_us": percentile(
+                        [float(row[f"vbs_{stage}_us"]) for row in rows], 50
+                    ),
+                    "p95_latency_us": percentile(
+                        [float(row[f"vbs_{stage}_us"]) for row in rows], 95
                     ),
                     "measurement_type": "measured_enclave_tsc",
                 }
             )
-        transcript = statistics.mean(float(row["transcript_us"]) for row in rows)
-        generation = statistics.mean(
-            float(row["attestation_generation_us"]) for row in rows
-        )
-        validation = statistics.mean(
-            float(row["attestation_validation_host_us"]) for row in rows
-        )
-        overhead.append(
-            {
-                "payload_bytes": int(payload),
-                "transcript_us": transcript,
-                "attestation_generation_us": generation,
-                "attestation_validation_host_us": validation,
-                "combined_overhead_us": transcript + generation + validation,
-                "measurement_type": "measured",
-            }
-        )
+        for row in rows:
+            total_us = float(row["vbs_process_wall_us"]) + float(
+                row["vbs_validation_wall_us"]
+            )
+            for stage, source_field in (
+                ("Transcript", "vbs_transcript_us"),
+                ("Evidence generation", "vbs_attestation_generation_us"),
+                ("External validation", "vbs_validation_wall_us"),
+            ):
+                latency_us = float(row[source_field])
+                overhead_trials.append(
+                    {
+                        "payload_bytes": int(payload),
+                        "run": int(row["run"]),
+                        "stage": stage,
+                        "latency_us": latency_us,
+                        "total_validated_vbs_us": total_us,
+                        "percent_of_total_vbs_latency": 100 * latency_us / total_us,
+                        "measurement_type": "measured_paired",
+                    }
+                )
     return [
         write_csv("vbs_performance_summary.csv", summary),
         write_csv("vbs_stage_breakdown.csv", stages),
-        write_csv("vbs_attestation_overhead.csv", overhead),
+        write_csv("vbs_attestation_overhead.csv", overhead_trials),
     ]
 
 
 def summarize_dp() -> list[Path]:
     raw = [row for row in read_csv("dp_vbs.csv") if row["is_warmup"] == "0"]
     error_rows: list[dict[str, Any]] = []
-    rounding_rows: list[dict[str, Any]] = []
     for epsilon, rows in sorted(group_by(raw, "epsilon_requested").items(), key=lambda item: float(item[0])):
         errors = [float(row["relative_error"]) for row in rows]
-        gaps = [float(row["rounding_gap_fixed"]) for row in rows]
         error_rows.append(
             {
                 "epsilon_requested": float(epsilon),
@@ -214,20 +288,35 @@ def summarize_dp() -> list[Path]:
                 "measurement_type": "measured",
             }
         )
-        rounding_rows.append(
-            {
-                "epsilon_requested": float(epsilon),
-                "runs": len(rows),
-                "mean_rounding_gap_fixed": statistics.mean(gaps),
-                "max_rounding_gap_fixed": max(gaps),
-                "under_reporting_count": sum(gap < 0 for gap in gaps),
-                "measurement_type": "measured",
-            }
-        )
+    rounding = read_csv("dp_rounding_boundaries.csv")
+    rounding_values = [float(row["rounding_margin_micro_epsilon"]) for row in rounding]
+    rounding_summary = [
+        {
+            "samples": len(rounding),
+            "minimum_margin_micro_epsilon": min(rounding_values),
+            "p50_margin_micro_epsilon": percentile(rounding_values, 50),
+            "p95_margin_micro_epsilon": percentile(rounding_values, 95),
+            "maximum_margin_micro_epsilon": max(rounding_values),
+            "zero_margin_count": sum(value == 0 for value in rounding_values),
+            "under_reporting_count": sum(int(row["under_reporting"]) for row in rounding),
+            "measurement_type": "measured_with_analytical_margin",
+        }
+    ]
     composition = read_csv("dp_composition.csv")
     exhaustion = read_csv("budget_exhaustion.csv")
+    exhaustion_trajectory: list[dict[str, Any]] = []
     exhaustion_summary: list[dict[str, Any]] = []
     for epsilon, rows in sorted(group_by(exhaustion, "epsilon_requested").items(), key=lambda item: float(item[0])):
+        ordered_rows = sorted(rows, key=lambda row: int(row["request_index"]))
+        cumulative_accepted = 0
+        for row in ordered_rows:
+            cumulative_accepted += int(row["accepted"])
+            exhaustion_trajectory.append(
+                {
+                    **row,
+                    "cumulative_accepted_requests": cumulative_accepted,
+                }
+            )
         exhaustion_summary.append(
             {
                 "epsilon_requested": float(epsilon),
@@ -243,8 +332,10 @@ def summarize_dp() -> list[Path]:
         )
     return [
         write_csv("dp_error_summary.csv", error_rows),
-        write_csv("dp_rounding_summary.csv", rounding_rows),
+        write_csv("dp_rounding_margin.csv", rounding),
+        write_csv("dp_rounding_summary.csv", rounding_summary),
         write_csv("dp_composition.csv", composition),
+        write_csv("budget_exhaustion_trajectory.csv", exhaustion_trajectory),
         write_csv("budget_exhaustion_summary.csv", exhaustion_summary),
     ]
 
@@ -252,9 +343,59 @@ def summarize_dp() -> list[Path]:
 def summarize_protocol() -> list[Path]:
     attacks = read_csv("protocol_attacks.csv")
     concurrency = read_csv("settlement_concurrency.csv")
+    attack_summary: list[dict[str, Any]] = []
+    for attack_case, rows in group_by(attacks, "attack_case").items():
+        latencies = [float(row["latency_ms"]) for row in rows]
+        attack_summary.append(
+            {
+                "category": rows[0]["category"],
+                "attack_case": attack_case,
+                "runs": len(rows),
+                "rejection_rate": statistics.mean(float(row["rejected"]) for row in rows),
+                "mean_rejection_latency_ms": statistics.mean(latencies),
+                "p2_5_rejection_latency_ms": percentile(latencies, 2.5),
+                "p50_rejection_latency_ms": percentile(latencies, 50),
+                "p95_rejection_latency_ms": percentile(latencies, 95),
+                "p97_5_rejection_latency_ms": percentile(latencies, 97.5),
+                "budget_invariant_violations": sum(
+                    int(row["budget_invariant_violation"]) for row in rows
+                ),
+                "measurement_type": "measured_local_hardhat",
+            }
+        )
+    attack_summary.sort(key=lambda row: (row["category"], row["attack_case"]))
+    concurrency_summary: list[dict[str, Any]] = []
+    for level, rows in sorted(
+        group_by(concurrency, "concurrency").items(), key=lambda item: int(item[0])
+    ):
+        latencies = [float(row["settlement_mean_latency_ms"]) for row in rows]
+        concurrency_summary.append(
+            {
+                "concurrency": int(level),
+                "runs": len(rows),
+                "mean_accepted": statistics.mean(float(row["accepted"]) for row in rows),
+                "mean_reverted": statistics.mean(float(row["reverted"]) for row in rows),
+                "mean_settlement_latency_ms": statistics.mean(latencies),
+                "p2_5_settlement_latency_ms": percentile(latencies, 2.5),
+                "p50_settlement_latency_ms": percentile(latencies, 50),
+                "p95_settlement_latency_ms": percentile(latencies, 95),
+                "p97_5_settlement_latency_ms": percentile(latencies, 97.5),
+                "mean_throughput_req_s": statistics.mean(
+                    float(row["throughput_req_s"]) for row in rows
+                ),
+                "budget_invariant_violations": sum(
+                    int(row["budget_invariant_violations"]) for row in rows
+                ),
+                "measurement_type": "measured_local_hardhat",
+            }
+        )
+    binding = read_csv("attack_binding_matrix.csv")
     return [
-        write_csv("protocol_attack_summary.csv", attacks),
-        write_csv("settlement_concurrency_summary.csv", concurrency),
+        write_csv("protocol_attack_latency.csv", attacks),
+        write_csv("protocol_attack_summary.csv", attack_summary),
+        write_csv("attack_binding_matrix.csv", binding),
+        write_csv("settlement_concurrency_trials.csv", concurrency),
+        write_csv("settlement_concurrency_summary.csv", concurrency_summary),
     ]
 
 
@@ -309,7 +450,11 @@ def main() -> int:
         ],
         "measurement_labels": {
             "measured": "direct structured timing or local-chain receipt",
+            "measured_paired": "paired Native/VBS executions over byte-identical payloads",
             "measured_enclave_tsc": "enclave TSC timing calibrated by the host",
+            "measured_with_analytical_margin": "measured fixed-point output minus its unsmoothed analytical value",
+            "measured_local_hardhat": "direct local Hardhat receipt or high-resolution wall timing",
+            "functional_test_evidence": "first-rejecting-layer classification backed by named passing tests",
             "analytical_from_measured_cost": "RDP formula using measured fixed-point cost",
             "model_calibrated_from_measured_components": "sum/substitution of separately measured components",
             "not_executed": "dependency/configuration absent; no number fabricated",
@@ -324,4 +469,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

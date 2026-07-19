@@ -114,3 +114,6 @@ Paper/figures/*
 !Paper/figures/panels/*.png
 !Paper/figures/PANEL_MANIFEST.md
 !Paper/figures/CAPTION_NOTES.md
+
+# Figure audit command record requested for the revised VBS evidence.
+!tee/vbs/FIGURE_AUDIT_LOG.md

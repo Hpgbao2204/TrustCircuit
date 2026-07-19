@@ -1,8 +1,8 @@
 {
   "schema": "TrustCircuit.Phase8VbsExperimentConfig.v1",
-  "measurement_type": "measured",
-  "timestamp": "2026-07-18T23:08:31.463518+00:00",
-  "git_commit": "666dd5c4f4ed3e5b3d25368e5b46fc218690305c",
+  "measurement_type": "mixed_see_each_csv_row",
+  "timestamp": "2026-07-19T09:33:23.050704+00:00",
+  "git_commit": "a6ff00e7aa23dc39c631ffee777a71d38e596bd3",
   "git_dirty": true,
   "os": "Windows-11-10.0.26200-SP0",
   "processor": "AMD64 Family 25 Model 116 Stepping 1, AuthenticAMD",
@@ -11,8 +11,9 @@
   "configuration": "Debug",
   "seed": 20260719,
   "warmups": 1,
-  "performance_reps": 5,
-  "privacy_reps": 8,
+  "performance_reps": 30,
+  "privacy_reps": 30,
+  "rounding_boundary_samples": 96,
   "payload_rows": [
     126,
     510,
@@ -30,10 +31,19 @@
     1.0
   ],
   "concurrency_bundles": 32,
-  "duration_seconds": 19.38420010000118,
+  "duration_seconds": 88.41562590000012,
   "sanity": {
     "performance_success_rate": 1,
-    "privacy_success_rate": 1
+    "paired_result_parity_rate": 1,
+    "privacy_success_rate": 1,
+    "boundary_under_reporting_count": 0
   },
-  "native_baseline_limitation": "The repository has no non-enclave native C++ processor. reference_aggregate_us is the measured Python reference and is never labeled as a native C++ measurement."
+  "native_vbs_pairing": "Each row invokes TrustCircuitNative.exe and TrustCircuitHost.exe over the same request JSON, key, nonce, AAD, ciphertext, and TCVBSDS1 payload; execution order alternates by run.",
+  "compiler": {
+    "platform": "x64",
+    "toolset": "v143",
+    "language_standard": "C++20",
+    "msvc_tools_version": "14.44.35207",
+    "runtime": "MultiThreadedDebug"
+  }
 }

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "..\Shared\DatasetAggregate.h"
+
 #include <VbsEnclave\Enclave\Implementation\Trusted.h>
 
 #include <algorithm>
@@ -541,86 +543,15 @@ HRESULT VbsEnclave::Trusted::Implementation::AggregateDataset(
     _Out_ std::uint64_t& rowCount,
     _Out_ std::uint64_t& aggregateUs)
 {
-    const auto started = __rdtsc();
-    resultFixed = 0;
-    rowCount = 0;
-    aggregateUs = 0;
-
-    if (tscTicksPerUs == 0 ||
-        (functionId != functionCount && functionId != functionMean))
-    {
-        return E_INVALIDARG;
-    }
-    if (lowerBoundFixed > upperBoundFixed ||
-        payload.size() < datasetHeaderBytes ||
-        !std::equal(
-            std::begin(datasetMagic),
-            std::end(datasetMagic),
-            payload.begin()))
-    {
-        return E_INVALIDARG;
-    }
-
-    const auto version = readUint32LittleEndian(payload, 8);
-    const auto rows = readUint32LittleEndian(payload, 12);
-    if (version != datasetVersion || rows > maxDatasetRows)
-    {
-        return E_INVALIDARG;
-    }
-    if (rows >
-        ((std::numeric_limits<std::size_t>::max)() - datasetHeaderBytes) /
-            sizeof(std::int64_t))
-    {
-        return E_INVALIDARG;
-    }
-    const auto expectedSize = datasetHeaderBytes +
-        static_cast<std::size_t>(rows) * sizeof(std::int64_t);
-    if (payload.size() != expectedSize ||
-        (functionId == functionMean && rows == 0))
-    {
-        return E_INVALIDARG;
-    }
-
-    std::int64_t sum = 0;
-    for (std::uint32_t index = 0; index < rows; ++index)
-    {
-        const auto value = readInt64LittleEndian(
-            payload,
-            datasetHeaderBytes +
-                static_cast<std::size_t>(index) * sizeof(std::int64_t));
-        if (value < lowerBoundFixed || value > upperBoundFixed)
-        {
-            return E_INVALIDARG;
-        }
-        if ((value > 0 &&
-             sum > (std::numeric_limits<std::int64_t>::max)() - value) ||
-            (value < 0 &&
-             sum < (std::numeric_limits<std::int64_t>::min)() - value))
-        {
-            return HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW);
-        }
-        sum += value;
-    }
-
-    if (functionId == functionCount)
-    {
-        if (static_cast<std::uint64_t>(rows) >
-            static_cast<std::uint64_t>(
-                (std::numeric_limits<std::int64_t>::max)() /
-                fixedPointScale))
-        {
-            return HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW);
-        }
-        resultFixed = static_cast<std::int64_t>(rows) * fixedPointScale;
-    }
-    else
-    {
-        resultFixed = sum / static_cast<std::int64_t>(rows);
-    }
-
-    rowCount = rows;
-    aggregateUs = (__rdtsc() - started) / tscTicksPerUs;
-    return S_OK;
+    return trustcircuit::processing::aggregateDataset(
+        payload,
+        functionId,
+        lowerBoundFixed,
+        upperBoundFixed,
+        tscTicksPerUs,
+        resultFixed,
+        rowCount,
+        aggregateUs);
 }
 
 HRESULT VbsEnclave::Trusted::Implementation::ExecuteEncrypted(

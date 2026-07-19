@@ -168,6 +168,24 @@ class VbsAttestationTests(unittest.TestCase):
             changed["aad"] = build_canonical_aad(changed).hex()
             self.assert_validation_rejected(directory, changed, response)
 
+    def test_changed_asset_id_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            request, response = self.execute(directory)
+            changed = copy.deepcopy(request)
+            changed["asset_id"] = "asset-substituted"
+            changed["aad"] = build_canonical_aad(changed).hex()
+            self.assert_validation_rejected(directory, changed, response)
+
+    def test_changed_consumer_id_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            request, response = self.execute(directory)
+            changed = copy.deepcopy(request)
+            changed["consumer_id"] = "consumer-substituted"
+            changed["aad"] = build_canonical_aad(changed).hex()
+            self.assert_validation_rejected(directory, changed, response)
+
     def test_changed_result_hash_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
@@ -182,6 +200,24 @@ class VbsAttestationTests(unittest.TestCase):
             request, response = self.execute(directory)
             changed = copy.deepcopy(request)
             changed["policy_hash"] = hashlib.sha256(b"substituted-policy").hexdigest()
+            changed["aad"] = build_canonical_aad(changed).hex()
+            self.assert_validation_rejected(directory, changed, response)
+
+    def test_changed_policy_version_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            request, response = self.execute(directory)
+            changed = copy.deepcopy(request)
+            changed["policy_version"] = int(changed["policy_version"]) + 1
+            changed["aad"] = build_canonical_aad(changed).hex()
+            self.assert_validation_rejected(directory, changed, response)
+
+    def test_changed_function_id_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            request, response = self.execute(directory)
+            changed = copy.deepcopy(request)
+            changed["function_id"] = 1
             changed["aad"] = build_canonical_aad(changed).hex()
             self.assert_validation_rejected(directory, changed, response)
 

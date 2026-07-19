@@ -3,9 +3,9 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Debug",
     [ValidateRange(1, 100)]
-    [int]$PerformanceReps = 5,
+    [int]$PerformanceReps = 30,
     [ValidateRange(1, 100)]
-    [int]$PrivacyReps = 8,
+    [int]$PrivacyReps = 30,
     [ValidateRange(1, 20)]
     [int]$Warmups = 1,
     [string]$MSBuildPath = "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
@@ -46,6 +46,9 @@ try {
         --network hardhat
     if ($LASTEXITCODE -ne 0) { throw "Phase 7 chain experiments failed" }
 
+    & python .\scripts\run_attack_layer_audit.py
+    if ($LASTEXITCODE -ne 0) { throw "Attack-layer audit failed" }
+
     & node .\zk\scripts\benchmark_zk.js
     if ($LASTEXITCODE -ne 0) { throw "ZK scaling experiment failed" }
     & node .\zk\scripts\benchmark_zk_schemes.js
@@ -61,4 +64,3 @@ try {
 finally {
     Pop-Location
 }
-

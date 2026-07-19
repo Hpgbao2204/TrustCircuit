@@ -1,8 +1,8 @@
 {
   "schema": "TrustCircuit.Phase8ChainExperimentConfig.v1",
   "measurement_type": "measured_local_hardhat",
-  "timestamp": "2026-07-18T23:09:20.078Z",
-  "git_commit": "666dd5c4f4ed3e5b3d25368e5b46fc218690305c",
+  "timestamp": "2026-07-19T09:34:47.089Z",
+  "git_commit": "a6ff00e7aa23dc39c631ffee777a71d38e596bd3",
   "git_dirty": true,
   "seed": 20260719,
   "warmups": {
@@ -18,13 +18,15 @@
     16,
     32
   ],
+  "concurrency_repetitions": 30,
+  "attack_latency_repetitions": 30,
   "ablation_runs": 5,
   "proof_runs": 32,
   "node": "v22.13.0",
   "platform": "win32 10.0.26200",
   "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
   "logical_cpus": 16,
-  "duration_seconds": 46.84541409999877,
+  "duration_seconds": 72.22490150000061,
   "public_testnet": {
     "executed": false,
     "reason": "hardhat.config.js defines only the local hardhat network; no repository testnet RPC/account configuration exists"

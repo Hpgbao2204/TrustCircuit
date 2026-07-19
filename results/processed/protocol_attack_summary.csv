@@ -1,13 +1,13 @@
-measurement_type,category,attack_case,accepted,rejected,rejection_stage,reason,latency_ms,budget_invariant_violation
-measured,context,wrong_request,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'RequestNotFound(""0x2ef4e9b8a742a3111b5154eb7921756a4ea25dfff48a3d82e5c5d0de881b9bcf"")'",14.672800000756979,0
-measured,context,wrong_asset,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(1)',2.770899999886751,0
-measured,context,wrong_consumer_id,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(2)',3.663899999111891,0
-measured,context,wrong_consumer_address,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'WrongConsumer(""0x70997970C51812dc3A010C7d01b50e0d17dc79C8"", ""0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"")'",2.254799999296665,0
-measured,context,wrong_policy,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(3)',2.8069000020623207,0
-measured,context,wrong_function,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(5)',2.775499999523163,0
-measured,context,wrong_result,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(6)',3.464800000190735,0
-measured,tampering,altered_transcript,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(9)',3.1944999992847443,0
-measured,tampering,altered_attestation,0,1,settlement,VM Exception while processing transaction: reverted with custom error 'ContextMismatch(10)',3.20159999653697,0
-measured,tampering,stale_attestation,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'StaleAttestation(1784416127000, 1)'",4.028099998831749,0
-measured,tampering,tampered_proof,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'InvalidProof(""0xe8cbe568a9638f8f01edb0613e1365476ed32fa3a4cfcffd691ff4dec7b415ff"")'",5.808100000023842,0
-measured,replay,nullifier_replay,0,1,settlement,"VM Exception while processing transaction: reverted with custom error 'RequestNotApproved(""0x398e26fb86e4afa8c23e51a6ef7192891de3e22b706993abe37a8b6e82828a5c"")'",8.884100001305342,0
+category,attack_case,runs,rejection_rate,mean_rejection_latency_ms,p2_5_rejection_latency_ms,p50_rejection_latency_ms,p95_rejection_latency_ms,p97_5_rejection_latency_ms,budget_invariant_violations,measurement_type
+context,wrong_asset,30,1.0,2.597693333402276,2.1333750002318994,2.506149999797344,3.291565000498667,3.437760000466368,0,measured_local_hardhat
+context,wrong_consumer_address,30,1.0,2.571236666571349,2.031794999912381,2.31180000025779,3.7582749994937332,3.780802499409765,0,measured_local_hardhat
+context,wrong_consumer_id,30,1.0,2.6522600000413754,2.263359999936074,2.572900000028312,3.4410699997562917,3.7526650000130752,0,measured_local_hardhat
+context,wrong_function,30,1.0,2.846580000004421,2.168712499924004,2.607849999796599,3.720880000013858,3.9208075002301475,0,measured_local_hardhat
+context,wrong_policy,30,1.0,2.8215033332196375,2.1888424998149274,2.6072499994188547,4.104315000167117,4.434777500433847,0,measured_local_hardhat
+context,wrong_request,30,1.0,2.728466666614016,1.8883100006263702,2.289100000169128,3.5082299999427056,6.785657499800422,0,measured_local_hardhat
+context,wrong_result,30,1.0,2.6786000000623367,2.163924999721348,2.534949999768287,3.5769049999304117,3.7341049997368825,0,measured_local_hardhat
+replay,nullifier_replay,30,1.0,2.552243333309889,1.9897149997763335,2.3469000002369285,3.59499500002712,3.612534999568015,0,measured_local_hardhat
+tampering,altered_attestation,30,1.0,2.808810000059505,2.285344999702647,2.618799999821931,3.6454400002025067,3.7064324999460947,0,measured_local_hardhat
+tampering,altered_transcript,30,1.0,2.992403333292653,2.2729874996701254,2.837650000117719,3.776199999731034,4.848529999656598,0,measured_local_hardhat
+tampering,stale_attestation,30,1.0,3.664326666574925,2.588989999447949,3.253599999472499,6.151704999664799,6.570342499576508,0,measured_local_hardhat
+tampering,tampered_proof,30,1.0,4.72080000002558,4.021357499691658,4.6988499998115,5.488445000071079,5.841517499811015,0,measured_local_hardhat

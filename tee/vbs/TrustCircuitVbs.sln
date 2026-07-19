@@ -9,12 +9,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TrustCircuitHost", "TrustCi
 		{7F5158EF-3294-49CC-A38B-A6A1052AA310} = {7F5158EF-3294-49CC-A38B-A6A1052AA310}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TrustCircuitNative", "TrustCircuitNative\TrustCircuitNative.vcxproj", "{37E6DD54-4870-4DD3-93FC-4613FE456211}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CBAC046C-C6C7-4CFD-A73D-A5E72F8D6D82}"
 	ProjectSection(SolutionItems) = preProject
 		TrustCircuitEnclave.edl = TrustCircuitEnclave.edl
 		TrustCircuitVbs.Local.props.example = TrustCircuitVbs.Local.props.example
 		README.md = README.md
 		PHASE1_COMMAND_LOG.md = PHASE1_COMMAND_LOG.md
+		FIGURE_AUDIT_LOG.md = FIGURE_AUDIT_LOG.md
 	EndProjectSection
 EndProject
 Global
@@ -31,6 +34,10 @@ Global
 		{8F47D7D5-BC6D-4E8D-A6A4-E0E520C5F098}.Debug|x64.Build.0 = Debug|x64
 		{8F47D7D5-BC6D-4E8D-A6A4-E0E520C5F098}.Release|x64.ActiveCfg = Release|x64
 		{8F47D7D5-BC6D-4E8D-A6A4-E0E520C5F098}.Release|x64.Build.0 = Release|x64
+		{37E6DD54-4870-4DD3-93FC-4613FE456211}.Debug|x64.ActiveCfg = Debug|x64
+		{37E6DD54-4870-4DD3-93FC-4613FE456211}.Debug|x64.Build.0 = Debug|x64
+		{37E6DD54-4870-4DD3-93FC-4613FE456211}.Release|x64.ActiveCfg = Release|x64
+		{37E6DD54-4870-4DD3-93FC-4613FE456211}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

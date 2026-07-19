@@ -1,4 +1,4 @@
 scheme,base_measured_latency_ms,prove_time_ms,verify_time_ms,full_circulation_latency_ms,full_circulation_throughput_req_s,measurement_type
-groth16,158.84171999815106,132.929,11.106,302.8767199981511,3.301673367322865,model_calibrated_from_measured_components
-plonk,158.84171999815106,3417.671,10.283,3586.7957199981506,0.27880037729065754,model_calibrated_from_measured_components
-fflonk,158.84171999815106,4107.779,7.133,4273.753719998152,0.23398634210499908,model_calibrated_from_measured_components
+groth16,166.3336400004074,132.929,11.106,310.36864000040737,3.2219750036559347,model_calibrated_from_measured_components
+plonk,166.3336400004074,3417.671,10.283,3594.287640000407,0.278219246804601,model_calibrated_from_measured_components
+fflonk,166.3336400004074,4107.779,7.133,4281.245640000408,0.23357688020907505,model_calibrated_from_measured_components

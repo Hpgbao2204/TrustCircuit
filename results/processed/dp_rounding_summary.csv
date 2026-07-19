@@ -1,7 +1,2 @@
-epsilon_requested,runs,mean_rounding_gap_fixed,max_rounding_gap_fixed,under_reporting_count,measurement_type
-0.05,8,0.0,0.0,0,measured
-0.1,8,0.0,0.0,0,measured
-0.2,8,0.0,0.0,0,measured
-0.25,8,0.0,0.0,0,measured
-0.5,8,0.0,0.0,0,measured
-1.0,8,0.0,0.0,0,measured
+samples,minimum_margin_micro_epsilon,p50_margin_micro_epsilon,p95_margin_micro_epsilon,maximum_margin_micro_epsilon,zero_margin_count,under_reporting_count,measurement_type
+96,0.0,0.42072854000000004,0.88973017775,0.998243192,10,0,measured_with_analytical_margin

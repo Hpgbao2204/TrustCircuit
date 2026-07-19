@@ -25,6 +25,8 @@ const ZKEY = path.join(ROOT, "zk", "build", "phase7_final.zkey");
 const VKEY = path.join(ROOT, "zk", "build", "phase7_vkey.json");
 const CONCURRENCY_LEVELS = [1, 2, 4, 8, 16, 32];
 const EXPERIMENT_SEED = 20260719;
+const ATTACK_LATENCY_REPS = 30;
+const CONCURRENCY_REPS = 30;
 
 function gitValue(args) {
   return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
@@ -523,73 +525,82 @@ async function runProtocolAttacks() {
   for (let caseIndex = 0; caseIndex < cases.length; caseIndex += 1) {
     const testCase = cases[caseIndex];
     const item = await createFreshPrepared("attack", caseIndex);
-    const system = await deploySystem();
-    const metric = newMetric();
-    let setup;
-    try {
-      const setupOptions = typeof testCase.setup === "function"
-        ? testCase.setup(item)
-        : (testCase.setup || {});
-      setup = await setupFullRequest(system, item, metric, setupOptions);
-    } catch (error) {
+    for (let run = 0; run < ATTACK_LATENCY_REPS; run += 1) {
+      // Each isolated trial deploys a fresh system. Resetting also prevents the
+      // one-second-per-block Hardhat clock from accumulating hundreds of
+      // synthetic seconds across 30 setup-heavy trials. Evidence expiry is
+      // still checked against the current wall-clock epoch in every trial.
+      await network.provider.send("hardhat_reset");
+      const system = await deploySystem();
+      const metric = newMetric();
+      let setup;
+      try {
+        const setupOptions = typeof testCase.setup === "function"
+          ? testCase.setup(item)
+          : (testCase.setup || {});
+        setup = await setupFullRequest(system, item, metric, setupOptions);
+      } catch (error) {
+        rows.push({
+          measurement_type: "measured",
+          category: testCase.category,
+          attack_case: testCase.name,
+          run,
+          accepted: 0,
+          rejected: 1,
+          rejection_stage: "setup",
+          reason: errorReason(error),
+          latency_ms: metric.latency_ms,
+          budget_invariant_violation: 0,
+        });
+        continue;
+      }
+      const [, consumer, stranger] = await ethers.getSigners();
+      const callMutation = typeof testCase.mutateCall === "function"
+        ? testCase.mutateCall(item)
+        : (testCase.mutateCall || {});
+      const evidenceMutation = typeof testCase.evidence === "function"
+        ? testCase.evidence(item)
+        : (testCase.evidence || {});
+      const requestKey = callMutation.requestKey || setup.context.requestKey;
+      const evidence = { ...setup.context.evidence, ...evidenceMutation };
+      const a = testCase.tamperProof
+        ? [(BigInt(item.a[0]) ^ 1n).toString(), item.a[1]]
+        : item.a;
+      let accepted = false;
+      let reason = "";
+      if (testCase.replay) {
+        const primeTx = await system.settlement
+          .connect(consumer)
+          .settle(requestKey, evidence, a, item.b, item.c, item.signals);
+        await primeTx.wait();
+      }
+      const started = nowMs();
+      try {
+        const tx = await system.settlement
+          .connect(testCase.caller === "stranger" ? stranger : consumer)
+          .settle(requestKey, evidence, a, item.b, item.c, item.signals);
+        await tx.wait();
+        accepted = true;
+      } catch (error) {
+        reason = errorReason(error);
+      }
+      const budgetState = await system.budget.getBudget(setup.context.assetKey);
+      const invariantViolation =
+        budgetState.reserved + budgetState.used > budgetState.total ? 1 : 0;
       rows.push({
         measurement_type: "measured",
         category: testCase.category,
         attack_case: testCase.name,
-        accepted: 0,
-        rejected: 1,
-        rejection_stage: "setup",
-        reason: errorReason(error),
-        latency_ms: metric.latency_ms,
-        budget_invariant_violation: 0,
+        run,
+        accepted: accepted ? 1 : 0,
+        rejected: accepted ? 0 : 1,
+        rejection_stage: accepted ? "none" : "settlement",
+        reason,
+        latency_ms: nowMs() - started,
+        budget_invariant_violation: invariantViolation,
       });
-      continue;
     }
-    const [, consumer, stranger] = await ethers.getSigners();
-    const callMutation = typeof testCase.mutateCall === "function"
-      ? testCase.mutateCall(item)
-      : (testCase.mutateCall || {});
-    const evidenceMutation = typeof testCase.evidence === "function"
-      ? testCase.evidence(item)
-      : (testCase.evidence || {});
-    const requestKey = callMutation.requestKey || setup.context.requestKey;
-    const evidence = { ...setup.context.evidence, ...evidenceMutation };
-    const a = testCase.tamperProof
-      ? [(BigInt(item.a[0]) ^ 1n).toString(), item.a[1]]
-      : item.a;
-    let accepted = false;
-    let reason = "";
-    const started = nowMs();
-    try {
-      const tx = await system.settlement
-        .connect(testCase.caller === "stranger" ? stranger : consumer)
-        .settle(requestKey, evidence, a, item.b, item.c, item.signals);
-      await tx.wait();
-      if (testCase.replay) {
-        const replayTx = await system.settlement
-          .connect(consumer)
-          .settle(requestKey, evidence, a, item.b, item.c, item.signals);
-        await replayTx.wait();
-      }
-      accepted = true;
-    } catch (error) {
-      reason = errorReason(error);
-    }
-    const budgetState = await system.budget.getBudget(setup.context.assetKey);
-    const invariantViolation =
-      budgetState.reserved + budgetState.used > budgetState.total ? 1 : 0;
-    rows.push({
-      measurement_type: "measured",
-      category: testCase.category,
-      attack_case: testCase.name,
-      accepted: accepted ? 1 : 0,
-      rejected: accepted ? 0 : 1,
-      rejection_stage: accepted ? "none" : "settlement",
-      reason,
-      latency_ms: nowMs() - started,
-      budget_invariant_violation: invariantViolation,
-    });
-    process.stdout.write(`[phase8-chain] attack ${testCase.name} accepted=${accepted ? 1 : 0}\n`);
+    process.stdout.write(`[phase8-chain] attack ${testCase.name} reps=${ATTACK_LATENCY_REPS}\n`);
   }
   writeCsv(path.join(RAW, "protocol_attacks.csv"), rows);
 }
@@ -603,15 +614,16 @@ async function runConcurrency() {
   await (await warmupBudget.consumeBudget(warmupAsset, warmupRequest, 1_000_000n)).wait();
   const rows = [];
   for (const concurrency of CONCURRENCY_LEVELS) {
-    const budget = await deployContract("BudgetLedger");
-    const [provider] = await ethers.getSigners();
-    const cost = 1_000_000n;
-    const capacity = concurrency === 1 ? 1 : Math.ceil(concurrency / 2);
-    const assetKey = ethers.id(`phase8-concurrency-budget-${concurrency}`);
-    await budget.registerBudget(assetKey, cost * BigInt(capacity));
-    const requestKeys = Array.from({ length: concurrency }, (_, index) =>
-      ethers.id(`phase8-concurrency-${concurrency}-${index}`)
-    );
+    for (let run = 0; run < CONCURRENCY_REPS; run += 1) {
+      const budget = await deployContract("BudgetLedger");
+      const [provider] = await ethers.getSigners();
+      const cost = 1_000_000n;
+      const capacity = concurrency === 1 ? 1 : Math.ceil(concurrency / 2);
+      const assetKey = ethers.id(`phase8-concurrency-budget-${concurrency}-${run}`);
+      await budget.registerBudget(assetKey, cost * BigInt(capacity));
+      const requestKeys = Array.from({ length: concurrency }, (_, index) =>
+        ethers.id(`phase8-concurrency-${concurrency}-${run}-${index}`)
+      );
     const batchStarted = nowMs();
     const startingNonce = await provider.getNonce();
     await network.provider.send("evm_setAutomine", [false]);
@@ -654,26 +666,28 @@ async function runConcurrency() {
       budgetState.budgetRemaining !== budgetState.total - budgetState.reserved - budgetState.used
         ? 1
         : 0;
-    rows.push({
-      measurement_type: "measured_local_hardhat",
-      concurrency,
-      capacity,
-      accepted,
-      reverted,
-      settlement_batch_latency_ms: batchLatency,
-      settlement_mean_latency_ms: batchLatency / Math.max(accepted, 1),
-      throughput_req_s: accepted * 1000 / Math.max(batchLatency, 0.001),
-      total_gas: (
-        reservations.reduce((sum, outcome) => sum + outcome.gas, 0n) +
-        consumptions.reduce((sum, gas) => sum + gas, 0n)
-      ).toString(),
-      budget_total_fixed: budgetState.total.toString(),
-      budget_used_fixed: budgetState.used.toString(),
-      budget_reserved_fixed: budgetState.reserved.toString(),
-      budget_remaining_fixed: budgetState.budgetRemaining.toString(),
-      budget_invariant_violations: invariantViolations,
-    });
-    process.stdout.write(`[phase8-chain] concurrency=${concurrency} accepted=${accepted} reverted=${reverted}\n`);
+      rows.push({
+        measurement_type: "measured_local_hardhat",
+        concurrency,
+        run,
+        capacity,
+        accepted,
+        reverted,
+        settlement_batch_latency_ms: batchLatency,
+        settlement_mean_latency_ms: batchLatency / Math.max(accepted, 1),
+        throughput_req_s: accepted * 1000 / Math.max(batchLatency, 0.001),
+        total_gas: (
+          reservations.reduce((sum, outcome) => sum + outcome.gas, 0n) +
+          consumptions.reduce((sum, gas) => sum + gas, 0n)
+        ).toString(),
+        budget_total_fixed: budgetState.total.toString(),
+        budget_used_fixed: budgetState.used.toString(),
+        budget_reserved_fixed: budgetState.reserved.toString(),
+        budget_remaining_fixed: budgetState.budgetRemaining.toString(),
+        budget_invariant_violations: invariantViolations,
+      });
+    }
+    process.stdout.write(`[phase8-chain] concurrency=${concurrency} reps=${CONCURRENCY_REPS}\n`);
   }
   writeCsv(path.join(RAW, "settlement_concurrency.csv"), rows);
 }
@@ -759,6 +773,8 @@ async function main() {
       budget_concurrency: 1,
     },
     concurrency_levels: CONCURRENCY_LEVELS,
+    concurrency_repetitions: CONCURRENCY_REPS,
+    attack_latency_repetitions: ATTACK_LATENCY_REPS,
     ablation_runs: Math.min(5, prepared.length),
     proof_runs: prepared.length,
     node: process.version,

@@ -3,14 +3,17 @@ from __future__ import annotations
 import argparse
 import csv
 from datetime import datetime, timezone
+import hashlib
 import json
 import math
 import os
 from pathlib import Path
 import platform
+import random
 import statistics
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Any, Iterable
 
@@ -20,13 +23,23 @@ VBS_ROOT = ROOT / "tee" / "vbs"
 sys.path.insert(0, str(VBS_ROOT))
 
 from phase7_encoding import encode_phase7_context  # noqa: E402
-from pipeline_client import execute_synthetic_request  # noqa: E402
+from attestation_validator import attach_validated_attestation  # noqa: E402
+from pipeline_client import (  # noqa: E402
+    _run_with_peak_rss,
+    execute_synthetic_request,
+    host_path,
+)
 from tests.vbs_reference import (  # noqa: E402
     FIXED_SCALE,
+    aes_256_gcm_encrypt,
+    aggregate_reference,
+    build_canonical_aad,
     conservative_privacy_cost_fixed,
     delta_to_fixed,
+    encode_dataset,
     epsilon_to_fixed,
     gaussian_noise_multiplier,
+    make_request,
 )
 
 
@@ -77,52 +90,46 @@ def repeated_rdp_epsilon(epsilon: float, delta: float, releases: int) -> float:
     )
 
 
-def performance_row(
-    pipeline: dict[str, Any], *, run: int, warmup: bool
-) -> dict[str, Any]:
-    reference = pipeline["reference"]
-    execution = pipeline["execution"]
-    timings = execution["timings_us"]
-    client = pipeline["client_timings_us"]
-    payload_bytes = reference["plaintext_bytes"]
-    wall_us = client["host_subprocess_wall"]
-    return {
-        "measurement_type": "measured",
-        "run": run,
-        "is_warmup": int(warmup),
-        "rows": reference["rows"],
-        "payload_bytes": payload_bytes,
-        "reference_aggregate_us": client["reference_aggregate"],
-        "vbs_process_wall_us": wall_us,
-        "vbs_host_total_us": timings.get("host_total", 0),
-        "enclave_call_us": timings.get("enclave_call", 0),
-        "decrypt_us": timings.get("decrypt", 0),
-        "aggregate_us": timings.get("aggregate", 0),
-        "dp_noise_us": timings.get("dp_noise", 0),
-        "transcript_us": timings.get("transcript", 0),
-        "attestation_generation_us": timings.get("attestation", 0),
-        "attestation_validation_host_us": timings.get(
-            "attestation_validation_host", 0
-        ),
-        "attestation_validation_enclave_us": timings.get(
-            "attestation_validation_enclave", 0
-        ),
-        "host_peak_rss_bytes": reference["host_peak_rss_bytes"],
-        "python_reference_rss_bytes": reference["python_rss_bytes"],
-        "vbs_payload_throughput_mib_s": (
-            payload_bytes / (1024 * 1024) / (wall_us / 1_000_000)
-            if wall_us
-            else 0
-        ),
-        "reference_payload_throughput_mib_s": (
-            payload_bytes
-            / (1024 * 1024)
-            / (max(client["reference_aggregate"], 1) / 1_000_000)
-        ),
-        "vbs_slowdown_vs_python_reference": wall_us
-        / max(client["reference_aggregate"], 1),
-        "ok": int(execution["ok"] is True),
-    }
+def native_path(vbs_root: Path, configuration: str) -> Path:
+    value = vbs_root / "x64" / configuration / "TrustCircuitNative.exe"
+    if not value.is_file():
+        raise FileNotFoundError(f"missing Native processor: {value}")
+    return value
+
+
+def invoke_json_processor(
+    binary: Path, request_path: Path
+) -> tuple[dict[str, Any], int, int]:
+    started = time.perf_counter_ns()
+    completed, peak_rss = _run_with_peak_rss(
+        [str(binary), str(request_path)], cwd=binary.parent, timeout=30
+    )
+    wall_us = (time.perf_counter_ns() - started) // 1000
+    try:
+        response = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"{binary.name} did not emit JSON") from error
+    if completed.returncode != 0 or response.get("ok") is not True:
+        raise RuntimeError(
+            f"{binary.name} rejected paired benchmark input: "
+            f"{completed.stderr.strip()}"
+        )
+    return response, int(wall_us), int(peak_rss)
+
+
+def exact_privacy_cost_epsilon(
+    epsilon_requested_fixed: int, delta_requested_fixed: int
+) -> float:
+    multiplier = gaussian_noise_multiplier(
+        epsilon_requested_fixed, delta_requested_fixed
+    )
+    delta = delta_requested_fixed / 1_000_000_000_000
+    minimum_rdp = min(
+        alpha / (2.0 * multiplier * multiplier)
+        + math.log(1.0 / delta) / (alpha - 1.0)
+        for alpha in RDP_ORDERS
+    )
+    return max(epsilon_requested_fixed / FIXED_SCALE, minimum_rdp)
 
 
 def main() -> int:
@@ -130,8 +137,8 @@ def main() -> int:
         description="Run measured VBS payload, DP, and concurrency-fixture experiments."
     )
     parser.add_argument("--configuration", choices=("Debug", "Release"), default="Debug")
-    parser.add_argument("--performance-reps", type=int, default=5)
-    parser.add_argument("--privacy-reps", type=int, default=8)
+    parser.add_argument("--performance-reps", type=int, default=30)
+    parser.add_argument("--privacy-reps", type=int, default=30)
     parser.add_argument("--warmups", type=int, default=1)
     parser.add_argument("--concurrency-bundles", type=int, default=32)
     parser.add_argument("--seed", type=int, default=20260719)
@@ -148,27 +155,169 @@ def main() -> int:
     bundle_root = raw_root / "concurrency_bundles"
     bundle_root.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
+    vbs_host = host_path(VBS_ROOT, args.configuration)
+    native_host = native_path(VBS_ROOT, args.configuration)
     performance_rows: list[dict[str, Any]] = []
     for rows in PAYLOAD_ROWS:
         for run in range(args.warmups + args.performance_reps):
             warmup = run < args.warmups
-            pipeline = execute_synthetic_request(
-                vbs_root=VBS_ROOT,
-                configuration=args.configuration,
-                function_name="MEAN",
-                rows=rows,
-                seed=args.seed + run,
-                epsilon=1.0,
-                delta=0.00001,
-                request_id=f"phase8-perf-{rows}-{run}-{time.time_ns()}",
-                asset_id=f"asset-phase8-payload-{rows}",
-                consumer_id="consumer-phase8-local",
-            )
-            performance_rows.append(
-                performance_row(pipeline, run=run, warmup=warmup)
-            )
+            seed = args.seed + run
+            generator = random.Random(seed)
+            values = [generator.randint(0, 100) * FIXED_SCALE for _ in range(rows)]
+            plaintext = encode_dataset(values)
+            payload_sha256 = hashlib.sha256(plaintext).hexdigest()
+            expected_result = aggregate_reference(2, values)
+            with tempfile.TemporaryDirectory(
+                prefix="trustcircuit-native-vbs-"
+            ) as temporary:
+                directory = Path(temporary)
+                ciphertext_path = directory / "dataset.enc"
+                request, _ = make_request(
+                    ciphertext_path,
+                    plaintext,
+                    2,
+                    0,
+                    100 * FIXED_SCALE,
+                    int(time.time() * 1000) + 300_000,
+                    apply_dp=False,
+                    key=os.urandom(32),
+                    nonce=os.urandom(12),
+                )
+                request.update(
+                    {
+                        "request_id": (
+                            f"phase8-paired-{rows}-{run}-{time.time_ns()}"
+                        ),
+                        "asset_id": f"asset-phase8-payload-{rows}",
+                        "consumer_id": "consumer-phase8-local",
+                        "policy_hash": hashlib.sha256(
+                            b"TrustCircuit.Phase8.NativeVbs.Policy.v1"
+                        ).hexdigest(),
+                        "policy_version": 1,
+                    }
+                )
+                aad = build_canonical_aad(request)
+                ciphertext, tag = aes_256_gcm_encrypt(
+                    bytes.fromhex(str(request["key_hex"])),
+                    bytes.fromhex(str(request["nonce"])),
+                    aad,
+                    plaintext,
+                )
+                request["aad"] = aad.hex()
+                request["authentication_tag"] = tag.hex()
+                ciphertext_path.write_bytes(ciphertext)
+                request_path = directory / "request.json"
+                request_path.write_text(
+                    json.dumps(request, separators=(",", ":")),
+                    encoding="utf-8",
+                )
+
+                order = (
+                    (("native", native_host), ("vbs", vbs_host))
+                    if run % 2 == 0
+                    else (("vbs", vbs_host), ("native", native_host))
+                )
+                executions: dict[str, dict[str, Any]] = {}
+                walls: dict[str, int] = {}
+                peaks: dict[str, int] = {}
+                for name, binary in order:
+                    execution, wall_us, peak_rss = invoke_json_processor(
+                        binary, request_path
+                    )
+                    executions[name] = execution
+                    walls[name] = wall_us
+                    peaks[name] = peak_rss
+
+                validation_started = time.perf_counter_ns()
+                validated_vbs = attach_validated_attestation(
+                    vbs_host,
+                    request,
+                    executions["vbs"],
+                    working_directory=directory,
+                )
+                validation_wall_us = (
+                    time.perf_counter_ns() - validation_started
+                ) // 1000
+                native = executions["native"]
+                vbs = validated_vbs
+                parity = (
+                    native["result_fixed"] == vbs["result_fixed"]
+                    == expected_result
+                    and native["result_hash"] == vbs["result_hash"]
+                    and native["row_count"] == vbs["row_count"] == rows
+                    and native["actual_privacy_cost_fixed"]
+                    == vbs["actual_privacy_cost_fixed"]
+                    == 0
+                )
+                if not parity:
+                    raise RuntimeError("Native/VBS deterministic parity failed")
+                native_timing = native["timings_us"]
+                vbs_timing = vbs["timings_us"]
+                native_wall = walls["native"]
+                vbs_wall = walls["vbs"]
+                performance_rows.append(
+                    {
+                        "measurement_type": "measured_paired",
+                        "configuration": args.configuration,
+                        "run": run,
+                        "is_warmup": int(warmup),
+                        "execution_order": "native_first"
+                        if order[0][0] == "native"
+                        else "vbs_first",
+                        "seed": seed,
+                        "request_id": request["request_id"],
+                        "rows": rows,
+                        "payload_bytes": len(plaintext),
+                        "payload_sha256": payload_sha256,
+                        "native_process_wall_us": native_wall,
+                        "vbs_process_wall_us": vbs_wall,
+                        "vbs_validation_wall_us": int(validation_wall_us),
+                        "native_host_total_us": native_timing["host_total"],
+                        "vbs_host_total_us": vbs_timing["host_total"],
+                        "native_decrypt_us": native_timing["decrypt"],
+                        "vbs_decrypt_us": vbs_timing["decrypt"],
+                        "native_hash_us": native_timing["hash"],
+                        "vbs_hash_us": vbs_timing["hash"],
+                        "native_aggregate_us": native_timing["aggregate"],
+                        "vbs_aggregate_us": vbs_timing["aggregate"],
+                        "native_dp_noise_us": native_timing["dp_noise"],
+                        "vbs_dp_noise_us": vbs_timing["dp_noise"],
+                        "native_transcript_us": native_timing["transcript"],
+                        "vbs_transcript_us": vbs_timing["transcript"],
+                        "vbs_attestation_generation_us": vbs_timing[
+                            "attestation"
+                        ],
+                        "vbs_attestation_validation_host_us": vbs_timing[
+                            "attestation_validation_host"
+                        ],
+                        "vbs_attestation_validation_enclave_us": vbs_timing[
+                            "attestation_validation_enclave"
+                        ],
+                        "native_peak_rss_bytes": peaks["native"],
+                        "vbs_peak_rss_bytes": peaks["vbs"],
+                        "native_result_fixed": native["result_fixed"],
+                        "vbs_result_fixed": vbs["result_fixed"],
+                        "result_hash_match": int(
+                            native["result_hash"] == vbs["result_hash"]
+                        ),
+                        "result_parity": int(parity),
+                        "native_payload_throughput_mib_s": (
+                            len(plaintext)
+                            / (1024 * 1024)
+                            / (native_wall / 1_000_000)
+                        ),
+                        "vbs_payload_throughput_mib_s": (
+                            len(plaintext)
+                            / (1024 * 1024)
+                            / (vbs_wall / 1_000_000)
+                        ),
+                        "vbs_slowdown_vs_native": vbs_wall / native_wall,
+                        "native_ok": int(native["ok"] is True),
+                        "vbs_ok": int(vbs["ok"] is True),
+                    }
+                )
         print(f"[phase8-vbs] payload rows={rows} complete", flush=True)
-    write_csv(raw_root / "vbs_performance.csv", performance_rows)
+    write_csv(raw_root / "native_vbs_performance.csv", performance_rows)
 
     privacy_rows: list[dict[str, Any]] = []
     for epsilon in EPSILON_GRID:
@@ -218,6 +367,76 @@ def main() -> int:
             )
         print(f"[phase8-vbs] epsilon={epsilon} complete", flush=True)
     write_csv(raw_root / "dp_vbs.csv", privacy_rows)
+
+    boundary_rows: list[dict[str, Any]] = []
+    boundary_centers = [
+        round(10_000 + index * (980_000 / 47)) for index in range(48)
+    ]
+    for boundary_index, center_fixed in enumerate(boundary_centers):
+        # Stay a half micro-unit to either side. Exact decimal boundaries can
+        # be represented infinitesimally above the integer by long double and
+        # would exercise JSON floating representation rather than accounting.
+        for offset_micro in (-0.49, 0.49):
+            epsilon = (center_fixed + offset_micro) / FIXED_SCALE
+            epsilon_fixed = epsilon_to_fixed(epsilon)
+            delta_fixed = delta_to_fixed(0.00001)
+            exact_cost = exact_privacy_cost_epsilon(
+                epsilon_fixed, delta_fixed
+            )
+            reference_fixed = conservative_privacy_cost_fixed(
+                epsilon_fixed, delta_fixed
+            )
+            pipeline = execute_synthetic_request(
+                vbs_root=VBS_ROOT,
+                configuration=args.configuration,
+                function_name="MEAN",
+                rows=64,
+                seed=args.seed,
+                epsilon=epsilon,
+                delta=0.00001,
+                request_id=(
+                    f"phase8-boundary-{boundary_index}-{offset_micro}-"
+                    f"{time.time_ns()}"
+                ),
+                asset_id="asset-phase8-boundary",
+                consumer_id="consumer-phase8-local",
+            )
+            actual_fixed = int(
+                pipeline["execution"]["actual_privacy_cost_fixed"]
+            )
+            if actual_fixed != reference_fixed:
+                raise RuntimeError(
+                    "VBS/Python fixed-point privacy cost mismatch at boundary"
+                )
+            boundary_rows.append(
+                {
+                    "measurement_type": "measured_with_analytical_margin",
+                    "boundary_index": boundary_index,
+                    "boundary_center_fixed": center_fixed,
+                    "offset_micro_epsilon": offset_micro,
+                    "epsilon_requested": format(epsilon, ".9f"),
+                    "epsilon_requested_fixed": epsilon_fixed,
+                    "delta_requested_fixed": delta_fixed,
+                    "exact_conservative_cost_epsilon": format(
+                        exact_cost, ".15f"
+                    ),
+                    "exact_conservative_cost_micro_epsilon": format(
+                        exact_cost * FIXED_SCALE, ".9f"
+                    ),
+                    "vbs_cost_fixed": actual_fixed,
+                    "python_reference_cost_fixed": reference_fixed,
+                    "rounding_margin_micro_epsilon": format(
+                        reference_fixed - exact_cost * FIXED_SCALE, ".9f"
+                    ),
+                    "under_reporting": int(actual_fixed < exact_cost * FIXED_SCALE),
+                    "ok": int(pipeline["execution"]["ok"] is True),
+                }
+            )
+    write_csv(raw_root / "dp_rounding_boundaries.csv", boundary_rows)
+    print(
+        f"[phase8-vbs] fixed-point boundary samples={len(boundary_rows)} complete",
+        flush=True,
+    )
 
     composition_rows: list[dict[str, Any]] = []
     for epsilon in EPSILON_GRID:
@@ -291,9 +510,13 @@ def main() -> int:
     )
 
     measured_performance = [row for row in performance_rows if not row["is_warmup"]]
+    toolset_file = Path(
+        "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/"
+        "Auxiliary/Build/Microsoft.VCToolsVersion.default.txt"
+    )
     config = {
         "schema": "TrustCircuit.Phase8VbsExperimentConfig.v1",
-        "measurement_type": "measured",
+        "measurement_type": "mixed_see_each_csv_row",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "git_commit": git_value("rev-parse", "HEAD"),
         "git_dirty": bool(git_value("status", "--porcelain")),
@@ -307,23 +530,42 @@ def main() -> int:
         "warmups": args.warmups,
         "performance_reps": args.performance_reps,
         "privacy_reps": args.privacy_reps,
+        "rounding_boundary_samples": len(boundary_rows),
         "payload_rows": PAYLOAD_ROWS,
         "epsilon_grid": EPSILON_GRID,
         "concurrency_bundles": args.concurrency_bundles,
         "duration_seconds": time.perf_counter() - started,
         "sanity": {
             "performance_success_rate": statistics.mean(
-                row["ok"] for row in measured_performance
+                row["native_ok"] and row["vbs_ok"]
+                for row in measured_performance
+            ),
+            "paired_result_parity_rate": statistics.mean(
+                row["result_parity"] for row in measured_performance
             ),
             "privacy_success_rate": statistics.mean(
                 row["ok"] for row in privacy_rows if not row["is_warmup"]
             ),
+            "boundary_under_reporting_count": sum(
+                row["under_reporting"] for row in boundary_rows
+            ),
         },
-        "native_baseline_limitation": (
-            "The repository has no non-enclave native C++ processor. "
-            "reference_aggregate_us is the measured Python reference and is "
-            "never labeled as a native C++ measurement."
+        "native_vbs_pairing": (
+            "Each row invokes TrustCircuitNative.exe and TrustCircuitHost.exe "
+            "over the same request JSON, key, nonce, AAD, ciphertext, and "
+            "TCVBSDS1 payload; execution order alternates by run."
         ),
+        "compiler": {
+            "platform": "x64",
+            "toolset": "v143",
+            "language_standard": "C++20",
+            "msvc_tools_version": toolset_file.read_text(encoding="utf-8").strip()
+            if toolset_file.is_file()
+            else "unknown",
+            "runtime": "MultiThreadedDebug"
+            if args.configuration == "Debug"
+            else "MultiThreaded",
+        },
     }
     (raw_root / "vbs_experiment_config.json").write_text(
         json.dumps(config, indent=2), encoding="utf-8"

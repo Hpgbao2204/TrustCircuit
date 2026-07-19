@@ -132,11 +132,14 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -Configuration Debug
 ```
 
-This creates raw data under `results/raw/phase8/`, processed tables under
-`results/processed/`, and 22 independent vector-PDF/300-dpi-PNG panels under
-`Paper/figures/panels/`. The repository has no configured public-testnet
-network and no non-enclave native C++ processor; those two limitations are
+This builds both `TrustCircuitNative.exe` and the VBS host/enclave, then creates
+raw data under `results/raw/phase8/`, processed tables under
+`results/processed/`, and 22 independent 12-by-8-inch vector PDFs plus 600-dpi
+PNG previews under `Paper/figures/panels/`. Native and VBS receive byte-identical
+encrypted requests for 30 paired measurements per payload by default. The
+repository has no configured public-testnet network; that limitation is
 recorded explicitly rather than replaced with fabricated measurements.
 
-Every command executed during this work and its result is recorded in
-`PHASE7_EXPERIMENT_LOG.md`.
+Phase 7 commands are recorded in `PHASE7_EXPERIMENT_LOG.md`; the Native baseline,
+revised measurements, panel audit, and final verification commands are recorded
+in `FIGURE_AUDIT_LOG.md`.
