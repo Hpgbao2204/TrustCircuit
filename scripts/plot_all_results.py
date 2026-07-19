@@ -232,32 +232,37 @@ def fig4() -> None:
     scaling = sorted(read_csv(PROCESSED / "zk_scaling.csv"), key=lambda row: f(row, "n_rules"))
     rules = np.asarray([f(row, "n_rules") for row in scaling])
 
-    # 4a: bubble/lollipop profile instead of a nearly diagonal dual-axis line.
+    # 4a: marginal circuit cost.  The old panel was essentially a diagonal
+    # line; showing the added constraints per policy rule makes the scaling
+    # signal visible without pretending that a straight line is a result.
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     constraints = np.asarray([f(row, "constraints") for row in scaling])
-    witness_kib = np.asarray([f(row, "witness_size_bytes") / 1024 for row in scaling])
-    sizes = 45 + 230 * witness_kib / max(float(np.nanmax(witness_kib)), 1.0)
-    ax.scatter(rules, constraints, s=sizes, c=witness_kib, cmap="viridis", edgecolors="#222222", linewidths=0.6)
-    ax.plot(rules, constraints, color="#4472c4", linewidth=1.2, alpha=0.55)
+    marginal = np.diff(np.r_[0.0, constraints])
+    ax.vlines(rules, 0, marginal, color="#9bb6df", linewidth=2.2)
+    ax.plot(rules, marginal, "o-", color="#4472c4", linewidth=1.8, label="Added constraints")
     ax.set_xlabel("Policy rules")
-    ax.set_ylabel("R1CS constraints")
-    ax.set_title("Compliance circuit growth")
+    ax.set_ylabel("Added R1CS constraints")
+    ax.set_title("Marginal compliance-circuit cost")
+    ax.legend()
     tidy(ax)
     save(fig, "fig4a_constraints")
 
-    # 4b: empirical CDFs are legible with many repeated measurements and do
-    # not turn a distribution into a collection of box glyphs.
+    # 4b: one clean latency curve per operation, replacing the former paired
+    # proving/verification subplots and avoiding a distribution of boxes.
     trials = retained(read_csv(PROCESSED / "zk_scaling_trials.csv"))
     groups = sorted(grouped(trials, "n_rules").items(), key=lambda item: int(item[0]))
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
-    for rule, rows in groups:
-        ecdf(ax, values(rows, "prove_time_ms"), label=f"{rule} rules: prove", color="#4472c4")
-        ecdf(ax, values(rows, "verify_time_ms"), label=f"{rule} rules: verify", color="#8064a2")
-    ax.set_xlabel("Latency (ms)")
-    ax.set_ylabel("Empirical cumulative probability")
-    ax.set_title("Proof and verification latency distributions")
-    ax.legend(ncol=2, fontsize=8)
-    tidy(ax, log_y=False)
+    x_rules = np.asarray([int(rule) for rule, _ in groups])
+    prove = [quantile(values(rows, "prove_time_ms"), 50) for _, rows in groups]
+    verify = [quantile(values(rows, "verify_time_ms"), 50) for _, rows in groups]
+    ax.plot(x_rules, prove, "o-", color="#4472c4", label="Median proving")
+    ax.plot(x_rules, verify, "s--", color="#8064a2", label="Median verification")
+    ax.fill_between(x_rules, prove, verify, color="#b7a8d5", alpha=0.12)
+    ax.set_xlabel("Policy rules")
+    ax.set_ylabel("Median latency (ms)")
+    ax.set_title("Proof latency versus policy complexity")
+    ax.legend()
+    tidy(ax, log_y=True)
     save(fig, "fig4b_proving_time")
 
     # 4c: normalized footprint lines keep the three measures on one scale.
@@ -281,18 +286,13 @@ def fig4() -> None:
     tidy(ax, log_y=True)
     save(fig, "fig4c_proof_key_size")
 
-    # 4d: connect the three backend observations in a fixed, documented order.
+    # 4d: bars give the three backends visual weight; isolated single markers
+    # made the previous panel look empty and over-spaced.
     circulation = read_csv(PROCESSED / "zk_backend_circulation.csv")
     backend = {row["scheme"]: row for row in read_csv(PROCESSED / "zk_backend_distribution.csv")}
     schemes = [row["scheme"] for row in circulation]
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
-    ax.plot(
-        schemes,
-        [f(row, "full_circulation_throughput_req_s") for row in circulation],
-        "o-",
-        color="#4472c4",
-        label="Full-circulation throughput",
-    )
+    ax.bar(schemes, [f(row, "full_circulation_throughput_req_s") for row in circulation], color="#4472c4", alpha=0.85, label="Full-circulation throughput")
     ax.set_xlabel("Proof backend")
     ax.set_ylabel("Model-calibrated throughput (requests/s)")
     ax.set_title("Proof-backend throughput")
@@ -448,15 +448,20 @@ def fig6() -> None:
     tidy(ax)
     save(fig, "fig6d_enclave_stage_breakdown")
 
+    # CPU samples on this host are frequently below the sampler resolution;
+    # plotting them produced a misleading vertical strip.  Working-set scaling
+    # is the directly resolved resource measure and is shown as two curves.
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     for configuration, prefix, marker, color in (("Native", "native", "o", COLORS["Native"]), ("VBS Enclave", "vbs", "s", COLORS["VBS Enclave"])):
-        x_values = [f(row, f"{prefix}_normalized_peak_cpu_percent") for row in trials]
-        y_values = [f(row, f"{prefix}_peak_rss_bytes") / (1024 * 1024) for row in trials]
-        mask = np.isfinite(x_values) & np.isfinite(y_values)
-        ax.scatter(np.asarray(x_values)[mask], np.asarray(y_values)[mask], marker=marker, color=color, alpha=0.32, label=configuration)
-    ax.set_xlabel("Peak normalized process CPU (%)")
-    ax.set_ylabel("Peak working set (MiB)")
-    ax.set_title("Host-process resource footprint")
+        memory = [
+            quantile(values(by_payload.get(str(int(p)), []), f"{prefix}_peak_rss_bytes"), 50) / (1024 * 1024)
+            for p in payload
+        ]
+        ax.plot(payload, memory, marker=marker, color=color, label=configuration)
+    ax.set_xscale("log")
+    ax.set_xlabel("Plaintext payload (bytes)")
+    ax.set_ylabel("Median peak working set (MiB)")
+    ax.set_title("Host-process memory footprint")
     ax.legend()
     tidy(ax)
     save(fig, "fig6e_memory_footprint")
@@ -489,11 +494,39 @@ def fig7() -> None:
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     ax.imshow(matrix, aspect="auto", cmap=matplotlib.colors.ListedColormap(["#f2f2f2", "#4472c4"]), vmin=0, vmax=1)
     ax.set_xticks(np.arange(len(layers)), layer_labels, rotation=25, ha="right")
-    ax.set_yticks(np.arange(len(attacks)), [attack.replace("_", " ") for attack in attacks])
+    short_attack_labels = {
+        "ciphertext_tampering": "Ciphertext",
+        "nonce_tampering": "Nonce",
+        "authentication_tag_tampering": "Authentication tag",
+        "aad_context_tampering": "AAD context",
+        "committed_hash_tampering": "Committed hash",
+        "request_id_substitution": "Request ID",
+        "asset_id_substitution": "Asset ID",
+        "consumer_id_substitution": "Consumer ID",
+        "policy_hash_substitution": "Policy hash",
+        "policy_version_substitution": "Policy version",
+        "function_id_substitution": "Function ID",
+        "result_hash_substitution": "Result hash",
+        "transcript_substitution": "Transcript",
+        "enclave_identity_substitution": "Enclave identity",
+        "attestation_substitution": "Attestation",
+        "stale_attestation": "Stale evidence",
+        "public_asset_mismatch": "Public asset",
+        "public_consumer_mismatch": "Public consumer",
+        "public_policy_mismatch": "Public policy",
+        "public_result_mismatch": "Public result",
+        "over_budget": "Over budget",
+        "proof_tampering": "Proof",
+        "nullifier_replay": "Nullifier replay",
+        "caller_substitution": "Caller",
+        "request_key_substitution": "Request key",
+    }
+    ax.set_yticks(np.arange(len(attacks)), [short_attack_labels.get(attack, attack.replace("_", " ")) for attack in attacks], fontsize=9)
     ax.set_xlabel("First rejecting layer")
     ax.set_ylabel("Attack case")
     ax.set_title("Binding-attack rejection layer")
     ax.grid(False)
+    fig.subplots_adjust(left=0.24, bottom=0.23, right=0.98, top=0.90)
     save(fig, "fig7a_context_substitution")
 
     attacks_raw = read_csv(PROCESSED / "protocol_attack_latency.csv")
