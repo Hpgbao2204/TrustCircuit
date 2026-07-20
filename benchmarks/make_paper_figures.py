@@ -1018,6 +1018,212 @@ def figure_cpabe_policy_comparison(rows, out_dir: Path) -> Path:
     return save(fig, out_dir, "ab1_policy_time")
 
 
+def figure_cpabe_policy_comparison_revised(rows, out_dir: Path) -> Path:
+    """Render the reviewer-facing CP-ABE policy benchmark with explicit semantics."""
+    pr = sorted(rows, key=lambda row: int(row["policy_attributes"]))
+    attributes = np.array([int(row["policy_attributes"]) for row in pr])
+    repetitions = np.array([int(row["repetitions"]) for row in pr])
+    if not np.all(repetitions == 30):
+        raise ValueError("the revised Figure 5(b) requires 30 repetitions per point")
+
+    series = [
+        (
+            "kem_dem_baseline_encrypt_ms",
+            "encrypt (TrustCircuit KEM-DEM)",
+            "o",
+            "-",
+            PALETTE[0],
+        ),
+        (
+            "kem_dem_baseline_decrypt_ms",
+            "decrypt (TrustCircuit KEM-DEM)",
+            "s",
+            "-",
+            PALETTE[1],
+        ),
+        (
+            "full_cpabe_encrypt_ms",
+            "encrypt (AC17/FAME, rabe 0.4.2)",
+            "^",
+            "--",
+            PALETTE[2],
+        ),
+        (
+            "full_cpabe_decrypt_ms",
+            "decrypt (AC17/FAME, rabe 0.4.2)",
+            "D",
+            "--",
+            PALETTE[4],
+        ),
+    ]
+
+    fig, ax = new_fig()
+    for prefix, label, marker, linestyle, color in series:
+        means = np.array([float(row[f"{prefix}_mean"]) for row in pr])
+        stddevs = np.array([float(row[f"{prefix}_std"]) for row in pr])
+        # Two-sided 95% Student-t interval with 29 degrees of freedom.
+        ci95 = 2.04523 * stddevs / np.sqrt(repetitions)
+        ax.errorbar(
+            attributes,
+            means,
+            yerr=ci95,
+            marker=marker,
+            linestyle=linestyle,
+            color=color,
+            capsize=4,
+            elinewidth=1.5,
+            label=label,
+        )
+
+    ax.set_xlabel("Total policy leaves (all-of-N; all N leaves used for decryption)")
+    ax.set_ylabel("Mean key-encapsulation latency (ms)")
+    ax.set_xticks(attributes)
+    ax.set_ylim(bottom=0)
+    ax.set_title("Same host and policy topology; same 32-byte (256-bit) payload key")
+    ax.legend(ncol=2, fontsize=12)
+    fig.text(
+        0.5,
+        0.005,
+        "Mean of 30 independent runs; error bars show 95% confidence intervals. "
+        "Setup/key generation excluded; AES-GCM bulk payload is measured separately in Fig. 5(c).",
+        ha="center",
+        va="bottom",
+        fontsize=11,
+    )
+    fig.subplots_adjust(bottom=0.22)
+    return save(fig, out_dir, "ab1_policy_time_revised")
+
+
+def figure_cpabe_policy_comparison_v2(rows, out_dir: Path) -> Path:
+    """Separate encrypt/decrypt panels so similar curves remain distinguishable."""
+    pr = sorted(rows, key=lambda row: int(row["policy_attributes"]))
+    attributes = np.array([int(row["policy_attributes"]) for row in pr])
+    repetitions = np.array([int(row["repetitions"]) for row in pr])
+    if not np.all(repetitions == 30):
+        raise ValueError("Figure 5(b) v2 requires 30 repetitions per point")
+
+    configurations = [
+        (
+            "Encryption",
+            "kem_dem_baseline_encrypt_ms",
+            "full_cpabe_encrypt_ms",
+        ),
+        (
+            "Decryption",
+            "kem_dem_baseline_decrypt_ms",
+            "full_cpabe_decrypt_ms",
+        ),
+    ]
+    fig, axes = plt.subplots(1, 2, figsize=FIG_SIZE, sharex=True)
+    for ax, (operation, baseline_prefix, cpabe_prefix) in zip(axes, configurations):
+        for prefix, label, marker, linestyle, color in (
+            (baseline_prefix, "KEM-DEM", "o", "-", PALETTE[0]),
+            (cpabe_prefix, "AC17/FAME (rabe 0.4.2)", "^", "--", PALETTE[2]),
+        ):
+            means = np.array([float(row[f"{prefix}_mean"]) for row in pr])
+            stddevs = np.array([float(row[f"{prefix}_std"]) for row in pr])
+            ci95 = 2.04523 * stddevs / np.sqrt(repetitions)
+            ax.errorbar(
+                attributes,
+                means,
+                yerr=ci95,
+                marker=marker,
+                linestyle=linestyle,
+                color=color,
+                capsize=4,
+                elinewidth=1.4,
+                label=label,
+            )
+        ax.set_xlabel("Policy leaves")
+        ax.set_ylabel("Encrypt (ms)" if operation == "Encryption" else "Decrypt (ms)")
+        ax.set_xticks(attributes)
+        ax.set_ylim(bottom=0)
+        ax.legend(fontsize=11)
+        ax.grid(axis="y", alpha=0.25)
+    fig.tight_layout()
+    return save(fig, out_dir, "ab1_policy_time_revised_v3")
+
+
+def figure_aes_gcm_throughput_revised(rows, out_dir: Path) -> Path:
+    full = sorted(
+        (row for row in rows if row["variant"] == "full_buffer"),
+        key=lambda row: int(row["payload_mib"]),
+    )
+    payload = np.array([int(row["payload_mib"]) for row in full])
+    repetitions = {int(row["repetitions"]) for row in full}
+    if len(repetitions) != 1:
+        raise ValueError("throughput figure requires the same repetitions per point")
+    enc = np.array([float(row["encrypt_mib_s_mean"]) for row in full])
+    dec = np.array([float(row["decrypt_mib_s_mean"]) for row in full])
+    enc_ci = np.array([float(row["encrypt_mib_s_ci95"]) for row in full])
+    dec_ci = np.array([float(row["decrypt_mib_s_ci95"]) for row in full])
+
+    fig, ax = new_fig()
+    ax.fill_between(payload, enc - enc_ci, enc + enc_ci, color=PALETTE[0], alpha=0.16)
+    ax.fill_between(payload, dec - dec_ci, dec + dec_ci, color=PALETTE[1], alpha=0.14)
+    ax.semilogx(payload, enc, marker="o", color=PALETTE[0], label="AES-256-GCM encryption", base=2)
+    ax.semilogx(payload, dec, marker="s", color=PALETTE[1], label="AES-256-GCM decryption", base=2)
+
+    ax.set_xlabel("Payload size (MiB)")
+    ax.set_ylabel("Throughput (MiB/s)")
+    ax.set_xticks(payload)
+    ax.set_xticklabels([str(value) for value in payload])
+    lower = min(np.min(enc - enc_ci), np.min(dec - dec_ci))
+    upper = max(np.max(enc + enc_ci), np.max(dec + dec_ci))
+    margin = 0.25 * (upper - lower)
+    ax.set_ylim(max(0, lower - margin), upper + margin)
+    ax.legend(loc="lower right")
+    return save(fig, out_dir, "ab4_throughput_revised_v2")
+
+
+def figure_aes_gcm_memory_revised(rows, out_dir: Path) -> Path:
+    by_variant = {
+        variant: sorted(
+            (row for row in rows if row["variant"] == variant),
+            key=lambda row: int(row["payload_mib"]),
+        )
+        for variant in ("full_buffer", "chunked")
+    }
+    payload = np.array([int(row["payload_mib"]) for row in by_variant["full_buffer"]])
+    fig, ax = new_fig()
+    plotted = {}
+    for variant, label, marker, color in (
+        ("full_buffer", "Full-buffer peak RSS", "o", PALETTE[3]),
+        ("chunked", "Chunked peak RSS (4 MiB)", "s", PALETTE[0]),
+    ):
+        values = np.array([float(row["incremental_peak_rss_mib_mean"]) for row in by_variant[variant]])
+        ci = np.array([float(row["incremental_peak_rss_mib_ci95"]) for row in by_variant[variant]])
+        plotted[variant] = values
+        ax.fill_between(payload, np.maximum(values - ci, 0.1), values + ci, color=color, alpha=0.15)
+        ax.plot(payload, values, marker=marker, color=color, label=label)
+
+    ax.plot(payload, payload, "--", color="#666666", label="1× payload reference")
+    for size in (128, 256, 512):
+        if size not in payload:
+            continue
+        index = int(np.where(payload == size)[0][0])
+        value = plotted["full_buffer"][index]
+        ax.annotate(
+            f"{value / size:.1f}×",
+            (size, value),
+            xytext=(-8, 9),
+            textcoords="offset points",
+            ha="right",
+            fontsize=11,
+            color=PALETTE[3],
+        )
+
+    ax.set_xscale("log", base=2)
+    ax.set_yscale("log", base=2)
+    ax.set_xticks(payload)
+    ax.set_xticklabels([str(value) for value in payload])
+    ax.set_xlabel("Payload size (MiB)")
+    ax.set_ylabel("Incremental RSS (MiB)")
+    ax.legend(loc="upper left")
+    ax.grid(which="both", alpha=0.22)
+    return save(fig, out_dir, "ab6_peak_rss_revised_v2")
+
+
 def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy_rows=None) -> list[Path]:
     paths: list[Path] = []
 
