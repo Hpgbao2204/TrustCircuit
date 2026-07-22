@@ -1,0 +1,31 @@
+{
+  "schema": "TrustCircuit.PublicTestnetRun.v1",
+  "ok": true,
+  "mode": "smoke",
+  "run_id": "smoke_20260722T172932299Z",
+  "run_directory": "results/raw/phase8/testnet/base_sepolia_smoke_20260722T172932299Z",
+  "chain": "Base Sepolia",
+  "chain_id": "84532",
+  "deployer_address": "0x862dAd21b3C2F6702fB3b7D784346b0b89Fa8b9F",
+  "transaction_count": 14,
+  "successful_transactions": 14,
+  "reverted_transactions": 0,
+  "rollback_checks_passed": true,
+  "canonical_addresses": {
+    "registry": "0x4335f2DAA7A19F7De8c1C57c1e6454728A407570",
+    "access_controller": "0x881c68B6cC62ea7612A3C3BAA2Ba72e2520a8EFe",
+    "budget_ledger": "0xF2855f5a47F8fE71d52cF47125cccc727fF03Ae4",
+    "audit_ledger": "0xC39375cC7E2C72CEf45AF352C86F7430c56145b5",
+    "groth16_verifier": "0x74869881Df8A36BD7ED60C57C191efc632e06af1",
+    "compliance_adapter": "0x7Fc496cF40A847B42d12946211db2D84AdAe93B2",
+    "settlement": "0x89AC58762196a03dD4ACc2adc2A9F3b8737Cf6bA"
+  },
+  "final_budget": {
+    "total": "10500000",
+    "reserved": "0",
+    "used": "500000",
+    "remaining": "10000000"
+  },
+  "raw_directory": "results/raw/phase8/testnet/base_sepolia_smoke_20260722T172932299Z",
+  "processed_directory": ""
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "TrustCircuit.DeploymentProfilesReused.v1",
+  "generated_at": "2026-07-20T21:26:27.980203+00:00",
+  "measurement_type": "reused_local_measurement",
+  "source_csv": "results/raw/phase8/e2e_ablation.csv",
+  "source_csv_sha256": "9c7f319d348289f14eac71bc7946a08d7b5759932a74b93c6ba46ba7acbf80d7",
+  "source_config": "results/raw/phase8/chain_experiment_config.json",
+  "source_config_hash": "ea091c96144cb733288085c0aa09e1893c72f7a689eb8649f66e8f0d052be86c",
+  "source_git_commit": "b82df429db76d5162bfcc57865ffa5279f1f3482",
+  "source_environment": {
+    "platform": "win32 10.0.26200",
+    "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
+    "logical_cpus": 16
+  },
+  "runs_per_profile": 30,
+  "warmups_in_source_excluded": true,
+  "bootstrap_samples": 10000,
+  "bootstrap_seed": 20260721,
+  "profile_mapping": {
+    "access_only": "TC-Lite",
+    "no_zk": "TC-Protected",
+    "full_trustcircuit": "TC-Full"
+  },
+  "limitations": [
+    "No new VBS execution was performed.",
+    "TC-Lite reuses access_only, whose recurring timer covers registry, access control, and audit but not CP-ABE/AES payload cryptography.",
+    "Network-byte counts were not present in the source CSV and remain unavailable.",
+    "Peak RSS and CPU are host benchmark-process counters, not enclave-only counters."
+  ]
+}

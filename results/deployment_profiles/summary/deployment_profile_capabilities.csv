@@ -1,0 +1,4 @@
+profile,tee,dp_budget,zkp,on_chain_audit,guarantee_score,main_guarantee
+TC-Lite,0,0,0,1,1,Authorized and auditable access
+TC-Protected,1,1,0,1,3,Confidential execution and budget control
+TC-Full,1,1,1,1,4,Verifiable policy and budget binding

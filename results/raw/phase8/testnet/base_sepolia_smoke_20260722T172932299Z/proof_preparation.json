@@ -1,0 +1,13 @@
+[
+  {
+    "measurement_type": "prepared_offchain_not_in_chain_latency",
+    "mode": "smoke",
+    "run_id": "smoke_20260722T172932299Z",
+    "proof_index": 0,
+    "request_id": "0x126b679f6cc7b8538c54da34df10a57a59f8c6bd0c8169286a994909c9c9b359",
+    "prove_time_ms": 899.336,
+    "verify_time_ms": 16.905,
+    "proof_bundle_bytes": 1405,
+    "verified": 1
+  }
+]

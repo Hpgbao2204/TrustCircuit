@@ -1,0 +1,51 @@
+[
+  {
+    "suite_iteration": 0,
+    "contract": "DataRegistry",
+    "address": "0x4335f2DAA7A19F7De8c1C57c1e6454728A407570",
+    "tx_hash": "0x0d07edc2d9a24a562fe55279c3df70796b8d3ad611dffbccb5f3efb2d1fe3199",
+    "block_number": 44486532
+  },
+  {
+    "suite_iteration": 0,
+    "contract": "AccessController",
+    "address": "0x881c68B6cC62ea7612A3C3BAA2Ba72e2520a8EFe",
+    "tx_hash": "0xadce98bffc62f86d9aed81219135c6c36989e9356f7360aac70a949184cae984",
+    "block_number": 44486534
+  },
+  {
+    "suite_iteration": 0,
+    "contract": "BudgetLedger",
+    "address": "0xF2855f5a47F8fE71d52cF47125cccc727fF03Ae4",
+    "tx_hash": "0x9b9fb1ce846d1ad80c55de1c784e4cbc8e84a8d26d9fd6fe48370932ead5832d",
+    "block_number": 44486536
+  },
+  {
+    "suite_iteration": 0,
+    "contract": "AuditLedger",
+    "address": "0xC39375cC7E2C72CEf45AF352C86F7430c56145b5",
+    "tx_hash": "0xd53464afc5ef7a4dfd9c806838cd491243aee66e1e50d9cd9724bf195bfb107a",
+    "block_number": 44486538
+  },
+  {
+    "suite_iteration": 0,
+    "contract": "Phase7Groth16Verifier",
+    "address": "0x74869881Df8A36BD7ED60C57C191efc632e06af1",
+    "tx_hash": "0xd7c20586c64f7a011d4fd9c6f1e8866b6ca46bdfd5c709558525afbdda2421a9",
+    "block_number": 44486540
+  },
+  {
+    "suite_iteration": 0,
+    "contract": "ComplianceVerifier",
+    "address": "0x7Fc496cF40A847B42d12946211db2D84AdAe93B2",
+    "tx_hash": "0x4563d6697610ef607177c43cf16940e697fd7a41e6e2d49ed01d2115e254e16f",
+    "block_number": 44486542
+  },
+  {
+    "suite_iteration": 0,
+    "contract": "TrustCircuitSettlement",
+    "address": "0x89AC58762196a03dD4ACc2adc2A9F3b8737Cf6bA",
+    "tx_hash": "0x2a723c92baa70a7f14fde290e4ef6f3dcf486b4f9c10c31384e842085dc4a632",
+    "block_number": 44486544
+  }
+]

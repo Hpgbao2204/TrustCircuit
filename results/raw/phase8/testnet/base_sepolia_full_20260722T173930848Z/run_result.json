@@ -1,11 +1,16 @@
 {
-  "measurement_type": "measured_public_testnet",
-  "executed": true,
+  "schema": "TrustCircuit.PublicTestnetRun.v1",
+  "ok": true,
+  "mode": "full",
+  "run_id": "full_20260722T173930848Z",
+  "run_directory": "results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z",
   "chain": "Base Sepolia",
   "chain_id": "84532",
-  "run_id": "full_20260722T173930848Z",
-  "raw_directory": "results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z",
+  "deployer_address": "0x862dAd21b3C2F6702fB3b7D784346b0b89Fa8b9F",
   "transaction_count": 302,
+  "successful_transactions": 272,
+  "reverted_transactions": 30,
+  "rollback_checks_passed": true,
   "canonical_addresses": {
     "registry": "0x61B895790a2abe3770ac19085432eb9e6d1008e5",
     "access_controller": "0x10356BF756aeBe217a19655f970B338530eB159b",
@@ -14,5 +19,11 @@
     "groth16_verifier": "0xc8AB37AC465111817Ff7B039EEa31E8F0AE4B722",
     "compliance_adapter": "0x2409EC3511D10FF9D5bbC042fB24C3D93b7D2be4",
     "settlement": "0x5b7219a19b93E2174d2f1fc11C46fDD65cFe7C61"
+  },
+  "final_budget": {
+    "total": "30000000",
+    "reserved": "0",
+    "used": "20000000",
+    "remaining": "10000000"
   }
 }

@@ -109,6 +109,8 @@ results/raw/phase8/concurrency_bundles/
 results/raw/phase8/fresh_bundles/
 !results/processed/
 !results/processed/**
+!results/deployment_profiles/
+!results/deployment_profiles/**
 
 !Paper/
 Paper/*

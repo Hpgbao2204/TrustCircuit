@@ -18,6 +18,12 @@
     "abe:cpabe:plot": "python crypto/plot_cpabe_policy.py",
     "abe:aes:benchmark": "python crypto/run_aes_gcm_scaling.py",
     "abe:aes:plot": "python crypto/plot_aes_gcm_revised.py",
+    "profiles:reuse": "python benchmarks/build_deployment_profiles_from_existing.py",
+    "profiles:plot": "python benchmarks/plot_deployment_profiles.py",
+    "profiles:all": "npm run profiles:reuse && npm run profiles:plot",
+    "testnet:base:smoke": "node benchmarks/base_sepolia_settlement.js --smoke",
+    "testnet:base": "node benchmarks/base_sepolia_settlement.js",
+    "testnet:base:process": "python benchmarks/process_base_sepolia_results.py",
     "lint": "echo \"TODO: add lint command\""
   },
   "devDependencies": {
