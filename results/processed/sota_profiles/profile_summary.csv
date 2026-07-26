@@ -1,0 +1,9 @@
+profile,year,category,bound_fields,total_enforcement_checks_per_request,median_layers_per_bound_field,unique_control_events_per_1000_requests_at_64_attempts
+ProMark,2024,Related Work emulation,31,68,2,50321.5
+Veracruz,2023,Related Work emulation,26,60,2.0,44369.0
+VLDP,2025,Related Work emulation,21,48,2,35531.5
+VerifBFL,2025,Related Work emulation,34,78,2.0,57730.0
+VPrivKV,2026,Related Work emulation,27,62,2,45894.5
+TC-Lite,2026,TrustCircuit profile,30,65,2.0,48094.5
+TC-Protected,2026,TrustCircuit profile,42,120,3.0,88803.0
+TC-Full,2026,TrustCircuit profile,48,180,3.5,133239.5

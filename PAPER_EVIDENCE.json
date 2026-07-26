@@ -1,0 +1,208 @@
+{
+  "schema": "TrustCircuit.PaperEvidence.v1",
+  "scope": "Canonical non-image evidence for the AWS Nitro paper evaluation",
+  "paper_claims": [
+    {
+      "group": "deployment_profiles",
+      "measurement_type": "measured_and_model_calibrated_as_labeled_in_rows",
+      "reported": {
+        "latency_ms": {"TC-Lite": 6.3, "TC-Protected": 148.0, "TC-Full": 378.6},
+        "throughput_req_s": {"TC-Lite": 159.84, "TC-Protected": 6.84, "TC-Full": 2.65},
+        "gas_million": {"TC-Lite": 0.43, "TC-Protected": 0.69, "TC-Full": 1.37}
+      },
+      "evidence": ["results/raw/phase8/e2e_ablation.csv"],
+      "reproduce": "python benchmarks/build_deployment_profiles_from_existing.py"
+    },
+    {
+      "group": "lifecycle_gas",
+      "measurement_type": "measured_local_hardhat",
+      "reported": {
+        "initialization_gas": 209388,
+        "request_path_gas_before_verifier": 428648
+      },
+      "evidence": [
+        "results/raw/contract_gas_benchmark.csv",
+        "results/summary/contract_gas_summary.csv"
+      ],
+      "reproduce": "npx hardhat run scripts/gas-benchmark.js && python benchmarks/summarize_gas.py"
+    },
+    {
+      "group": "zk_scaling_and_backends",
+      "measurement_type": "measured_local",
+      "reported": {
+        "constraints": {"1": 1927, "2": 2444, "4": 3478, "6": 4512, "8": 5546, "10": 6580},
+        "groth16_two_rule_prove_ms": 176,
+        "groth16_two_rule_proof_bytes": 943,
+        "isolated_verifier_gas": 255757,
+        "plonk_prove_ms": 3373,
+        "fflonk_prove_ms": 3526
+      },
+      "evidence": [
+        "results/raw/zk_benchmark.csv",
+        "results/raw/zk_schemes.csv",
+        "results/summary/zk_onchain_gas.csv",
+        "results/summary/zk_schemes_gas.csv"
+      ],
+      "source_snapshot": "zk/circuits/paper_legacy_compliance_check.circom",
+      "reproduce": "Use the paper legacy circuit with Circom 2.2.2 and snarkjs 0.7.5; performance is host-dependent."
+    },
+    {
+      "group": "proof_backend_path",
+      "measurement_type": "model_calibrated_from_measured_proof_and_fixed_non_proof_components",
+      "reported": {
+        "throughput_circulations_s": {"groth16": 4.03, "plonk": 0.29, "fflonk": 0.28}
+      },
+      "evidence": ["results/summary/e2e_zk_schemes.csv"],
+      "reproduce": "python benchmarks/e2e_zk_projection.py"
+    },
+    {
+      "group": "dp_utility",
+      "measurement_type": "seeded_synthetic_experiment",
+      "reported": {
+        "records": 50000,
+        "trials_per_query_epsilon": 500,
+        "diabetes_count_error_percent_epsilon_1": 0.044,
+        "count_error_percent_epsilon_0_1": [0.40, 0.47],
+        "mean_error_percent_epsilon_0_1": [0.085, 0.11]
+      },
+      "evidence": [
+        "results/raw/dp_utility.csv",
+        "results/summary/dp_utility_summary.csv",
+        "results/summary/dp_config.json"
+      ],
+      "reproduce": "python dp/experiment.py --seed 42 --rows 50000 --trials 500"
+    },
+    {
+      "group": "cpabe_policy_scaling",
+      "measurement_type": "measured_local",
+      "reported": {
+        "full_cpabe_encrypt_ms_5_to_25_leaves": [51, 181],
+        "kem_dem_encrypt_ms_5_to_25_leaves": [6, 35],
+        "full_cpabe_decrypt_ms": [23, 24]
+      },
+      "evidence": [
+        "results/raw/cpabe_policy_benchmark.csv",
+        "results/summary/cpabe_policy_summary.csv",
+        "results/summary/cpabe_policy_config.json"
+      ],
+      "reproduce": "python crypto/run_cpabe_policy_benchmark.py"
+    },
+    {
+      "group": "aes_gcm_payload_scaling",
+      "measurement_type": "measured_local",
+      "reported": {"steady_throughput_gib_s_approx": [1.3, 1.4]},
+      "evidence": [
+        "results/raw/abe_payload_scaling.csv",
+        "results/summary/abe_payload_summary.csv",
+        "results/summary/abe_scaling_config.json"
+      ],
+      "reproduce": "node crypto/abe_scaling.js"
+    },
+    {
+      "group": "nitro_payload_attestation_and_pool",
+      "measurement_type": "measured_aws_nitro_with_explicit_model_projections",
+      "reported": {
+        "measured_payload_mib": [1, 8, 32, 128],
+        "measured_worker_counts": [1, 2, 4],
+        "projected_worker_counts": [8, 16, 32, 64],
+        "attestation_median_ms": 1.879
+      },
+      "evidence": [
+        "results/raw/nitro_latency.csv",
+        "results/raw/nitro_attestation.csv",
+        "results/raw/nitro_pool.csv",
+        "results/summary/nitro_config.json",
+        "results/summary/nitro_pool_projection_summary.csv"
+      ],
+      "reproduce": "Run tee/nitro parent, attestation, and pool benchmark clients on an AWS Nitro Enclaves host."
+    },
+    {
+      "group": "protocol_deviation_detection",
+      "measurement_type": "seeded_protocol_level_simulation",
+      "reported": {"trials": 1500, "severity_levels": [0.1, 0.25, 0.5, 0.75, 1.0]},
+      "evidence": [
+        "results/raw/tee_attack_trials.csv",
+        "results/summary/tee_attack_summary.csv",
+        "results/summary/tee_attack_config.json"
+      ],
+      "reproduce": "python tee/attack_simulation.py --seed 42 --rows 60000 --trials 30 --cpu-hash-rounds 8000 --scratch-mb 16"
+    },
+    {
+      "group": "base_sepolia",
+      "measurement_type": "measured_public_testnet",
+      "reported": {
+        "deployment_gas": 4256636,
+        "deployment_calldata_bytes": 18791,
+        "valid_settlement_median_gas": 471163,
+        "valid_settlement_p95_gas": 471187,
+        "valid_settlement_median_inclusion_s": 3.72,
+        "valid_settlement_median_fee_micro_eth": 2.8641
+      },
+      "evidence": [
+        "results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/deployments.json",
+        "results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/transactions.csv"
+      ],
+      "reproduce": "node benchmarks/base_sepolia_settlement.js"
+    },
+    {
+      "group": "cross_system_enforcement_surface",
+      "measurement_type": "analytical_and_seeded_reconstruction",
+      "reported": {"uniform_field_space_reached_percent_at_128_mutations": 93.24},
+      "evidence": [
+        "results/raw/phase8/sota_profiles/config.json",
+        "results/processed/sota_profiles/field_work_curve.csv",
+        "results/processed/sota_profiles/compound_field_curve.csv",
+        "results/processed/sota_profiles/reconstruction_scope.csv"
+      ],
+      "reproduce": "python benchmarks/sota_field_curve_benchmark.py"
+    }
+  ],
+  "files": [
+    {"file":"results/raw/contract_gas_benchmark.csv","sha256":"baa8fc95eae7488fc4949ee77966917317d1346c2436b63e2474321b8f9174eb","rows":4200},
+    {"file":"results/summary/contract_gas_summary.csv","sha256":"d96a1abc3967fde7c8be463329ebbcd827f1eaa9ebae598f8d3ba84eb827342d","rows":40},
+    {"file":"results/raw/zk_benchmark.csv","sha256":"53f6addf9443662af88319bd3b31addd95551f21e9462f60e0c94bc91ba13c65","rows":6},
+    {"file":"results/summary/zk_benchmark_summary.csv","sha256":"53f6addf9443662af88319bd3b31addd95551f21e9462f60e0c94bc91ba13c65","rows":6},
+    {"file":"results/summary/zk_benchmark_config.json","sha256":"8d431cd71967c9e78a1d29ace0638d2d09c3f71a3a7a9c5b608f287921894aa0"},
+    {"file":"results/raw/zk_schemes.csv","sha256":"972d9c37d86ec71c6c3fea7bfbbfa46ea0a8bf6e5caada28340cac31971f1cc5","rows":3},
+    {"file":"results/summary/zk_schemes_summary.csv","sha256":"15a27f8e2d0b099dcfe6fe9d1049b5c8eda94ccc2178da81de76fc0974ff5057","rows":3},
+    {"file":"results/summary/zk_schemes_config.json","sha256":"f5a4a68a393c395b459c454f2c6e5500bfe8f0b97af1482daf6e9ceffa9ee76c"},
+    {"file":"results/summary/zk_onchain_gas.csv","sha256":"726ca1ab60d4b490ff205b68a3ccb446d9f9d5b62e9a9b2d2c4a2cb5001a8d2f","rows":1},
+    {"file":"results/summary/zk_schemes_gas.csv","sha256":"029d6b7a1d5063d32df8c09e0f14b027597ca1959bab4103607662c06ac66f92","rows":3},
+    {"file":"results/summary/e2e_zk_schemes.csv","sha256":"84f2fc442ea8add1e7b5f10a44a06f0859df20da4a2cb66b8f28908dd79648a4","rows":3},
+    {"file":"results/raw/dp_utility.csv","sha256":"89f4139da094165a6e869791e76e59644b4dd637efebf485e77eb83911f18f21","rows":15000},
+    {"file":"results/summary/dp_utility_summary.csv","sha256":"204d9572a3d242c384a3f88520dc8283bc1904c936d19c86e491d7331e600258","rows":30},
+    {"file":"results/summary/dp_config.json","sha256":"64c202afee90c381dcded24bd67dd43f28148333bd4f9e3f693bb4a9c74b5e87"},
+    {"file":"results/raw/cpabe_policy_benchmark.csv","sha256":"033c62260aa57a7e07ee00a4db1cc57d859f29d4a6493f41e2ca28d68b773e91","rows":600},
+    {"file":"results/summary/cpabe_policy_summary.csv","sha256":"54fcb7510f86081c277e19abec50a2e25119ec644e5b3b37ad6090f73ddde99b","rows":5},
+    {"file":"results/summary/cpabe_policy_config.json","sha256":"11d6de907ffc3759bd6d2416129cc341ea13c94fb4bc23534126cad9a9dccafe"},
+    {"file":"results/raw/abe_payload_scaling.csv","sha256":"e5345834896c6ece14fd241ba48f22b910c34c5b63121a92d1fc0d91d5370ecf","rows":43},
+    {"file":"results/summary/abe_payload_summary.csv","sha256":"b54445d7fb9c3131717e8c241c857c3727ccc91e379d151394b15d245cb4c9d6","rows":10},
+    {"file":"results/summary/abe_scaling_config.json","sha256":"ca0997eac278bef36bc0010984e50152d947f0b00cec56a31a3b4f66814c6eec"},
+    {"file":"results/raw/nitro_latency.csv","sha256":"c090c9d32345ed90b4ee1b1400076db04cd0b5fb239b99a9ee9e7622ddbcadf0","rows":20},
+    {"file":"results/raw/nitro_attestation.csv","sha256":"aae64152baad99bb69a52cf8692e11e11cadbdafa760f2f05e2b52811c7eb047","rows":20},
+    {"file":"results/raw/nitro_pool.csv","sha256":"16c8e47f5ab6096e70beb39920976ee454c53250808b4f86a5d668c7d631f175","rows":240},
+    {"file":"results/summary/nitro_latency_summary.csv","sha256":"54fe217f25ec75a29b28c370a66df1cd3e888a26ee84e721d0bafaa53b0360e9","rows":4},
+    {"file":"results/summary/nitro_attestation_summary.csv","sha256":"fa61fde15097ee495e6279d4c24f3a651c6433867201fca9b8d031c12be6397b","rows":1},
+    {"file":"results/summary/nitro_config.json","sha256":"84b9a2b2765e6a472b7cda1484c35022941be5ed4c84318742778819f274b816"},
+    {"file":"results/summary/nitro_pool_summary.csv","sha256":"4ad53354690a480c0dd622be9aac19dd8a91183a392a303946da372f32f2218c","rows":3},
+    {"file":"results/summary/nitro_pool_projection_summary.csv","sha256":"e34dba2fbd3432f7cf3534e7e26376a2360d456a8503308ab98a8de8ab2fafcf","rows":7},
+    {"file":"results/raw/tee_attack_trials.csv","sha256":"101727bfcf6ed76c6ad3029d38c050d5e6ad1c72204da13252943eebb0a8a649","rows":1500},
+    {"file":"results/summary/tee_attack_summary.csv","sha256":"2f8441c640062739cd46ccc6e2b865a5345543767e94d259e3307e5090feba14","rows":50},
+    {"file":"results/summary/tee_attack_config.json","sha256":"663d34a7b27ce058cb9118f97db60db465063a89e4406d9864f0724215349b4e"},
+    {"file":"results/raw/phase8/sota_profiles/config.json","sha256":"9c71f9bb49d1b506e3d3a85a2d0b770411fa65b41d67c0285c46fb478c66cfa8"},
+    {"file":"results/processed/sota_profiles/field_work_curve.csv","sha256":"fcf14c7094ad844ad522a8b987323a62bddfe1746ac0b933998802407ae5f6e4","rows":384},
+    {"file":"results/processed/sota_profiles/compound_field_curve.csv","sha256":"2bdc517d04cc5a7d51f023520ae9241da93cd69ea8bcf373590a962a1552c45e","rows":96},
+    {"file":"results/processed/sota_profiles/profile_summary.csv","sha256":"bbf0fb2eebca7d7c197f48e35564f080f4ad35049ad9df6fc020f06293d5c604","rows":8},
+    {"file":"results/processed/sota_profiles/reconstruction_scope.csv","sha256":"5693a17e8931256e32752604d1932e0413884951ad535182fd50980112ab096f","rows":8},
+    {"file":"zk/circuits/paper_legacy_compliance_check.circom","sha256":"3e54ea94dd11051988515291029d6280a1b6c573674a6fb85b29d1bd877268c0"}
+  ],
+  "limitations": [
+    "Runtime measurements are expected to vary across hosts; exact structural values, raw historical measurements, and reported aggregates are preserved.",
+    "The paper ZK evidence uses the seven-public-input legacy circuit snapshot, not the later eleven-public-input VBS migration circuit.",
+    "Historical ZK scaling and backend CSVs retain aggregate measurements from twelve repetitions but not the individual per-repetition timing rows.",
+    "Nitro payload sizes 1, 8, 32, and 128 MiB are directly measured; historical 256, 512, and 1024 MiB panel points are model projections from the measured plateau.",
+    "Nitro worker counts 1, 2, and 4 are directly measured; counts 8 through 64 are model-calibrated projections.",
+    "Protocol deviation detection is a seeded protocol-level simulation, not a hardware side-channel or platform-compromise experiment.",
+    "The Base Sepolia campaign records one historical network state; reruns will have different fees and confirmation latencies."
+  ]
+}

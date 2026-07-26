@@ -1,0 +1,19 @@
+{
+  "schemes": [
+    "groth16",
+    "plonk",
+    "fflonk"
+  ],
+  "curve": "bn128",
+  "hash": "poseidon",
+  "rules": 2,
+  "budget_bits": 64,
+  "ptau_power": 16,
+  "reps": 12,
+  "circom_version": "circom compiler 2.2.2",
+  "snarkjs_version": "0.7.5",
+  "node": "v22.13.0",
+  "platform": "win32 10.0.26200",
+  "cpus": 16,
+  "note": "Same compliance circuit instantiated under Groth16/PLONK/fflonk; local Windows measurement."
+}

@@ -1,0 +1,17 @@
+{
+  "seed": 42,
+  "rows": 50000,
+  "trials": 500,
+  "epsilon_values": [
+    0.1,
+    0.5,
+    1.0,
+    2.0,
+    5.0
+  ],
+  "delta": 1e-05,
+  "raw_output": "results\\raw\\dp_utility.csv",
+  "summary_output": "results\\summary\\dp_utility_summary.csv",
+  "config_output": "results\\summary\\dp_config.json",
+  "figure_output": "results\\figures\\dp_utility_matrix.pdf"
+}

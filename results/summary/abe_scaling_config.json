@@ -1,0 +1,16 @@
+{
+  "scheme": "LSSS access-tree + secp256k1 ECIES + AES-256-GCM hybrid",
+  "payload_policy": "4-of-8 threshold (fixed during payload scaling)",
+  "max_payload_mb": 512,
+  "ram_budget_mb": 24000,
+  "security_trials": 300,
+  "crypto": {
+    "kem": "secp256k1 ECDH",
+    "kdf": "HKDF-SHA256",
+    "aead": "AES-256-GCM"
+  },
+  "node": "v22.13.0",
+  "platform": "win32 10.0.26200",
+  "total_ram_gb": "31.3",
+  "cpus": 16
+}

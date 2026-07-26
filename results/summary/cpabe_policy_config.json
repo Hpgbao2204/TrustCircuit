@@ -1,0 +1,52 @@
+{
+  "schema": "TrustCircuit.CpAbePolicyBenchmark.v1",
+  "run_id": "cpabe-20260719T231005Z-461a7545",
+  "timestamp_utc": "2026-07-19T23:10:05.164736+00:00",
+  "measurement_type": "directly measured",
+  "comparison": {
+    "kem_dem_baseline": "TrustCircuit LSSS all-of-N + secp256k1 ECIES per leaf + AES-256-GCM",
+    "full_cpabe": "AC17/FAME pairing-based CP-ABE via rabe 0.4.2"
+  },
+  "policy_model": "left-associated binary all-of-N conjunction; decryption key contains all N attributes",
+  "policy_sizes": [
+    5,
+    10,
+    15,
+    20,
+    25
+  ],
+  "repetitions": 30,
+  "warmups_per_policy": 5,
+  "payload_bytes": 32,
+  "timed_operations": [
+    "encrypt",
+    "decrypt"
+  ],
+  "excluded_from_timing": [
+    "scheme setup",
+    "master-key setup",
+    "user secret-key generation",
+    "process startup",
+    "CSV serialization"
+  ],
+  "execution": "single-process, sequential operations, release-optimized Rust binary",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 116 Stepping 1, AuthenticAMD",
+    "logical_cpu_count": 16,
+    "python": "3.12.10",
+    "node": "v22.13.0",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)"
+  },
+  "git_commit": "64ab05d06adc886bdeb4f93c6a3a24fa4758e183",
+  "git_dirty": true,
+  "raw_csv": "results\\raw\\cpabe_policy_benchmark.csv",
+  "raw_csv_sha256": "033c62260aa57a7e07ee00a4db1cc57d859f29d4a6493f41e2ca28d68b773e91",
+  "summary_csv": "results\\summary\\cpabe_policy_summary.csv",
+  "limitations": [
+    "Latency is host- and toolchain-specific.",
+    "The benchmark isolates policy-dependent cryptography with a 32-byte payload; setup and key generation are not included.",
+    "The KEM-DEM baseline and AC17/FAME implementation use different cryptographic groups and language runtimes, so the comparison is an implementation-level systems benchmark rather than a primitive-equivalence proof."
+  ]
+}

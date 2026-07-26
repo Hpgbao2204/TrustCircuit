@@ -1,0 +1,1385 @@
+{
+  "enforcement_layers": {
+    "authorization": "authorization or policy validation",
+    "commitment": "canonical transcript or commitment binding",
+    "execution": "isolated-execution evidence",
+    "proof": "proof-relation enforcement",
+    "state": "stateful transition or replay enforcement"
+  },
+  "field_groups": {
+    "audit_receipt": [
+      "result_hash",
+      "audit_digest",
+      "receipt_id",
+      "block_height",
+      "settlement_time",
+      "evidence_chain_hash"
+    ],
+    "execution_evidence": [
+      "runtime_id",
+      "enclave_measurement",
+      "attestation_nonce",
+      "attestation_time",
+      "transcript_hash",
+      "execution_key_id"
+    ],
+    "identity_provenance": [
+      "request_id",
+      "asset_id",
+      "consumer_id",
+      "producer_id",
+      "data_version",
+      "request_timestamp"
+    ],
+    "input_integrity": [
+      "data_hash",
+      "ciphertext_hash",
+      "nonce",
+      "authentication_tag",
+      "aad_hash",
+      "input_signature"
+    ],
+    "policy_authorization": [
+      "policy_hash",
+      "policy_version",
+      "consent_id",
+      "access_scope",
+      "deadline",
+      "function_id"
+    ],
+    "privacy_accounting": [
+      "epsilon",
+      "delta",
+      "sensitivity",
+      "clipping_bound",
+      "mechanism_id",
+      "actual_privacy_cost"
+    ],
+    "proof_context": [
+      "public_input_hash",
+      "proof_context",
+      "verifier_id",
+      "circuit_version",
+      "proof_digest",
+      "relation_tag"
+    ],
+    "state_settlement": [
+      "request_status",
+      "budget_before",
+      "budget_after",
+      "nullifier",
+      "replay_key",
+      "settlement_id"
+    ]
+  },
+  "metadata": {
+    "field_order_trials": 600,
+    "git_commit": "8f2abc8f0a0704d4454c6bd86744909f21205476",
+    "measurement_boundary": "48-field feature-contract emulation",
+    "mutation_batch_trials": 100,
+    "non_claim": "not source-system performance or cryptographic reproduction",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "requests_per_mutation_batch": 1000,
+    "schema": "trustcircuit-sota-field-curves/v3",
+    "seed": 20260723,
+    "timestamp_utc": "2026-07-23T22:45:13.499466+00:00"
+  },
+  "profiles": [
+    {
+      "category": "Related Work emulation",
+      "emulated_slice": "campaign policy, participant binding, PoC relation, replay token, ledger audit",
+      "key": "promark",
+      "label": "ProMark",
+      "omissions": "Fabric deployment, Pedersen/ECIES/MPC workflow, original PoC implementation",
+      "protections": {
+        "access_scope": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "asset_id": [
+          "authorization",
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "audit_digest": [
+          "commitment",
+          "state"
+        ],
+        "block_height": [
+          "commitment",
+          "state"
+        ],
+        "budget_after": [
+          "commitment",
+          "state"
+        ],
+        "budget_before": [
+          "commitment",
+          "state"
+        ],
+        "ciphertext_hash": [
+          "commitment",
+          "proof"
+        ],
+        "circuit_version": [
+          "commitment",
+          "proof"
+        ],
+        "consent_id": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "consumer_id": [
+          "authorization",
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "data_hash": [
+          "commitment",
+          "proof"
+        ],
+        "data_version": [
+          "commitment",
+          "state"
+        ],
+        "deadline": [
+          "commitment",
+          "proof"
+        ],
+        "evidence_chain_hash": [
+          "state"
+        ],
+        "function_id": [
+          "commitment",
+          "proof"
+        ],
+        "nonce": [
+          "commitment",
+          "proof"
+        ],
+        "nullifier": [
+          "commitment",
+          "state"
+        ],
+        "policy_hash": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "policy_version": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "producer_id": [
+          "commitment",
+          "state"
+        ],
+        "proof_context": [
+          "commitment",
+          "proof"
+        ],
+        "proof_digest": [
+          "proof"
+        ],
+        "public_input_hash": [
+          "commitment",
+          "proof"
+        ],
+        "receipt_id": [
+          "commitment",
+          "state"
+        ],
+        "relation_tag": [
+          "proof"
+        ],
+        "replay_key": [
+          "state"
+        ],
+        "request_id": [
+          "authorization",
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "request_status": [
+          "commitment",
+          "state"
+        ],
+        "result_hash": [
+          "commitment",
+          "state"
+        ],
+        "settlement_time": [
+          "commitment",
+          "state"
+        ],
+        "verifier_id": [
+          "commitment",
+          "proof"
+        ]
+      },
+      "source": "Hoang et al., IEEE TDSC",
+      "source_url": "https://doi.org/10.1109/TDSC.2024.3478049",
+      "year": 2024
+    },
+    {
+      "category": "Related Work emulation",
+      "emulated_slice": "global policy, principals, transcript integrity, isolated-runtime attestation",
+      "key": "veracruz",
+      "label": "Veracruz",
+      "omissions": "Nitro/CCA/seL4 runtimes, TLS provisioning, proxy attestation service",
+      "protections": {
+        "aad_hash": [
+          "commitment",
+          "execution"
+        ],
+        "access_scope": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "asset_id": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "attestation_nonce": [
+          "commitment",
+          "execution"
+        ],
+        "attestation_time": [
+          "commitment",
+          "execution"
+        ],
+        "audit_digest": [
+          "commitment",
+          "execution"
+        ],
+        "authentication_tag": [
+          "commitment",
+          "execution"
+        ],
+        "ciphertext_hash": [
+          "commitment",
+          "execution"
+        ],
+        "consent_id": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "consumer_id": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "data_hash": [
+          "commitment",
+          "execution"
+        ],
+        "data_version": [
+          "commitment",
+          "execution"
+        ],
+        "deadline": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "enclave_measurement": [
+          "commitment",
+          "execution"
+        ],
+        "execution_key_id": [
+          "commitment",
+          "execution"
+        ],
+        "function_id": [
+          "commitment"
+        ],
+        "input_signature": [
+          "commitment",
+          "execution"
+        ],
+        "nonce": [
+          "commitment",
+          "execution"
+        ],
+        "policy_hash": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "policy_version": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "producer_id": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "request_id": [
+          "authorization",
+          "commitment",
+          "execution"
+        ],
+        "request_timestamp": [
+          "commitment",
+          "execution"
+        ],
+        "result_hash": [
+          "commitment",
+          "execution"
+        ],
+        "runtime_id": [
+          "commitment",
+          "execution"
+        ],
+        "transcript_hash": [
+          "commitment",
+          "execution"
+        ]
+      },
+      "source": "Brossard et al., IEEE TCC",
+      "source_url": "https://arxiv.org/abs/2205.03322",
+      "year": 2023
+    },
+    {
+      "category": "Related Work emulation",
+      "emulated_slice": "authenticated LDP input, mechanism parameters, randomized output relation",
+      "key": "vldp",
+      "label": "VLDP",
+      "omissions": "Groth16 circuit, shuffle deployment, original cryptographic implementation",
+      "protections": {
+        "aad_hash": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "actual_privacy_cost": [
+          "commitment",
+          "proof"
+        ],
+        "asset_id": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "authentication_tag": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "ciphertext_hash": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "circuit_version": [
+          "commitment",
+          "proof"
+        ],
+        "clipping_bound": [
+          "commitment",
+          "proof"
+        ],
+        "data_hash": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "delta": [
+          "commitment",
+          "proof"
+        ],
+        "epsilon": [
+          "commitment",
+          "proof"
+        ],
+        "input_signature": [
+          "commitment",
+          "proof"
+        ],
+        "mechanism_id": [
+          "commitment",
+          "proof"
+        ],
+        "nonce": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "policy_hash": [
+          "proof"
+        ],
+        "proof_context": [
+          "commitment",
+          "proof"
+        ],
+        "proof_digest": [
+          "commitment",
+          "proof"
+        ],
+        "public_input_hash": [
+          "commitment",
+          "proof"
+        ],
+        "request_id": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "result_hash": [
+          "commitment",
+          "proof"
+        ],
+        "sensitivity": [
+          "commitment",
+          "proof"
+        ],
+        "verifier_id": [
+          "commitment",
+          "proof"
+        ]
+      },
+      "source": "Bontekoe et al., PoPETs",
+      "source_url": "https://petsymposium.org/popets/2025/popets-2025-0076.php",
+      "year": 2025
+    },
+    {
+      "category": "Related Work emulation",
+      "emulated_slice": "training-task identity, model-update proof, round state, blockchain audit",
+      "key": "verifbfl",
+      "label": "VerifBFL",
+      "omissions": "federated training, Nova/IVC execution, Chainlink, IPFS and PBFT network",
+      "protections": {
+        "aad_hash": [
+          "commitment",
+          "proof"
+        ],
+        "asset_id": [
+          "authorization",
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "audit_digest": [
+          "commitment",
+          "state"
+        ],
+        "authentication_tag": [
+          "commitment",
+          "proof"
+        ],
+        "block_height": [
+          "commitment",
+          "state"
+        ],
+        "budget_after": [
+          "proof",
+          "state"
+        ],
+        "budget_before": [
+          "proof",
+          "state"
+        ],
+        "ciphertext_hash": [
+          "commitment",
+          "proof"
+        ],
+        "circuit_version": [
+          "commitment",
+          "proof"
+        ],
+        "consumer_id": [
+          "authorization",
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "data_hash": [
+          "commitment",
+          "proof"
+        ],
+        "data_version": [
+          "authorization",
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "delta": [
+          "commitment",
+          "proof"
+        ],
+        "epsilon": [
+          "commitment",
+          "proof"
+        ],
+        "evidence_chain_hash": [
+          "commitment",
+          "state"
+        ],
+        "input_signature": [
+          "commitment",
+          "proof"
+        ],
+        "nonce": [
+          "commitment",
+          "proof"
+        ],
+        "nullifier": [
+          "proof",
+          "state"
+        ],
+        "policy_hash": [
+          "authorization",
+          "commitment"
+        ],
+        "policy_version": [
+          "authorization",
+          "commitment"
+        ],
+        "producer_id": [
+          "authorization",
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "proof_context": [
+          "commitment",
+          "proof"
+        ],
+        "proof_digest": [
+          "commitment",
+          "proof"
+        ],
+        "public_input_hash": [
+          "commitment",
+          "proof"
+        ],
+        "receipt_id": [
+          "commitment",
+          "state"
+        ],
+        "relation_tag": [
+          "commitment",
+          "proof"
+        ],
+        "replay_key": [
+          "proof",
+          "state"
+        ],
+        "request_id": [
+          "authorization",
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "request_status": [
+          "proof",
+          "state"
+        ],
+        "request_timestamp": [
+          "commitment",
+          "state"
+        ],
+        "result_hash": [
+          "commitment",
+          "state"
+        ],
+        "sensitivity": [
+          "commitment",
+          "proof"
+        ],
+        "settlement_time": [
+          "commitment",
+          "state"
+        ],
+        "verifier_id": [
+          "commitment",
+          "proof"
+        ]
+      },
+      "source": "Bellachia et al.",
+      "source_url": "https://arxiv.org/abs/2501.04319",
+      "year": 2025
+    },
+    {
+      "category": "Related Work emulation",
+      "emulated_slice": "joint key sampling, interactive perturbation verification, enhanced ZK relation",
+      "key": "vprivkv",
+      "label": "VPrivKV",
+      "omissions": "coin-flipping transport, full PrivKV analytics and original ZK implementation",
+      "protections": {
+        "aad_hash": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "actual_privacy_cost": [
+          "commitment",
+          "proof"
+        ],
+        "asset_id": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "audit_digest": [
+          "commitment",
+          "proof"
+        ],
+        "authentication_tag": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "budget_before": [
+          "proof",
+          "state"
+        ],
+        "ciphertext_hash": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "circuit_version": [
+          "commitment",
+          "proof"
+        ],
+        "clipping_bound": [
+          "commitment",
+          "proof"
+        ],
+        "consumer_id": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "data_hash": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "delta": [
+          "commitment",
+          "proof"
+        ],
+        "epsilon": [
+          "commitment",
+          "proof"
+        ],
+        "input_signature": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "mechanism_id": [
+          "commitment",
+          "proof"
+        ],
+        "nonce": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "policy_hash": [
+          "authorization",
+          "commitment"
+        ],
+        "policy_version": [
+          "authorization",
+          "commitment"
+        ],
+        "producer_id": [
+          "commitment"
+        ],
+        "proof_context": [
+          "commitment",
+          "proof"
+        ],
+        "proof_digest": [
+          "commitment",
+          "proof"
+        ],
+        "public_input_hash": [
+          "commitment",
+          "proof"
+        ],
+        "request_id": [
+          "authorization",
+          "commitment",
+          "proof"
+        ],
+        "request_status": [
+          "proof",
+          "state"
+        ],
+        "result_hash": [
+          "commitment",
+          "proof"
+        ],
+        "sensitivity": [
+          "commitment",
+          "proof"
+        ],
+        "verifier_id": [
+          "commitment",
+          "proof"
+        ]
+      },
+      "source": "Zhou et al., IEEE TIFS",
+      "source_url": "https://doi.org/10.1109/TIFS.2025.3639964",
+      "year": 2026
+    },
+    {
+      "category": "TrustCircuit profile",
+      "emulated_slice": "encrypted authorization, canonical request fields, request state and audit",
+      "key": "tc_lite",
+      "label": "TC-Lite",
+      "omissions": "confidential execution, DP accounting and VCP proof",
+      "protections": {
+        "aad_hash": [
+          "commitment"
+        ],
+        "access_scope": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "asset_id": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "audit_digest": [
+          "commitment",
+          "state"
+        ],
+        "authentication_tag": [
+          "commitment"
+        ],
+        "block_height": [
+          "commitment",
+          "state"
+        ],
+        "budget_after": [
+          "commitment",
+          "state"
+        ],
+        "budget_before": [
+          "commitment",
+          "state"
+        ],
+        "ciphertext_hash": [
+          "commitment"
+        ],
+        "consent_id": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "consumer_id": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "data_hash": [
+          "commitment"
+        ],
+        "data_version": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "deadline": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "evidence_chain_hash": [
+          "commitment",
+          "state"
+        ],
+        "function_id": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "input_signature": [
+          "commitment"
+        ],
+        "nonce": [
+          "commitment"
+        ],
+        "nullifier": [
+          "commitment",
+          "state"
+        ],
+        "policy_hash": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "policy_version": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "producer_id": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "receipt_id": [
+          "commitment",
+          "state"
+        ],
+        "replay_key": [
+          "commitment",
+          "state"
+        ],
+        "request_id": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "request_status": [
+          "commitment",
+          "state"
+        ],
+        "request_timestamp": [
+          "authorization",
+          "commitment",
+          "state"
+        ],
+        "result_hash": [
+          "commitment",
+          "state"
+        ],
+        "settlement_id": [
+          "state"
+        ],
+        "settlement_time": [
+          "commitment",
+          "state"
+        ]
+      },
+      "source": "TrustCircuit deployment profile",
+      "source_url": "local:Paper/main-new.tex",
+      "year": 2026
+    },
+    {
+      "category": "TrustCircuit profile",
+      "emulated_slice": "TC-Lite plus attested computation, conservative privacy cost and budget state",
+      "key": "tc_protected",
+      "label": "TC-Protected",
+      "omissions": "VCP proof and proof-bound nullifier",
+      "protections": {
+        "aad_hash": [
+          "commitment",
+          "execution"
+        ],
+        "access_scope": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "actual_privacy_cost": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "asset_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "attestation_nonce": [
+          "commitment",
+          "execution"
+        ],
+        "attestation_time": [
+          "commitment",
+          "execution"
+        ],
+        "audit_digest": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "authentication_tag": [
+          "commitment",
+          "execution"
+        ],
+        "block_height": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "budget_after": [
+          "commitment",
+          "state"
+        ],
+        "budget_before": [
+          "commitment",
+          "state"
+        ],
+        "ciphertext_hash": [
+          "commitment",
+          "execution"
+        ],
+        "clipping_bound": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "consent_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "consumer_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "data_hash": [
+          "commitment",
+          "execution"
+        ],
+        "data_version": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "deadline": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "delta": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "enclave_measurement": [
+          "commitment",
+          "execution"
+        ],
+        "epsilon": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "evidence_chain_hash": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "execution_key_id": [
+          "commitment",
+          "execution"
+        ],
+        "function_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "input_signature": [
+          "commitment",
+          "execution"
+        ],
+        "mechanism_id": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "nonce": [
+          "commitment",
+          "execution"
+        ],
+        "nullifier": [
+          "commitment",
+          "state"
+        ],
+        "policy_hash": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "policy_version": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "producer_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "receipt_id": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "replay_key": [
+          "commitment",
+          "state"
+        ],
+        "request_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "request_status": [
+          "commitment",
+          "state"
+        ],
+        "request_timestamp": [
+          "authorization",
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "result_hash": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "runtime_id": [
+          "commitment",
+          "execution"
+        ],
+        "sensitivity": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "settlement_id": [
+          "commitment",
+          "state"
+        ],
+        "settlement_time": [
+          "commitment",
+          "execution",
+          "state"
+        ],
+        "transcript_hash": [
+          "commitment",
+          "execution"
+        ]
+      },
+      "source": "TrustCircuit deployment profile",
+      "source_url": "local:Paper/main-new.tex",
+      "year": 2026
+    },
+    {
+      "category": "TrustCircuit profile",
+      "emulated_slice": "request, attestation and proof binding with cumulative budget and atomic settlement",
+      "key": "tc_full",
+      "label": "TC-Full",
+      "omissions": "this emulator does not execute the real VBS, Groth16 or Solidity stack",
+      "protections": {
+        "aad_hash": [
+          "commitment",
+          "execution",
+          "proof"
+        ],
+        "access_scope": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "actual_privacy_cost": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "asset_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "attestation_nonce": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "attestation_time": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "audit_digest": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "authentication_tag": [
+          "commitment",
+          "execution",
+          "proof"
+        ],
+        "block_height": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "budget_after": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "budget_before": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "ciphertext_hash": [
+          "commitment",
+          "execution",
+          "proof"
+        ],
+        "circuit_version": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "clipping_bound": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "consent_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "consumer_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "data_hash": [
+          "commitment",
+          "execution",
+          "proof"
+        ],
+        "data_version": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "deadline": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "delta": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "enclave_measurement": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "epsilon": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "evidence_chain_hash": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "execution_key_id": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "function_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "input_signature": [
+          "commitment",
+          "execution",
+          "proof"
+        ],
+        "mechanism_id": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "nonce": [
+          "commitment",
+          "execution",
+          "proof"
+        ],
+        "nullifier": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "policy_hash": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "policy_version": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "producer_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "proof_context": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "proof_digest": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "public_input_hash": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "receipt_id": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "relation_tag": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "replay_key": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "request_id": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "request_status": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "request_timestamp": [
+          "authorization",
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "result_hash": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "runtime_id": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "sensitivity": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "settlement_id": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "settlement_time": [
+          "commitment",
+          "proof",
+          "state"
+        ],
+        "transcript_hash": [
+          "commitment",
+          "execution",
+          "proof",
+          "state"
+        ],
+        "verifier_id": [
+          "commitment",
+          "proof",
+          "state"
+        ]
+      },
+      "source": "TrustCircuit deployment profile",
+      "source_url": "local:Paper/main-new.tex",
+      "year": 2026
+    }
+  ]
+}
