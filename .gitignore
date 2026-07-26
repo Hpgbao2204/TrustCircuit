@@ -58,13 +58,44 @@ zk/circuits/compliance_lib.circom
 # Downloaded tool binaries
 tools/
 
-# Experiment outputs
-results/
+# Experiment outputs are local by default. Only canonical raw evidence is tracked.
+results/**
+!results/
+!results/raw/
+!results/raw/phase8/
+!results/raw/phase8/attack_binding_matrix.csv
+!results/raw/phase8/attack_binding_matrix_config.json
+!results/raw/phase8/budget_exhaustion.csv
+!results/raw/phase8/chain_experiment_config.json
+!results/raw/phase8/comparison_capabilities.csv
+!results/raw/phase8/comparison_performance.csv
+!results/raw/phase8/dp_composition.csv
+!results/raw/phase8/dp_rounding_boundaries.csv
+!results/raw/phase8/dp_vbs.csv
+!results/raw/phase8/e2e_ablation.csv
+!results/raw/phase8/native_vbs_performance.csv
+!results/raw/phase8/protocol_attacks.csv
+!results/raw/phase8/settlement_concurrency.csv
+!results/raw/phase8/vbs_experiment_config.json
+!results/raw/phase8/zk_backend_runs.csv
+!results/raw/phase8/zk_backends.csv
+!results/raw/phase8/zk_backends_config.json
+!results/raw/phase8/zk_scaling.csv
+!results/raw/phase8/zk_scaling_config.json
+!results/raw/phase8/zk_scaling_runs.csv
+!results/raw/phase8/testnet/
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/config.json
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/deployments.json
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/proof_preparation.csv
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/run_result.json
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/transactions.csv
 *.csv.tmp
 
 # Local notes / markdown docs
 Paper/
 .skills/
+PROJECT_STATE.json
 
 # Logs
 *.log
@@ -100,32 +131,6 @@ tee/vbs/**/*.vcxproj.user
 
 # Local Rust build output for the pairing-based CP-ABE benchmark.
 crypto/rabe_benchmark/target/
-
-# Phase 7/8 reproducibility artifacts requested for the VBS migration.
-!results/
-results/*
-!results/raw/
-results/raw/*
-!results/raw/e2e/
-!results/raw/e2e/**
-!results/raw/phase8/
-!results/raw/phase8/**
-# Per-request VBS bundles are transient test inputs. The manifest and aggregate
-# raw CSV/JSON stay versionable; regenerated bundles remain locally isolated.
-results/raw/phase8/concurrency_bundles/
-results/raw/phase8/fresh_bundles/
-!results/processed/
-!results/processed/**
-!results/deployment_profiles/
-!results/deployment_profiles/**
-
-!Paper/
-Paper/*
-!Paper/figures/
-Paper/figures/*
-!Paper/figures/panels/
-!Paper/figures/panels/*.pdf
-!Paper/figures/panels/*.png
 
 # Markdown
 *.md
