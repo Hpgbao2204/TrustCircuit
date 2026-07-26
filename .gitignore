@@ -17,6 +17,22 @@ env/
 .env
 .env.*
 !.env.example
+secrets/
+credentials/
+private-keys/
+*.secret
+*.secrets
+*.key
+*.pem
+*.pfx
+*.p12
+*.crt
+*.cer
+*.jks
+*.keystore
+*.kdbx
+*.tfstate
+*.tfstate.*
 
 # Hardhat / Solidity
 artifacts/
@@ -47,14 +63,6 @@ results/
 *.csv.tmp
 
 # Local notes / markdown docs
-*.md
-!/README.md
-!tee/vbs/README.md
-!tee/vbs/PHASE1_COMMAND_LOG.md
-!tee/vbs/IMPLEMENTATION_LOG.md
-!tee/vbs/PROTOCOL.md
-!tee/vbs/ATTESTATION_LOG.md
-!tee/vbs/PHASE7_EXPERIMENT_LOG.md
 Paper/
 .skills/
 
@@ -76,9 +84,10 @@ Thumbs.db
 # Local generated data
 data/generated/*
 !data/generated/.gitkeep
+data/private/
+data/raw/
+data/sensitive/
 tee/witness/
-
-*.pem
 
 # Windows VBS Enclave local configuration and build outputs
 tee/vbs/TrustCircuitVbs.Local.props
@@ -91,8 +100,6 @@ tee/vbs/**/*.vcxproj.user
 
 # Local Rust build output for the pairing-based CP-ABE benchmark.
 crypto/rabe_benchmark/target/
-!crypto/CPABE_BENCHMARK.md
-!crypto/AES_GCM_SCALING_BENCHMARK.md
 
 # Phase 7/8 reproducibility artifacts requested for the VBS migration.
 !results/
@@ -119,8 +126,7 @@ Paper/figures/*
 !Paper/figures/panels/
 !Paper/figures/panels/*.pdf
 !Paper/figures/panels/*.png
-!Paper/figures/PANEL_MANIFEST.md
-!Paper/figures/CAPTION_NOTES.md
 
-# Figure audit command record requested for the revised VBS evidence.
-!tee/vbs/FIGURE_AUDIT_LOG.md
+# Markdown
+*.md
+!/README.md

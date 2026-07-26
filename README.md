@@ -1,43 +1,27 @@
 # TrustCircuit
 
-[![DOI](https://zenodo.org/badge/1245496520.svg)](https://doi.org/10.5281/zenodo.20669379)
+TrustCircuit là prototype kết hợp smart contract, differential privacy, zero-knowledge proof và Windows VBS Enclave cho xử lý dữ liệu ngoài chuỗi.
 
-TrustCircuit is a research prototype for accountable privacy-preserving data access. It combines blockchain-based access control and audit logs, differential privacy budget accounting, zero-knowledge compliance proofs, and a TEE worker simulator for off-chain computation.
+## Triển khai lại
 
-The prototype follows a simple pipeline:
+Yêu cầu: Node.js, Python 3, Visual Studio 2022 x64, Windows SDK 10.0.26100.0 và môi trường VBS Enclave đã cấu hình.
 
-```text
-Register -> Negotiate -> Compute -> Prove Compliance -> Audit & Consume
-```
-
-## Components
-
-- Solidity smart contracts for data registration, access control, budget tracking, verification, and audit records.
-- Differential privacy experiments with aggregate queries, Gaussian noise, and budget consumption.
-- Circom/snarkjs zero-knowledge compliance proof flow.
-- TEE worker simulator for request execution, attestation-like reports, and sealed witnesses, with experiments run on AWS Nitro as a TEE-like evaluation environment.
-- Benchmark scripts for gas, latency, proof overhead, throughput, and privacy-utility evaluation.
-
-## Quick Start
-
-```bash
-npm install
+```powershell
+npm ci
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+npm run compile
 npm test
 ```
 
-## Citation
+Sao chép `tee/vbs/TrustCircuitVbs.Local.props.example` thành `tee/vbs/TrustCircuitVbs.Local.props`, điền đường dẫn tooling và certificate local, rồi build:
 
-This work is currently unpublished. If you use this repository, please cite the Zenodo archive:
-
-```bibtex
-@misc{huynh2026trustcircuit,
-  title        = {TrustCircuit: Blockchain-Orchestrated Privacy-Preserving Data Circulation with Verifiable Compliance},
-  author       = {Huynh, Bao and Tran, Tuan-Dung and Pham, Van-Hau},
-  year         = {2026},
-  publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.20669380},
-  url          = {https://doi.org/10.5281/zenodo.20669380},
-  note         = {Unpublished research prototype}
-}
+```powershell
+msbuild tee/vbs/TrustCircuitVbs.sln /m /p:Configuration=Debug /p:Platform=x64
+powershell -NoProfile -ExecutionPolicy Bypass -File tee/vbs/tests/smoke.ps1
+npm run phase7:build
+npm run phase7:e2e
 ```
+
+Biến môi trường và khóa triển khai phải đặt trong `.env`; không commit secrets, private keys, certificate hay dữ liệu riêng tư.
