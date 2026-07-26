@@ -27,8 +27,6 @@ PANELS = ROOT / "Paper" / "figures" / "panels"
 FIGURE_SIZE = (12, 8)
 DPI = 600
 
-# A restrained, colour-blind-friendly palette.  Font, font size, line width,
-# and other typography remain Matplotlib defaults on purpose.
 COLORS = {
     "Native": "#1f4e79",
     "VBS Enclave": "#c55a11",
@@ -104,9 +102,6 @@ def quantile(data: Sequence[float], percentile: float) -> float:
 
 
 def style() -> None:
-    # Reset any user/site matplotlibrc (including Times New Roman overrides).
-    # No project-specific font is selected: the default Matplotlib font is
-    # used consistently in PDF and PNG output.
     plt.rcdefaults()
 
 
@@ -120,8 +115,6 @@ def tidy(ax: plt.Axes, *, log_y: bool = False) -> None:
 
 def save(fig: plt.Figure, stem: str) -> None:
     PANELS.mkdir(parents=True, exist_ok=True)
-    # No tight bounding box: every panel has the same physical canvas and can
-    # be dropped into a paper layout without an unpredictable crop.
     fig.savefig(PANELS / f"{stem}.pdf", format="pdf")
     fig.savefig(PANELS / f"{stem}.png", format="png", dpi=DPI)
     plt.close(fig)
@@ -163,7 +156,6 @@ def fig3() -> None:
     order = [variant for variant in VARIANT_ORDER if variant in present]
     labels = [variant_label(value) for value in order]
 
-    # 3a: a compact median/p95 line chart replaces the repeated boxplot motif.
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     medians = [quantile(values([r for r in trials if r["variant"] == v], "throughput_req_s"), 50) for v in order]
     p95 = [quantile(values([r for r in trials if r["variant"] == v], "throughput_req_s"), 95) for v in order]
@@ -177,7 +169,6 @@ def fig3() -> None:
     tidy(ax, log_y=True)
     save(fig, "fig3a_ablation_throughput")
 
-    # 3b: same visual grammar, with latency on a linear axis.
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     medians = [quantile(values([r for r in trials if r["variant"] == v], "total_latency_ms"), 50) for v in order]
     p95 = [quantile(values([r for r in trials if r["variant"] == v], "total_latency_ms"), 95) for v in order]
@@ -190,7 +181,6 @@ def fig3() -> None:
     tidy(ax)
     save(fig, "fig3b_ablation_latency")
 
-    # 3c: one panel showing normalized stage shares as smooth lines.
     matrix = read_csv(PROCESSED / "e2e_stage_by_variant.csv")
     stages = ["access", "budget", "tee", "proof", "settlement", "audit"]
     stage_rows = {(row["variant"], row["stage"]): f(row, "mean_latency_ms") for row in matrix}
@@ -208,8 +198,6 @@ def fig3() -> None:
     tidy(ax)
     save(fig, "fig3c_stage_breakdown")
 
-    # 3d: ordered cost profile; connecting observations prevents a sparse,
-    # label-heavy cloud while preserving the measured values.
     summary = read_csv(PROCESSED / "e2e_ablation_summary.csv")
     summary = sorted(summary, key=lambda row: order.index(row["variant"]))
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
@@ -232,9 +220,6 @@ def fig4() -> None:
     scaling = sorted(read_csv(PROCESSED / "zk_scaling.csv"), key=lambda row: f(row, "n_rules"))
     rules = np.asarray([f(row, "n_rules") for row in scaling])
 
-    # 4a: marginal circuit cost.  The old panel was essentially a diagonal
-    # line; showing the added constraints per policy rule makes the scaling
-    # signal visible without pretending that a straight line is a result.
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     constraints = np.asarray([f(row, "constraints") for row in scaling])
     marginal = np.diff(np.r_[0.0, constraints])
@@ -247,8 +232,6 @@ def fig4() -> None:
     tidy(ax)
     save(fig, "fig4a_constraints")
 
-    # 4b: one clean latency curve per operation, replacing the former paired
-    # proving/verification subplots and avoiding a distribution of boxes.
     trials = retained(read_csv(PROCESSED / "zk_scaling_trials.csv"))
     groups = sorted(grouped(trials, "n_rules").items(), key=lambda item: int(item[0]))
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
@@ -265,7 +248,6 @@ def fig4() -> None:
     tidy(ax, log_y=True)
     save(fig, "fig4b_proving_time")
 
-    # 4c: normalized footprint lines keep the three measures on one scale.
     distribution = {row["circuit"]: row for row in read_csv(PROCESSED / "zk_scaling_distribution.csv")}
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     for field, label, color in (
@@ -286,8 +268,6 @@ def fig4() -> None:
     tidy(ax, log_y=True)
     save(fig, "fig4c_proof_key_size")
 
-    # 4d: bars give the three backends visual weight; isolated single markers
-    # made the previous panel look empty and over-spaced.
     circulation = read_csv(PROCESSED / "zk_backend_circulation.csv")
     backend = {row["scheme"]: row for row in read_csv(PROCESSED / "zk_backend_distribution.csv")}
     schemes = [row["scheme"] for row in circulation]
@@ -305,7 +285,6 @@ def fig5() -> None:
     dp = retained(read_csv(PROCESSED / "dp_vbs_trials.csv"))
     epsilons = sorted({row["epsilon_requested"] for row in dp}, key=float)
 
-    # 5a: ECDFs show utility across epsilon without overplotting 30-run boxes.
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     for index, epsilon in enumerate(epsilons):
         data = values([row for row in dp if row["epsilon_requested"] == epsilon], "relative_error")
@@ -317,9 +296,6 @@ def fig5() -> None:
     tidy(ax)
     save(fig, "fig5a_dp_relative_error")
 
-    # 5b: analytical composition is drawn as an ordinary line chart, not a
-    # staircase, because the underlying fixed-point values are already sampled
-    # at release indices.
     composition = read_csv(PROCESSED / "dp_composition.csv")
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     for index, epsilon in enumerate(epsilons):
@@ -338,7 +314,6 @@ def fig5() -> None:
     tidy(ax)
     save(fig, "fig5b_cumulative_privacy_loss")
 
-    # 5c: continuous-looking ECDF of the conservative rounding margin.
     rounding = read_csv(PROCESSED / "dp_rounding_margin.csv")
     margins = values(rounding, "rounding_margin_micro_epsilon")
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
@@ -351,8 +326,6 @@ def fig5() -> None:
     tidy(ax)
     save(fig, "fig5c_rounding_gap")
 
-    # 5d: one trajectory per epsilon, with accepted releases represented by
-    # the measured remaining budget only (the acceptance invariant is in CSV).
     budget = read_csv(PROCESSED / "budget_exhaustion_trajectory.csv")
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     for index, epsilon in enumerate(sorted({row["epsilon_requested"] for row in budget}, key=float)):
@@ -448,9 +421,6 @@ def fig6() -> None:
     tidy(ax)
     save(fig, "fig6d_enclave_stage_breakdown")
 
-    # CPU samples on this host are frequently below the sampler resolution;
-    # plotting them produced a misleading vertical strip.  Working-set scaling
-    # is the directly resolved resource measure and is shown as two curves.
     fig, ax = plt.subplots(figsize=FIGURE_SIZE)
     for configuration, prefix, marker, color in (("Native", "native", "o", COLORS["Native"]), ("VBS Enclave", "vbs", "s", COLORS["VBS Enclave"])):
         memory = [
@@ -589,8 +559,6 @@ def fig8() -> None:
     x = np.arange(len(configurations))
     latency = [quantile(values([row for row in trials if row["configuration"] == configuration], "total_latency_ms"), 50) for configuration in configurations]
     throughput = [quantile(values([row for row in trials if row["configuration"] == configuration], "throughput_req_s"), 50) for configuration in configurations]
-    # A single latency chart avoids the misleading visual comparison caused by
-    # placing two differently-scaled panels beside each other.
     ax.plot(x, latency, "o-", color="#4472c4", label="Median latency")
     ax.set_xticks(x, configurations, rotation=28, ha="right")
     ax.set_ylabel("End-to-end latency (ms)")

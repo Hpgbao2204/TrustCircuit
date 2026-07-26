@@ -1,24 +1,3 @@
-/*
- * Multi-scheme proof-system comparison for the TrustCircuit compliance relation.
- *
- * Instantiates the SAME Circom compliance circuit (base, 2 composable rules)
- * under three EVM-verifiable argument systems and measures the trade-off:
- *   - Groth16  (per-circuit trusted setup, smallest proof/gas)
- *   - PLONK    (universal/updatable trusted setup)
- *   - fflonk   (universal setup, FFT-friendly, larger proof, cheaper prover)
- *
- * For each scheme it records prove/verify time, proof size, proving- and
- * verification-key sizes, and peak RSS, and exports a Solidity verifier so the
- * companion Hardhat script can measure on-chain verification gas.
- *
- * Outputs:
- *   results/raw/phase8/zk_backends.csv
- *   results/processed/zk_backends.csv
- *   results/raw/phase8/zk_backends_config.json
- *   contracts/ComplianceGroth16Verifier.sol
- *   contracts/CompliancePlonkVerifier.sol
- *   contracts/ComplianceFflonkVerifier.sol
- */
 
 const fs = require("fs");
 const crypto = require("crypto");
@@ -97,12 +76,10 @@ async function buildInput(poseidon, nRules) {
 async function main() {
   ensureDir(BUILD); ensureDir(path.dirname(RAW)); ensureDir(path.dirname(SUMMARY));
 
-  // stripped library copy so the wrapper owns `component main`
   const libPath = path.join(ROOT, "zk", "circuits", "compliance_lib.circom");
   fs.copyFileSync(path.join(ROOT, "zk", "circuits", "compliance_check.circom"), libPath);
   fs.writeFileSync(libPath, fs.readFileSync(libPath, "utf8").replace(/component main[\s\S]*$/m, "\n"));
 
-  // universal powers of tau (large enough for fflonk blow-up)
   const pot0 = path.join(BUILD, `pot${PTAU_POWER}_0.ptau`);
   const pot1 = path.join(BUILD, `pot${PTAU_POWER}_1.ptau`);
   const potFinal = path.join(BUILD, `pot${PTAU_POWER}_final.ptau`);
@@ -113,7 +90,6 @@ async function main() {
     snk(["powersoftau", "prepare", "phase2", pot1, potFinal, "-v"]);
   }
 
-  // compile base circuit
   const name = `cmp_${RULES}`;
   const circuit = path.join(BUILD, `${name}.circom`);
   fs.writeFileSync(circuit, `pragma circom 2.1.6;
@@ -209,7 +185,6 @@ component main {public [requestId, assetId, consumerId, policyHash, policyVersio
         });
       }
 
-      // export Solidity verifier + calldata
       const solOut = path.join(ROOT, "contracts", scheme.solidity);
       snk(["zkey", "export", "solidityverifier", zkey, solOut]);
       fs.writeFileSync(path.join(BUILD, `${name}_${scheme.name}_proof.json`), JSON.stringify(lastProof));

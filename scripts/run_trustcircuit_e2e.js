@@ -1,8 +1,3 @@
-/*
- * Real Phase 7 local end-to-end pipeline. The VBS execution bundle is created
- * by prepare_phase7_bundle.py; this script proves its canonical context and
- * atomically settles it on the in-process Hardhat chain.
- */
 "use strict";
 
 const fs = require("fs");

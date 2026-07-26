@@ -1,0 +1,2 @@
+trials,attestation_mean_ms,attestation_median_ms,attestation_min_ms,attestation_max_ms,e2e_mean_ms,document_size_mean_bytes
+20,1.961,1.879,1.784,3.653,54.42,4557

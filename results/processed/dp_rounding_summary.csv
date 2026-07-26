@@ -1,2 +1,0 @@
-samples,minimum_margin_micro_epsilon,p50_margin_micro_epsilon,p95_margin_micro_epsilon,maximum_margin_micro_epsilon,zero_margin_count,under_reporting_count,measurement_type
-96,0.0,0.42072854000000004,0.88973017775,0.998243192,10,0,measured_with_analytical_margin

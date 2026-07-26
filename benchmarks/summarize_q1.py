@@ -43,9 +43,6 @@ def pct(values: list[float], p: float) -> float:
     return float(np.percentile(np.array(values, dtype=float), p)) if values else 0.0
 
 
-# ---------------------------------------------------------------------------
-# E2E ablation: per-variant totals (latency percentiles, gas, proof gas, etc.)
-# ---------------------------------------------------------------------------
 PROOF_STAGES = {"submitProof", "zk_verify_proof"}
 
 
@@ -87,9 +84,6 @@ def summarize_e2e() -> None:
     write(SUM / "e2e_ablation_summary.csv", out, list(out[0].keys()))
 
 
-# ---------------------------------------------------------------------------
-# Budget composition: final state per (regime, epsilon) after 100 requests.
-# ---------------------------------------------------------------------------
 def summarize_budget_composition() -> None:
     rows = read(RAW / "budget_composition.csv")
     groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
@@ -115,9 +109,6 @@ def summarize_budget_composition() -> None:
     write(SUM / "budget_composition_summary.csv", out, list(out[0].keys()))
 
 
-# ---------------------------------------------------------------------------
-# Double-spend: rates per (concurrency, epsilon, budget) over trials.
-# ---------------------------------------------------------------------------
 def summarize_double_spend() -> None:
     rows = read(RAW / "budget_double_spend.csv")
     groups: dict[tuple, list[dict]] = defaultdict(list)
@@ -146,7 +137,6 @@ def summarize_double_spend() -> None:
         })
     write(SUM / "budget_double_spend_summary.csv", out, list(out[0].keys()))
 
-    # also a compact view aggregated over epsilon/budget per concurrency.
     by_conc: dict[int, list[dict]] = defaultdict(list)
     for r in out:
         by_conc[r["concurrency"]].append(r)
@@ -163,15 +153,11 @@ def summarize_double_spend() -> None:
     write(SUM / "budget_double_spend_by_concurrency.csv", compact, list(compact[0].keys()))
 
 
-# ---------------------------------------------------------------------------
-# Proof binding: pass-through (already one row per attack), normalised.
-# ---------------------------------------------------------------------------
 def summarize_proof_binding() -> None:
     rows = read(RAW / "proof_binding_attacks.csv")
     out = []
     for r in rows:
         reason = r.get("adapter_revert_reason", "")
-        # extract the custom-error name for a tidy table column.
         short = ""
         if "custom error '" in reason:
             short = reason.split("custom error '", 1)[1].split("(", 1)[0]

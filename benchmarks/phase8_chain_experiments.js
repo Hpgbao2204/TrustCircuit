@@ -1,8 +1,3 @@
-/*
- * Phase 8 local-chain experiments over real Phase 6 VBS evidence and the real
- * Phase 7 Groth16 verifier. Outputs machine-readable CSV/JSON only; plotting is
- * performed later from these files.
- */
 "use strict";
 
 const fs = require("fs");
@@ -242,10 +237,6 @@ async function prepareProofs() {
 }
 
 async function createFreshPrepared(label, index) {
-  // Hardhat advances block timestamps monotonically. Long benchmark runs can
-  // move its clock ahead of the Windows clock used by fresh VBS statements;
-  // reset before each evidence-dependent isolated trial so both start from the
-  // same local wall-clock epoch. This does not bypass the expiry check.
   await network.provider.send("hardhat_reset");
   const directory = path.join(RAW, "fresh_bundles");
   fs.mkdirSync(directory, { recursive: true });
@@ -579,10 +570,6 @@ async function runProtocolAttacks() {
     const testCase = cases[caseIndex];
     const item = await createFreshPrepared("attack", caseIndex);
     for (let run = 0; run < ATTACK_LATENCY_REPS; run += 1) {
-      // Each isolated trial deploys a fresh system. Resetting also prevents the
-      // one-second-per-block Hardhat clock from accumulating hundreds of
-      // synthetic seconds across 30 setup-heavy trials. Evidence expiry is
-      // still checked against the current wall-clock epoch in every trial.
       await network.provider.send("hardhat_reset");
       const system = await deploySystem();
       const metric = newMetric();

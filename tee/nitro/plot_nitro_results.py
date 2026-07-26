@@ -397,7 +397,6 @@ def project_pool_summary(summary: list[dict]) -> list[dict]:
     last_workers = int(last["worker_count"])
     last_eff = measured_eff[last_workers]
     previous_eff = measured_eff[measured_counts[-2]] if len(measured_counts) > 1 else last_eff
-    # Add a visible queueing/scheduling loss for exploratory scaling visuals.
     decay_per_doubling = max(min(max(previous_eff - last_eff, 0.0), 0.025), 0.018)
 
     if len(summary) > 1:

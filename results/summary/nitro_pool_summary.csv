@@ -1,0 +1,4 @@
+worker_count,requests,throughput_rps,throughput_per_worker_rps,latency_median_ms,latency_mean_ms,latency_p95_ms,host_cpu_util_percent
+1,80,15.866,15.866,62.985,62.964,63.216,0.0
+2,80,31.654,15.827,62.886,62.933,63.46,0.0
+4,80,63.237,15.809,62.877,62.974,63.952,0.0

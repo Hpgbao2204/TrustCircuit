@@ -1,0 +1,4 @@
+scheme,setup_model,curve,constraints,public_inputs,proof_size_bytes,prove_time_ms_mean,prove_time_ms_std,verify_time_ms_mean,proving_key_bytes,verification_key_bytes,peak_rss_mb,reps,calldata_exported
+groth16,per-circuit,bn128,2444,7,943,175.723,18.531,15.153,1149381,4027,709.3,12,true
+plonk,universal,bn128,2444,7,2319,3373.205,462.249,15.163,10180356,2042,762.3,12,true
+fflonk,universal,bn128,2444,7,2314,3525.682,268.404,11.437,13326568,1102,918.3,12,true

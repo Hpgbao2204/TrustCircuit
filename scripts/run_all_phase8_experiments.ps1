@@ -33,8 +33,6 @@ try {
     & npm.cmd test
     if ($LASTEXITCODE -ne 0) { throw "Hardhat regression tests failed" }
 
-    # Fresh VBS evidence is generated immediately before proof/concurrency work
-    # so every statement remains inside its five-minute validity interval.
     & python .\scripts\run_phase8_vbs_experiments.py `
         --configuration $Configuration `
         --performance-reps $PerformanceReps `

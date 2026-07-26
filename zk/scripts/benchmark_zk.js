@@ -1,21 +1,3 @@
-/*
- * Real Groth16 benchmark for the TrustCircuit Verifiable Compliance relation.
- *
- * Pipeline (all local, Windows-friendly):
- *   circom (tools/circom.exe) -> r1cs/wasm
- *   snarkjs powers-of-tau (phase 1, reused)
- *   snarkjs groth16 setup + contribute (phase 2, per circuit)
- *   circomlibjs Poseidon -> valid/invalid witness inputs
- *   snarkjs groth16 prove / verify (timed, repeated)
- *   exported Solidity verifier for the base circuit
- *
- * Outputs:
- *   results/raw/phase8/zk_scaling.csv
- *   results/processed/zk_scaling.csv
- *   results/raw/phase8/zk_scaling_config.json
- *   contracts/ComplianceGroth16Verifier.sol   (base circuit, on-chain verify)
- *   zk/build/...                               (intermediate artifacts)
- */
 
 const fs = require("fs");
 const crypto = require("crypto");
@@ -88,8 +70,6 @@ function percentile(a, p) {
 }
 
 function writeCircuit(nRules) {
-  // compliance_check.circom declares its own main; wrappers include the stripped
-  // library copy and own the main component with the chosen rule count.
   const wrapper = `pragma circom 2.1.6;
 include "${path.join(ROOT, "zk", "circuits").replace(/\\/g, "/")}/compliance_lib.circom";
 component main {public [requestId, assetId, consumerId, policyHash, policyVersion, functionId, resultHash, epsilonCost, nullifier, transcriptHash, attestationDigest]} = ComplianceCheck(${nRules}, ${BUDGET_BITS});
@@ -164,15 +144,12 @@ async function main() {
   ensureDir(path.dirname(RAW));
   ensureDir(path.dirname(SUMMARY));
 
-  // Make the template available to wrappers under a stable name.
   fs.copyFileSync(path.join(ROOT, "zk", "circuits", "compliance_check.circom"),
     path.join(ROOT, "zk", "circuits", "compliance_lib.circom"));
-  // Strip the trailing `component main` from the lib copy so wrappers own main.
   const libPath = path.join(ROOT, "zk", "circuits", "compliance_lib.circom");
   let lib = fs.readFileSync(libPath, "utf8").replace(/component main[\s\S]*$/m, "\n");
   fs.writeFileSync(libPath, lib);
 
-  // ---- Phase 1: powers of tau (circuit independent, reused) ----
   const pot0 = path.join(BUILD, `pot${PTAU_POWER}_0.ptau`);
   const pot1 = path.join(BUILD, `pot${PTAU_POWER}_1.ptau`);
   const potFinal = path.join(BUILD, `pot${PTAU_POWER}_final.ptau`);
@@ -192,14 +169,12 @@ async function main() {
     const circuit = writeCircuit(nRules);
     const name = `compliance_${nRules}`;
 
-    // compile
     sh(CIRCOM, [circuit, "--r1cs", "--wasm", "--sym", "-o", BUILD, "-l", CIRCOMLIB]);
     const r1cs = path.join(BUILD, `${name}.r1cs`);
     const wasm = path.join(BUILD, `${name}_js`, `${name}.wasm`);
     const info = snk(["r1cs", "info", r1cs]);
     const constraints = parseConstraints(info);
 
-    // phase 2 setup
     const zkey0 = path.join(BUILD, `${name}_0.zkey`);
     const zkey = path.join(BUILD, `${name}_final.zkey`);
     const vkeyPath = path.join(BUILD, `${name}_vkey.json`);
@@ -208,7 +183,6 @@ async function main() {
     snk(["zkey", "export", "verificationkey", zkey, vkeyPath]);
     const vkey = JSON.parse(fs.readFileSync(vkeyPath, "utf8"));
 
-    // valid witness + proof timing
     const input = await buildInputs(poseidon, nRules, "valid");
     const wtns = path.join(BUILD, `${name}_witness.wtns`);
     await snarkjs.wtns.calculate(input, wasm, wtns);
@@ -275,7 +249,6 @@ async function main() {
       });
     }
 
-    // negative cases: witness generation / verification must fail
     const negatives = {};
     for (const mode of ["invalid_policy", "invalid_budget", "invalid_nullifier"]) {
       const ninput = await buildInputs(poseidon, nRules, mode);
@@ -283,12 +256,11 @@ async function main() {
       try {
         const nw = path.join(BUILD, `${name}_${mode}.wtns`);
         await snarkjs.wtns.calculate(ninput, wasm, nw);
-        // if witness computed, the proof must fail to verify against honest vkey
         const { proof, publicSignals } = await snarkjs.groth16.prove(zkey, nw);
         const ok = await snarkjs.groth16.verify(vkey, publicSignals, proof);
         rejected = !ok;
       } catch (e) {
-        rejected = true; // unsatisfied constraint -> witness/proof rejected
+        rejected = true;
       }
       negatives[mode] = rejected;
     }
@@ -321,7 +293,6 @@ async function main() {
 
     if (nRules === BASE_RULES) {
       snk(["zkey", "export", "solidityverifier", zkey, SOLIDITY]);
-      // export proof + public signals, then Solidity calldata for a gas test
       fs.writeFileSync(path.join(BUILD, `${name}_proof.json`), JSON.stringify(lastProof));
       fs.writeFileSync(path.join(BUILD, `${name}_public.json`), JSON.stringify(lastPublic));
       const calldata = snk(["zkey", "export", "soliditycalldata",
@@ -330,7 +301,6 @@ async function main() {
     }
   }
 
-  // write raw csv
   const headers = Object.keys(rows[0]);
   fs.writeFileSync(RAW, [headers.join(","), ...rows.map((r) => headers.map((h) => r[h]).join(","))].join("\n") + "\n");
   const runHeaders = Object.keys(runRows[0]);
@@ -342,7 +312,6 @@ async function main() {
     ].join("\n") + "\n"
   );
 
-  // summary == same rows here (one row per circuit); keep both for the pipeline
   fs.writeFileSync(SUMMARY, [headers.join(","), ...rows.map((r) => headers.map((h) => r[h]).join(","))].join("\n") + "\n");
 
   fs.writeFileSync(CONFIG, JSON.stringify({

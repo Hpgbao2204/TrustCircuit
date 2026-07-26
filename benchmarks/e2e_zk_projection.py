@@ -20,9 +20,6 @@ from pathlib import Path
 
 SUMMARY = Path("results/summary")
 
-# Measured non-prover stage latencies of a TC-Full circulation (ms).
-# TEE confidential compute (median of TC-Full tee_compute) and the aggregate
-# of all on-chain settlement calls excluding the proof stage.
 TEE_COMPUTE_MS = 44.0
 ONCHAIN_SETTLEMENT_MS = 13.0
 

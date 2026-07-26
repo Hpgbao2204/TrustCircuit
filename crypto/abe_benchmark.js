@@ -1,19 +1,3 @@
-/*
- * Benchmark for the TrustCircuit hybrid attribute-based access module.
- *
- * Measures, as a function of policy size (number of attributes / leaves):
- *   - key-encapsulation encrypt time (CP-ABE-style share + per-leaf ECIES)
- *   - authorized decrypt time (leaf ECIES + LSSS reconstruction)
- *   - key-encapsulation size (bytes of the per-leaf ciphertexts)
- *   - AES-256-GCM bulk encrypt time for a fixed payload
- *
- * Output:
- *   results/raw/abe_benchmark.csv
- *   results/summary/abe_summary.csv
- *   results/summary/abe_config.json
- *
- * Usage: node crypto/abe_benchmark.js [--reps 30] [--payload-kib 64]
- */
 "use strict";
 
 const fs = require("fs");
@@ -52,8 +36,6 @@ function pctl(a, p) {
   return lo === hi ? s[lo] : s[lo] + (s[hi] - s[lo]) * (idx - lo);
 }
 
-// Build a balanced threshold policy with `n` leaves that requires ceil(n/2)
-// of them: a representative non-trivial monotone access structure.
 function buildPolicy(n) {
   const leaves = Array.from({ length: n }, (_, i) => abe.leaf(`attr:${i}`));
   if (n === 1) return leaves[0];
@@ -61,14 +43,12 @@ function buildPolicy(n) {
   return abe.THR(k, ...leaves);
 }
 
-// An attribute set that satisfies the ceil(n/2)-of-n policy.
 function satisfyingSet(n) {
   const k = n === 1 ? 1 : Math.ceil(n / 2);
   return Array.from({ length: k }, (_, i) => `attr:${i}`);
 }
 
 function ksize(ct) {
-  // total bytes of the per-leaf key-encapsulation ciphertexts
   let bytes = 0;
   for (const leaf of Object.values(ct.leafCts)) {
     bytes += leaf.blob.epk.length / 2 + leaf.blob.iv.length / 2 + leaf.blob.ct.length / 2 + leaf.blob.tag.length / 2;

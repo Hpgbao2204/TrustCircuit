@@ -43,9 +43,6 @@ def num(x: str, fmt: str = "{:,.0f}") -> str:
         return esc(str(x))
 
 
-# ---------------------------------------------------------------------------
-# Table A: modern capability matrix (the main replacement table).
-# ---------------------------------------------------------------------------
 def table_capability() -> Path:
     rows = read(SUM / "modern_sota_capability.csv")
     dims = ["verifiable_dp", "zk_compliance", "blockchain_settlement", "budget_accounting",
@@ -76,9 +73,6 @@ def table_capability() -> Path:
     return write("tableA_modern_capability.tex", "\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Table 3: quantitative ZK/VDP overhead (measured TC + literature baselines).
-# ---------------------------------------------------------------------------
 def table_overhead() -> Path:
     rows = read(SUM / "modern_sota_comparison.csv")
     lines = [
@@ -129,9 +123,6 @@ def table_overhead() -> Path:
     return write("table3_modern_overhead.tex", "\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Table B: measured E2E ablation.
-# ---------------------------------------------------------------------------
 E2E_ORDER = ["OffChain", "ACL-Only", "NoBudget", "NoZK", "TC-Full-MockZK",
              "TC-Full-ZK-VerifyOnly", "TC-Full-ZK-ProveAndVerify"]
 E2E_GUARANTEE = {
@@ -170,9 +161,6 @@ def table_e2e() -> Path:
     return write("tableB_e2e_ablation.tex", "\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Table C: ZK scheme comparison (from existing measured selection matrix).
-# ---------------------------------------------------------------------------
 def table_zk() -> Path:
     rows = read(LEGACY / "zk_scheme_selection.csv")
     lines = [
@@ -205,9 +193,6 @@ def table_zk() -> Path:
     return write("tableC_zk_scheme.tex", "\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Table D: concurrent budget double-spend.
-# ---------------------------------------------------------------------------
 def table_double_spend() -> Path:
     rows = read(SUM / "budget_double_spend_by_concurrency.csv")
     lines = [
@@ -230,12 +215,8 @@ def table_double_spend() -> Path:
     return write("tableD_double_spend.tex", "\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Budget composition table.
-# ---------------------------------------------------------------------------
 def table_budget_composition() -> Path:
     rows = read(SUM / "budget_composition_summary.csv")
-    # show epsilon=0.25 slice (representative) for compactness.
     sel = [r for r in rows if abs(float(r["epsilon"]) - 0.25) < 1e-9]
     order = ["NoBudget", "TrustedOffChainBudget", "ConsumeOnlyLedger",
              "TrustCircuitReserveConsume", "TrustCircuitReserveConsumeZK"]
@@ -263,9 +244,6 @@ def table_budget_composition() -> Path:
     return write("tableE_budget_composition.tex", "\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Proof-binding attack table.
-# ---------------------------------------------------------------------------
 def table_binding() -> Path:
     rows = read(SUM / "proof_binding_attacks_summary.csv")
     acc = {"1": r"\ding{51}", "0": r"---"}
@@ -290,9 +268,6 @@ def table_binding() -> Path:
     return write("tableF_proof_binding.tex", "\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# TEE redundancy summary table (worst-case rows).
-# ---------------------------------------------------------------------------
 def table_tee() -> Path:
     rows = read(SUM / "tee_redundancy_attacks_summary.csv")
     fracs = [0.1, 0.25, 0.33, 0.5]
@@ -317,9 +292,6 @@ def table_tee() -> Path:
     return write("tableG_tee_redundancy.tex", "\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Public-dataset DP utility table.
-# ---------------------------------------------------------------------------
 def table_public_dp() -> Path:
     rows = read(SUM / "public_dp_utility_summary.csv")
     source = rows[0]["dataset_source"] if rows else "uci"

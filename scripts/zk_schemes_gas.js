@@ -1,8 +1,3 @@
-/*
- * Measure on-chain verification gas for the three exported compliance verifiers
- * (Groth16, PLONK, fflonk) using the real proof calldata from
- * benchmark_zk_schemes.js. Writes results/summary/zk_schemes_gas.csv.
- */
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("hardhat");
@@ -23,13 +18,9 @@ async function main() {
       continue;
     }
     const raw = fs.readFileSync(cdPath, "utf8").trim();
-    // Tolerant parse: snarkjs emits quoted hex (groth16/plonk), unquoted hex
-    // (fflonk), and sometimes bare decimal public signals. Normalise to JSON.
     let norm = raw.replace(/"/g, "");
     norm = norm.replace(/0x[0-9a-fA-F]+/g, (m) => `"${m}"`);
     norm = norm.replace(/(?<=[\[,])(\d+)(?=[\],])/g, '"$1"');
-    // snarkjs separates top-level arrays inconsistently: groth16/fflonk use
-    // "],[", but plonk emits "][" (newline, no comma). Normalise to "],[".
     norm = norm.replace(/\]\s*\[/g, "],[");
     const args = JSON.parse(`[${norm}]`);
     const Factory = await ethers.getContractFactory(s.contract);

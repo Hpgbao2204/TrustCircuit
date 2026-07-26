@@ -33,11 +33,10 @@ from pathlib import Path
 SUMMARY = Path("results/summary")
 Q1 = Path("results/q1/summary")
 
-# Marker tokens shared with the LaTeX renderer.
-YES = "yes"        # direct support  -> \ding{51}
-PARTIAL = "partial"  # indirect/limited -> $\sim$
-NO = "no"          # out of scope    -> ---
-NR = "n/r"         # not reported in the source paper
+YES = "yes"
+PARTIAL = "partial"
+NO = "no"
+NR = "n/r"
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -56,23 +55,17 @@ def measured_trustcircuit() -> dict[str, float]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Table A: qualitative mechanism comparison vs modern (2024-2026) SOTA.
-# Dimensions chosen to be objective (a capability is either in the system's
-# design or it is not), not a numeric quality score.
-# ---------------------------------------------------------------------------
 CAP_DIMS = [
-    "verifiable_dp",        # proves the DP/noise step is correct
-    "zk_compliance",        # succinct proof of a policy/compliance predicate
-    "blockchain_settlement",# on-chain settlement of the request/result
-    "budget_accounting",    # composable privacy-budget ledger
-    "proof_binding",        # proof bound to request/asset/consumer/policy/eps
-    "replay_nullifier",     # single-use nullifier / replay protection
-    "audit_support",        # tamper-evident per-operation audit evidence
-    "confidential_compute", # TEE / MPC / encrypted execution
+    "verifiable_dp",
+    "zk_compliance",
+    "blockchain_settlement",
+    "budget_accounting",
+    "proof_binding",
+    "replay_nullifier",
+    "audit_support",
+    "confidential_compute",
 ]
 
-# (system, year, group, scores over CAP_DIMS, main_limitation, ref)
 CAPABILITY = [
     ("VDP (Biswas-Cormode)", 2022, "A",
      [YES, YES, NO, PARTIAL, NO, NO, NO, NO],
@@ -136,12 +129,6 @@ def write_capability() -> Path:
     return out
 
 
-# ---------------------------------------------------------------------------
-# Table 3: quantitative ZK/VDP overhead. Only TrustCircuit rows are measured
-# here; external rows are literature values (per their cited paper) and are
-# explicitly flagged. Mixed units are avoided: we compare the proof system that
-# each work uses for its verifiable claim.
-# ---------------------------------------------------------------------------
 def write_comparison() -> Path:
     """Quantitative head-to-head table (the MAIN SOTA experiment table).
 
@@ -155,7 +142,6 @@ def write_comparison() -> Path:
 
     rows: list[dict] = []
 
-    # --- measured TrustCircuit, three proof systems on the SAME circuit ---
     for scheme in ("groth16", "plonk", "fflonk"):
         r = zk_sel[scheme]
         rows.append({
@@ -173,7 +159,6 @@ def write_comparison() -> Path:
             "ref": "this",
         })
 
-    # --- literature-reported modern baselines ---
     rows.append({
         "system": "Khadka et al.", "year": 2026,
         "target_problem": "compliance (selective disclosure)",

@@ -133,7 +133,7 @@ def main() -> None:
             request = json.loads(data.decode("utf-8"))
             response = handle_request(request)
             conn.sendall(json.dumps(response, separators=(",", ":")).encode("utf-8"))
-        except Exception as exc:  # keep enclave alive during benchmark failures
+        except Exception as exc:
             error = {"ok": False, "error": type(exc).__name__, "message": str(exc)}
             conn.sendall(json.dumps(error).encode("utf-8"))
         finally:

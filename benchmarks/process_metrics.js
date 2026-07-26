@@ -34,7 +34,6 @@ function windowsMemorySnapshot() {
       };
     }
   } catch (_) {
-    // A missing counter is represented as null; it is never replaced by zero.
   }
   return {
     working_set_bytes: process.memoryUsage().rss,

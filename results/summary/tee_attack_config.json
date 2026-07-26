@@ -1,0 +1,28 @@
+{
+  "seed": 42,
+  "rows": 60000,
+  "trials": 30,
+  "severity_levels": [
+    0.1,
+    0.25,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "cpu_hash_rounds": 8000,
+  "scratch_mb": 16,
+  "detector_strength": 0.82,
+  "attacks": [
+    "honest",
+    "invalid_purpose",
+    "invalid_query",
+    "budget_overuse",
+    "tampered_result",
+    "tampered_attestation",
+    "replay_request",
+    "dataset_substitution",
+    "skip_dp_noise",
+    "wrong_epsilon"
+  ],
+  "note": "TEE attack simulation only; not real SGX."
+}

@@ -1,19 +1,3 @@
-/*
- * Experiment 4 (Q1 plan): concurrent budget double-spend stress test.
- *
- * Many requests are submitted into the SAME block (automine disabled) and each
- * tries to reserve epsilon from a fixed asset budget. A correct ledger must
- * accept at most floor(budget/epsilon) of them regardless of concurrency, so
- * the on-chain conservation invariant holds even under a same-block race.
- *
- * Sweep: concurrency x epsilon x budget, repeated `trials` times.
- * Metrics: overspend_accepted_rate, blocked_rate, attack_success_rate,
- *          final_budget_consistent.
- *
- * Output: results/q1/raw/budget_double_spend.csv
- *
- * Usage: npx hardhat run benchmarks/budget_double_spend.js
- */
 const fs = require("fs");
 const path = require("path");
 const { ethers, network } = require("hardhat");
@@ -54,9 +38,8 @@ async function runTrial(budgetLedger, concurrency, epsilon, budget, trial) {
   const assetId = ethers.id(`ds:${concurrency}:${epsilon}:${budget}:${trial}:${Math.random()}`);
   await (await budgetLedger.registerBudget(assetId, totalFixed)).wait();
 
-  const capacity = Number(totalFixed / epsFixed); // max correctly-acceptable
+  const capacity = Number(totalFixed / epsFixed);
 
-  // queue `concurrency` reservations into one block, then mine together.
   await setAutomine(false);
   const sent = [];
   for (let i = 0; i < concurrency; i += 1) {
@@ -67,7 +50,6 @@ async function runTrial(budgetLedger, concurrency, epsilon, budget, trial) {
   await mine();
   await setAutomine(true);
 
-  // resolve receipts: a tx is "accepted" iff it was mined successfully.
   let accepted = 0;
   for (const txOrErr of submitted) {
     if (txOrErr && txOrErr.__err) continue;
@@ -75,13 +57,11 @@ async function runTrial(budgetLedger, concurrency, epsilon, budget, trial) {
       const rec = await txOrErr.wait();
       if (rec && rec.status === 1) accepted += 1;
     } catch (e) {
-      /* reverted in-block -> blocked */
     }
   }
 
   const blocked = concurrency - accepted;
   const overspendAccepted = Math.max(0, accepted - capacity);
-  // verify the ledger's own state never went negative.
   const [total, reserved, used, remaining] = await budgetLedger.getBudget(assetId);
   const consistent = reserved + used <= total && remaining >= 0n;
 
@@ -118,7 +98,6 @@ async function main() {
     }
     process.stdout.write(`[double-spend] concurrency=${concurrency} done\n`);
   }
-  // ensure automine restored even if something threw mid-run.
   await setAutomine(true);
 
   const out = path.join("results", "q1", "raw", "budget_double_spend.csv");

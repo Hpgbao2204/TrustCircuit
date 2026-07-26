@@ -61,7 +61,6 @@ def synthetic_healthcare(rows: int, rng: np.random.Generator) -> dict[str, np.nd
     the (standardised) clinical attributes so that risk rises with age, blood
     pressure, and cholesterol.
     """
-    # latent correlation among (age, systolic_bp, cholesterol)
     corr = np.array([
         [1.00, 0.35, 0.30],
         [0.35, 1.00, 0.28],
@@ -76,8 +75,6 @@ def synthetic_healthcare(rows: int, rng: np.random.Generator) -> dict[str, np.nd
     systolic_bp = latent[:, 1].clip(80, 210)
     cholesterol = latent[:, 2].clip(100, 360)
 
-    # diabetes risk rises with standardised age / BP / cholesterol (logistic);
-    # the intercept is tuned to ~18% population prevalence.
     z = (
         -1.85
         + 0.55 * (ages - 48.0) / 15.0

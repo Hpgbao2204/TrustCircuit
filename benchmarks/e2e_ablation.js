@@ -1,23 +1,3 @@
-/*
- * Experiment 2 (Q1 plan): end-to-end ablation across the TrustCircuit
- * guarantee stack, measured on the local Hardhat EVM with real contracts and a
- * real Groth16 proof.
- *
- * Variants (each removes/adds one guarantee relative to the full pipeline):
- *   OffChain                  - no chain at all (local compute baseline)
- *   ACL-Only                  - registry + access control only
- *   NoBudget                  - + TEE compute + audit, but no privacy budget
- *   NoZK                      - full lifecycle with budget, no compliance proof
- *   TC-Full-MockZK            - full lifecycle + mock proof record
- *   TC-Full-ZK-VerifyOnly     - full lifecycle + on-chain Groth16 verify
- *   TC-Full-ZK-ProveAndVerify - + real off-chain snarkjs proving (timed)
- *
- * Per-stage rows go to results/q1/raw/e2e_ablation.csv. The Python summarizer
- * (summarize_q1.py) aggregates the requested metrics (mean/p95/p99 latency,
- * total gas, proof gas, success rate, throughput).
- *
- * Usage: npx hardhat run benchmarks/e2e_ablation.js -- --runs 50
- */
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -224,7 +204,6 @@ async function runPipeline(ctx) {
     });
 
     if (variant === "TC-Full-ZK-ProveAndVerify") {
-      // real off-chain Groth16 proving cost (snarkjs over the same circuit).
       const start = nowMs();
       let ok = true;
       try {
@@ -255,7 +234,6 @@ async function runPipeline(ctx) {
     return;
   }
 
-  // mock / no-zk / no-budget / acl-only share the base lifecycle.
   const assetId = ethers.id(`asset:${suffix}`);
   const requestId = ethers.id(`request:${suffix}`);
   base.request_id = requestId;

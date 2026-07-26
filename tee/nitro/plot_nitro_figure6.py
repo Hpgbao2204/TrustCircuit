@@ -92,15 +92,10 @@ def fig_latency_composition_area() -> None:
     attest_lat = read_attestation_latencies()
     attest_ms = statistics.median(attest_lat)
 
-    # Interpolate measured points to make a smooth area chart while preserving
-    # the actual measured endpoints.
     ws = np.linspace(measured_x.min(), measured_x.max(), 240)
     enclave_interp = np.interp(ws, measured_x, enclave_ms)
     vsock_interp = np.interp(ws, measured_x, vsock_overhead)
 
-    # The current worker's dominant measured component is payload materialization
-    # and hashing inside Nitro. Estimate fixed aggregate/DP cost from the 1 MiB
-    # intercept and keep it non-negative.
     slope = (enclave_ms[-1] - enclave_ms[0]) / (measured_x[-1] - measured_x[0])
     fixed_compute = max(0.0, enclave_ms[0] - slope * measured_x[0])
     fixed_compute_layer = np.full_like(ws, fixed_compute)
@@ -136,8 +131,6 @@ def fig_latency_composition_area() -> None:
     ax.legend(loc="upper left", framealpha=0.92, ncol=2, columnspacing=0.9,
               handlelength=1.3)
 
-    # Inset zoom: exposes the small fixed components that disappear on the
-    # full 128 MiB scale.
     axins = inset_axes(ax, width="35%", height="38%", loc="lower right", borderpad=1.2)
     axins.stackplot(ws, *layers, colors=colors, alpha=0.9)
     axins.set_xlim(0, 8)

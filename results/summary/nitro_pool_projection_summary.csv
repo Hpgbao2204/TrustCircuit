@@ -1,0 +1,8 @@
+worker_count,source,requests,throughput_rps,throughput_per_worker_rps,latency_median_ms,latency_mean_ms,latency_p95_ms,host_cpu_util_percent,speedup,efficiency
+1,measured,80,15.866,15.866,62.985,62.964,63.216,0.0,1.0,1.0
+2,measured,80,31.654,15.827,62.886,62.933,63.46,0.0,1.995,0.998
+4,measured,80,63.237,15.809,62.877,62.974,63.952,0.0,3.986,0.996
+8,projected,0,124.189,15.524,63.0,63.146,64.444,0.0,7.827,0.978
+16,projected,0,243.809,15.238,63.123,63.318,64.936,0.0,15.367,0.96
+32,projected,0,478.48,14.952,63.246,63.491,65.428,0.0,30.158,0.942
+64,projected,0,938.681,14.667,63.369,63.663,65.92,0.0,59.163,0.924

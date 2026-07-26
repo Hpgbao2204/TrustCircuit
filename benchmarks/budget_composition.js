@@ -1,24 +1,3 @@
-/*
- * Experiment 3 (Q1 plan): privacy-budget composition under repeated requests.
- *
- * We replay a stream of epsilon-charged requests against five accounting
- * regimes and measure how each one conserves the asset budget:
- *
- *   NoBudget                       - no accounting; every request "accepted".
- *   TrustedOffChainBudget          - off-chain counter (trusted manager).
- *   ConsumeOnlyLedger              - on-chain ledger, consume without reserve.
- *   TrustCircuitReserveConsume     - reserve-then-consume on the BudgetLedger.
- *   TrustCircuitReserveConsumeZK   - same, with the per-request proof-binding
- *                                    gas attributed (measured Groth16 verify).
- *
- * For each epsilon-per-request we sweep requests 1..N against a fixed asset
- * budget and record acceptance, remaining budget, cumulative epsilon,
- * overspend, invariant violations, gas/request and utility loss.
- *
- * Output: results/q1/raw/budget_composition.csv
- *
- * Usage: npx hardhat run benchmarks/budget_composition.js
- */
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("hardhat");
@@ -28,7 +7,7 @@ const EPSILON_SCALE = 1_000_000n;
 const ASSET_BUDGET = 5.0;
 const EPSILONS = [0.1, 0.25, 0.5, 1.0];
 const MAX_REQUESTS = 100;
-const ZK_VERIFY_GAS = 255757; // measured Groth16 on-chain verify (zk_schemes_gas.csv)
+const ZK_VERIFY_GAS = 255757;
 
 const REGIMES = [
   "NoBudget",
@@ -74,11 +53,10 @@ async function runRegime(rows, regime, epsilon) {
 
   let accepted = 0;
   let rejected = 0;
-  let consumedFixed = 0n; // amount actually spent
+  let consumedFixed = 0n;
   let overspendFixed = 0n;
   let violations = 0;
   let gasTotal = 0n;
-  // off-chain trusted counter (float) to model TrustedOffChainBudget drift.
   let offchainRemaining = ASSET_BUDGET;
 
   for (let i = 1; i <= MAX_REQUESTS; i += 1) {
@@ -87,7 +65,6 @@ async function runRegime(rows, regime, epsilon) {
     let gasThis = 0n;
 
     if (regime === "NoBudget") {
-      // no accounting: always accept; overspend accrues once budget is gone.
       thisAccepted = true;
     } else if (regime === "TrustedOffChainBudget") {
       if (offchainRemaining + 1e-9 >= epsilon) {
@@ -95,10 +72,7 @@ async function runRegime(rows, regime, epsilon) {
         thisAccepted = true;
       }
     } else if (regime === "ConsumeOnlyLedger") {
-      // consume without reserving: still enforced by the ledger remaining check.
       try {
-        // emulate "consume-only" by reserving+consuming atomically in one shot;
-        // the ledger's remaining() guard is what enforces conservation.
         const rtx = await onchain.reserveBudget(assetId, requestId, epsFixed);
         const rr = await rtx.wait();
         const ctx = await onchain.consumeBudget(assetId, requestId, epsFixed);
@@ -130,12 +104,9 @@ async function runRegime(rows, regime, epsilon) {
       rejected += 1;
     }
 
-    // ground-truth conservation: a request should only be accepted if it fits
-    // the true remaining budget. Violations = accepted requests beyond budget.
     const trueRemaining = totalFixed - consumedFixed;
     if (thisAccepted && trueRemaining < 0n) {
       overspendFixed += -trueRemaining > epsFixed ? epsFixed : -trueRemaining;
-      // count a violation only for regimes that *should* have blocked it.
       if (regime === "NoBudget" || regime === "TrustedOffChainBudget") violations += 1;
     }
 

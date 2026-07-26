@@ -17,6 +17,22 @@ env/
 .env
 .env.*
 !.env.example
+secrets/
+credentials/
+private-keys/
+*.secret
+*.secrets
+*.key
+*.pem
+*.pfx
+*.p12
+*.crt
+*.cer
+*.jks
+*.keystore
+*.kdbx
+*.tfstate
+*.tfstate.*
 
 # Hardhat / Solidity
 artifacts/
@@ -42,21 +58,92 @@ zk/circuits/compliance_lib.circom
 # Downloaded tool binaries
 tools/
 
-# Experiment outputs
-results/
+# Experiment outputs are local by default. Only canonical raw evidence is tracked.
+results/**
+!results/
+!results/raw/
+!results/raw/phase8/
+!results/raw/phase8/attack_binding_matrix.csv
+!results/raw/phase8/attack_binding_matrix_config.json
+!results/raw/phase8/budget_exhaustion.csv
+!results/raw/phase8/chain_experiment_config.json
+!results/raw/phase8/comparison_capabilities.csv
+!results/raw/phase8/comparison_performance.csv
+!results/raw/phase8/dp_composition.csv
+!results/raw/phase8/dp_rounding_boundaries.csv
+!results/raw/phase8/dp_vbs.csv
+!results/raw/phase8/e2e_ablation.csv
+!results/raw/phase8/native_vbs_performance.csv
+!results/raw/phase8/protocol_attacks.csv
+!results/raw/phase8/settlement_concurrency.csv
+!results/raw/phase8/vbs_experiment_config.json
+!results/raw/phase8/zk_backend_runs.csv
+!results/raw/phase8/zk_backends.csv
+!results/raw/phase8/zk_backends_config.json
+!results/raw/phase8/zk_scaling.csv
+!results/raw/phase8/zk_scaling_config.json
+!results/raw/phase8/zk_scaling_runs.csv
+!results/raw/phase8/testnet/
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/config.json
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/deployments.json
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/proof_preparation.csv
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/run_result.json
+!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/transactions.csv
+
+# Canonical evidence used by the Nitro paper evaluation.
+!results/raw/contract_gas_benchmark.csv
+!results/raw/zk_benchmark.csv
+!results/raw/zk_schemes.csv
+!results/raw/dp_utility.csv
+!results/raw/cpabe_policy_benchmark.csv
+!results/raw/abe_payload_scaling.csv
+!results/raw/nitro_latency.csv
+!results/raw/nitro_attestation.csv
+!results/raw/nitro_pool.csv
+!results/raw/tee_attack_trials.csv
+!results/raw/phase8/sota_profiles/
+results/raw/phase8/sota_profiles/*
+!results/raw/phase8/sota_profiles/config.json
+
+!results/summary/
+results/summary/*
+!results/summary/contract_gas_summary.csv
+!results/summary/zk_benchmark_summary.csv
+!results/summary/zk_benchmark_config.json
+!results/summary/zk_schemes_summary.csv
+!results/summary/zk_schemes_config.json
+!results/summary/zk_onchain_gas.csv
+!results/summary/zk_schemes_gas.csv
+!results/summary/e2e_zk_schemes.csv
+!results/summary/dp_utility_summary.csv
+!results/summary/dp_config.json
+!results/summary/cpabe_policy_summary.csv
+!results/summary/cpabe_policy_config.json
+!results/summary/abe_payload_summary.csv
+!results/summary/abe_scaling_config.json
+!results/summary/nitro_latency_summary.csv
+!results/summary/nitro_attestation_summary.csv
+!results/summary/nitro_config.json
+!results/summary/nitro_pool_summary.csv
+!results/summary/nitro_pool_projection_summary.csv
+!results/summary/tee_attack_summary.csv
+!results/summary/tee_attack_config.json
+
+!results/processed/
+results/processed/*
+!results/processed/sota_profiles/
+results/processed/sota_profiles/*
+!results/processed/sota_profiles/field_work_curve.csv
+!results/processed/sota_profiles/compound_field_curve.csv
+!results/processed/sota_profiles/profile_summary.csv
+!results/processed/sota_profiles/reconstruction_scope.csv
 *.csv.tmp
 
 # Local notes / markdown docs
-*.md
-!/README.md
-!tee/vbs/README.md
-!tee/vbs/PHASE1_COMMAND_LOG.md
-!tee/vbs/IMPLEMENTATION_LOG.md
-!tee/vbs/PROTOCOL.md
-!tee/vbs/ATTESTATION_LOG.md
-!tee/vbs/PHASE7_EXPERIMENT_LOG.md
 Paper/
 .skills/
+PROJECT_STATE.json
 
 # Logs
 *.log
@@ -76,9 +163,10 @@ Thumbs.db
 # Local generated data
 data/generated/*
 !data/generated/.gitkeep
+data/private/
+data/raw/
+data/sensitive/
 tee/witness/
-
-*.pem
 
 # Windows VBS Enclave local configuration and build outputs
 tee/vbs/TrustCircuitVbs.Local.props
@@ -91,36 +179,7 @@ tee/vbs/**/*.vcxproj.user
 
 # Local Rust build output for the pairing-based CP-ABE benchmark.
 crypto/rabe_benchmark/target/
-!crypto/CPABE_BENCHMARK.md
-!crypto/AES_GCM_SCALING_BENCHMARK.md
 
-# Phase 7/8 reproducibility artifacts requested for the VBS migration.
-!results/
-results/*
-!results/raw/
-results/raw/*
-!results/raw/e2e/
-!results/raw/e2e/**
-!results/raw/phase8/
-!results/raw/phase8/**
-# Per-request VBS bundles are transient test inputs. The manifest and aggregate
-# raw CSV/JSON stay versionable; regenerated bundles remain locally isolated.
-results/raw/phase8/concurrency_bundles/
-results/raw/phase8/fresh_bundles/
-!results/processed/
-!results/processed/**
-!results/deployment_profiles/
-!results/deployment_profiles/**
-
-!Paper/
-Paper/*
-!Paper/figures/
-Paper/figures/*
-!Paper/figures/panels/
-!Paper/figures/panels/*.pdf
-!Paper/figures/panels/*.png
-!Paper/figures/PANEL_MANIFEST.md
-!Paper/figures/CAPTION_NOTES.md
-
-# Figure audit command record requested for the revised VBS evidence.
-!tee/vbs/FIGURE_AUDIT_LOG.md
+# Markdown
+*.md
+!/README.md

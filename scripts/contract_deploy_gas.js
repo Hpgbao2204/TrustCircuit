@@ -1,10 +1,3 @@
-/*
- * Measure one-time deployment gas for every TrustCircuit contract on the local
- * Hardhat EVM. Deployment (one-time) cost is a different gas dimension from the
- * per-call execution cost in contract_gas_summary.csv.
- *
- * Output: results/summary/contract_deploy_gas.csv
- */
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("hardhat");

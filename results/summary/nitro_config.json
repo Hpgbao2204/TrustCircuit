@@ -1,0 +1,35 @@
+{
+  "schema": "TrustCircuit.NitroEvidenceConfig.v1",
+  "provenance": "Reconstructed after the run from the retained raw rows, benchmark clients, host scripts, and manuscript setup table; no measurement value was changed.",
+  "measurement_type": "measured_aws_nitro_with_explicit_model_projections",
+  "environment": {
+    "instances": ["m6i.4xlarge", "m6i.8xlarge"],
+    "os": "Amazon Linux 2023",
+    "python": "3.9",
+    "transport": "VSOCK",
+    "worker_image": "EIF",
+    "memory_mib_per_enclave": 1024,
+    "vcpus_per_enclave": 2
+  },
+  "payload_benchmark": {
+    "command": "python3 tee/nitro/parent_benchmark.py --payload-mib 1 8 32 128 --trials 5 --rows 50000 --out results/raw/nitro_latency.csv",
+    "measured_payload_mib": [1, 8, 32, 128],
+    "projected_payload_mib_in_historical_panel": [256, 512, 1024]
+  },
+  "attestation_benchmark": {
+    "command": "python3 tee/nitro/attestation_benchmark.py --trials 20 --rows 50000 --payload-mib 1 --out results/raw/nitro_attestation.csv",
+    "measurement": "AWS NSM document generation"
+  },
+  "pool_benchmark": {
+    "client": "tee/nitro/pool_benchmark.py",
+    "requests_per_worker_count": 80,
+    "payload_mib": 1,
+    "measured_worker_counts": [1, 2, 4],
+    "projected_worker_counts": [8, 16, 32, 64]
+  },
+  "limitations": [
+    "The exact original shell command line was not stored contemporaneously; commands above are reconstructed from raw row cardinality and client defaults.",
+    "Runtime measurements are specific to the recorded AWS hosts and campaign.",
+    "Projected payload and worker-count points are not direct hardware measurements."
+  ]
+}

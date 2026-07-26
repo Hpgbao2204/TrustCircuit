@@ -10,19 +10,6 @@ interface IPhase7Groth16Verifier {
     ) external view returns (bool);
 }
 
-/**
- * @title ComplianceVerifier
- * @notice Request-bound adapter for the Phase 7 VCP Groth16 verifier.
- *
- * Canonical public-signal order:
- *   0 requestId, 1 assetId, 2 consumerId, 3 policyHash,
- *   4 policyVersion, 5 functionId, 6 resultHash, 7 epsilonCost,
- *   8 nullifier, 9 transcriptHash, 10 attestationDigest.
- *
- * Native Windows evidence is validated outside the EVM. This adapter binds the
- * digest and validity interval of that validated statement; it does not claim
- * that Solidity validates the native VBS report or its certificate chain.
- */
 contract ComplianceVerifier {
     uint256 internal constant IDX_REQUEST = 0;
     uint256 internal constant IDX_ASSET = 1;

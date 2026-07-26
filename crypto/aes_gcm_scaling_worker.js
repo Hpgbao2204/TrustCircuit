@@ -1,7 +1,3 @@
-/*
- * One process-isolated AES-256-GCM measurement.
- * Stdout is exactly one JSON object; diagnostics belong on stderr.
- */
 "use strict";
 
 const crypto = require("crypto");

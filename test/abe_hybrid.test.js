@@ -20,7 +20,6 @@ describe("CP-ABE-style hybrid encryption (LSSS + ECIES + AES-256-GCM)", function
   }
 
   it("authorized attribute set decrypts (AND + OR policy)", function () {
-    // (role:doctor) AND (dept:cardiology OR dept:research)
     const policy = AND(leaf("role:doctor"), OR(leaf("dept:cardiology"), leaf("dept:research")));
     const { authority, pp } = setup(policy);
     const data = Buffer.from("patient-record: confidential payload \u2764", "utf8");
@@ -39,7 +38,6 @@ describe("CP-ABE-style hybrid encryption (LSSS + ECIES + AES-256-GCM)", function
     const { authority, pp } = setup(policy);
     const ct = encrypt(pp, policy, Buffer.from("secret"));
 
-    // has the OR branch but not the required role
     const bad = authority.issueKey(["dept:cardiology"]);
     expect(decrypt(bad, ct)).to.equal(null);
   });
@@ -49,7 +47,7 @@ describe("CP-ABE-style hybrid encryption (LSSS + ECIES + AES-256-GCM)", function
     const { authority, pp } = setup(policy);
     const ct = encrypt(pp, policy, Buffer.from("secret"));
 
-    const bad = authority.issueKey(["role:doctor"]); // OR unsatisfied
+    const bad = authority.issueKey(["role:doctor"]);
     expect(decrypt(bad, ct)).to.equal(null);
   });
 
@@ -70,7 +68,6 @@ describe("CP-ABE-style hybrid encryption (LSSS + ECIES + AES-256-GCM)", function
     const { authority, pp } = setup(policy);
     const ct = encrypt(pp, policy, Buffer.from("authentic"));
 
-    // flip a byte of the ciphertext payload
     const buf = Buffer.isBuffer(ct.payload) ? Buffer.from(ct.payload) : Buffer.from(ct.payload, "hex");
     buf[0] ^= 0xff;
     ct.payload = buf;
@@ -84,15 +81,14 @@ describe("CP-ABE-style hybrid encryption (LSSS + ECIES + AES-256-GCM)", function
     const { authority, pp } = setup(policy);
     const ct = encrypt(pp, policy, Buffer.from("data"));
 
-    // attacker holds a key for an unrelated attribute issued by the authority
-    const attacker = authority.issueKey(["p", "z"]); // has p, lacks q
+    const attacker = authority.issueKey(["p", "z"]);
     expect(decrypt(attacker, ct)).to.equal(null);
   });
 
   it("supports large payloads (hybrid AES-256-GCM bulk path)", function () {
     const policy = OR(leaf("tier:gold"), leaf("tier:platinum"));
     const { authority, pp } = setup(policy);
-    const data = crypto.randomBytes(256 * 1024); // 256 KiB
+    const data = crypto.randomBytes(256 * 1024);
     const ct = encrypt(pp, policy, data);
     const k = authority.issueKey(["tier:platinum"]);
     expect(decrypt(k, ct).equals(data)).to.equal(true);

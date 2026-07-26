@@ -1,32 +1,3 @@
-/*
- * Large-payload scaling + security experiment for the TrustCircuit hybrid
- * attribute-based access module.
- *
- * Three studies:
- *   (A) Payload scaling  - fixed policy (4-of-8), payload grows 1..MAX MB.
- *                          Isolates the AES-256-GCM bulk path: encrypt/decrypt
- *                          time, throughput (MB/s), peak RSS. Shows that the
- *                          CP-ABE key-encapsulation cost is amortised away as
- *                          the protected payload grows.
- *   (B) Policy scaling    - fixed 1 MB payload, policy grows 1..32 leaves.
- *                          Key-encapsulation (the "CP-ABE evidence") cost and
- *                          size as the access structure becomes richer.
- *   (C) Security stress   - for several policies, many AUTHORISED and
- *                          UNAUTHORISED attribute sets are attempted; reports
- *                          authorised success rate (must be 1.0) and
- *                          unauthorised block rate (must be 1.0). The crypto
- *                          strength (ECDH/AES-256/GCM) is constant regardless
- *                          of payload or policy size.
- *
- * Output:
- *   results/raw/abe_payload_scaling.csv
- *   results/summary/abe_payload_summary.csv
- *   results/raw/abe_security.csv
- *   results/summary/abe_scaling_config.json
- *
- * Usage:
- *   node crypto/abe_scaling.js [--max-mb 256] [--budget-mb 24000] [--sec-trials 300]
- */
 "use strict";
 
 const fs = require("fs");
@@ -47,7 +18,7 @@ function arg(name, def) {
 }
 
 const MAX_MB = Number(arg("--max-mb", "256"));
-const BUDGET_MB = Number(arg("--budget-mb", "24000")); // soft RAM budget guard
+const BUDGET_MB = Number(arg("--budget-mb", "24000"));
 const SEC_TRIALS = Number(arg("--sec-trials", "300"));
 
 function mean(a) {
@@ -65,7 +36,6 @@ function writeCsv(file, rows) {
   fs.writeFileSync(file, [headers.join(","), ...rows.map((r) => headers.map((h) => r[h]).join(","))].join("\n") + "\n");
 }
 
-// representative non-trivial policy: 4-of-8 threshold
 function fixedPolicy() {
   return abe.THR(4, ...Array.from({ length: 8 }, (_, i) => abe.leaf(`attr:${i}`)));
 }
@@ -81,7 +51,6 @@ function kencBytes(ct) {
   return b;
 }
 
-// ---- (A) payload scaling -------------------------------------------------
 function payloadScaling() {
   const sizesMb = [];
   for (let m = 1; m <= MAX_MB; m *= 2) sizesMb.push(m);
@@ -162,7 +131,6 @@ function payloadScaling() {
   writeCsv(SUM_PAYLOAD, sum);
 }
 
-// ---- (C) security stress -------------------------------------------------
 function randomSubset(pool, size) {
   const a = [...pool];
   for (let i = a.length - 1; i > 0; i--) {
@@ -192,14 +160,12 @@ function securityStress() {
     let authOk = 0;
     let unauthBlocked = 0;
     for (let t = 0; t < SEC_TRIALS; t++) {
-      // authorised: a random set of size >= k
       const aSize = cfg.k + Math.floor(Math.random() * (cfg.leaves - cfg.k + 1));
       const authKey = authority.issueKey(randomSubset(pool, aSize));
       const pa = abe.decrypt(authKey, ct);
       if (pa && pa.equals(payload)) authOk++;
 
-      // unauthorised: a random set of size < k
-      const uSize = Math.floor(Math.random() * cfg.k); // 0..k-1
+      const uSize = Math.floor(Math.random() * cfg.k);
       const unKey = authority.issueKey(randomSubset(pool, uSize));
       const pu = abe.decrypt(unKey, ct);
       if (!pu) unauthBlocked++;
@@ -212,7 +178,7 @@ function securityStress() {
       authorized_success_rate: (authOk / SEC_TRIALS).toFixed(4),
       unauthorized_block_rate: (unauthBlocked / SEC_TRIALS).toFixed(4),
       false_accept_rate: ((SEC_TRIALS - unauthBlocked) / SEC_TRIALS).toFixed(6),
-      key_security_bits: 128, // ECDH(secp256k1)~128, AES-256-GCM tag 128
+      key_security_bits: 128,
       symmetric_bits: 256,
     });
     console.log(`policy=${cfg.k}/${cfg.leaves} authOK=${(authOk / SEC_TRIALS).toFixed(3)} unauthBlocked=${(unauthBlocked / SEC_TRIALS).toFixed(3)}`);

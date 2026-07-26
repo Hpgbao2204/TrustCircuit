@@ -1,43 +1,73 @@
 # TrustCircuit
 
-[![DOI](https://zenodo.org/badge/1245496520.svg)](https://doi.org/10.5281/zenodo.20669379)
+TrustCircuit is a reproducible research prototype combining smart contracts, differential privacy, zero-knowledge proofs, CP-ABE, and trusted execution. The paper evaluation uses AWS Nitro Enclaves. The Windows VBS implementation is a later migration track and is not used as evidence for the paper's Nitro claims.
 
-TrustCircuit is a research prototype for accountable privacy-preserving data access. It combines blockchain-based access control and audit logs, differential privacy budget accounting, zero-knowledge compliance proofs, and a TEE worker simulator for off-chain computation.
+## Repository scope
 
-The prototype follows a simple pipeline:
+The repository contains source code, tests, dependency locks, public input data, and the canonical non-image evidence needed to audit the reported paper values. Paper sources, generated figures, transient request bundles, build outputs, credentials, and local machine state are intentionally excluded.
 
-```text
-Register -> Negotiate -> Compute -> Prove Compliance -> Audit & Consume
-```
+`PAPER_EVIDENCE.json` maps each manuscript claim to raw data, summaries, configs, commands, measurement classes, row counts, and SHA-256 hashes. `REPRODUCIBILITY.json` separately covers the later VBS experiment suite. Measured, simulated, analytical, and model-projected values are not presented as the same evidence class.
 
-## Components
+## Install and test
 
-- Solidity smart contracts for data registration, access control, budget tracking, verification, and audit records.
-- Differential privacy experiments with aggregate queries, Gaussian noise, and budget consumption.
-- Circom/snarkjs zero-knowledge compliance proof flow.
-- TEE worker simulator for request execution, attestation-like reports, and sealed witnesses, with experiments run on AWS Nitro as a TEE-like evaluation environment.
-- Benchmark scripts for gas, latency, proof overhead, throughput, and privacy-utility evaluation.
+Requirements for local experiments: Node.js 22, Python 3.12, Rust, Circom 2.2.2, and snarkjs 0.7.5. Nitro reruns additionally require an AWS Nitro Enclaves host.
 
-## Quick Start
-
-```bash
-npm install
+```powershell
+npm ci
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+npm run compile
 npm test
 ```
 
-## Citation
+Verify every retained evidence hash, row count, and reported numerical claim without generating figures:
 
-This work is currently unpublished. If you use this repository, please cite the Zenodo archive:
-
-```bibtex
-@misc{huynh2026trustcircuit,
-  title        = {TrustCircuit: Blockchain-Orchestrated Privacy-Preserving Data Circulation with Verifiable Compliance},
-  author       = {Huynh, Bao and Tran, Tuan-Dung and Pham, Van-Hau},
-  year         = {2026},
-  publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.20669380},
-  url          = {https://doi.org/10.5281/zenodo.20669380},
-  note         = {Unpublished research prototype}
-}
+```powershell
+python scripts/verify_paper_evidence.py
 ```
+
+The paper's seven-public-input circuit is preserved at `zk/circuits/paper_legacy_compliance_check.circom`. The current eleven-public-input circuit belongs to the later VBS migration and therefore produces different constraint and proof measurements.
+
+## Rerun paper experiments
+
+Local benchmark entry points are:
+
+```powershell
+npx.cmd hardhat run scripts/gas-benchmark.js
+python dp/experiment.py --seed 42 --rows 50000 --trials 500
+python crypto/run_cpabe_policy_benchmark.py
+node crypto/abe_scaling.js
+```
+
+Nitro source and host-side clients are under `tee/nitro`. Build the EIF from its Dockerfile, start the enclave, then run the payload, native-attestation, and worker-pool clients. Direct measurements cover payloads 1--128 MiB and worker counts 1, 2, and 4. Larger values are explicitly retained as model projections.
+
+Base Sepolia evidence includes public transaction hashes. A new testnet run requires a user-supplied RPC endpoint and funded test account in `.env`; secrets are not archived.
+
+## VBS migration track
+
+Copy `tee/vbs/TrustCircuitVbs.Local.props.example` to `tee/vbs/TrustCircuitVbs.Local.props`, configure local tooling and signing, then run:
+
+```powershell
+msbuild tee/vbs/TrustCircuitVbs.sln /m /p:Configuration=Debug /p:Platform=x64
+powershell -NoProfile -ExecutionPolicy Bypass -File tee/vbs/tests/smoke.ps1
+npm run phase7:build
+npm run phase7:e2e
+```
+
+## Reproduce VBS experiments
+
+Regenerate processed tables and figures from the retained raw evidence:
+
+```powershell
+python scripts/process_phase8_results.py
+python scripts/plot_all_results.py
+```
+
+Rerun the full local experiment suite:
+
+```powershell
+npm run phase8:experiments
+```
+
+Historical configs preserve their original commit, dirty-worktree flag, environment, seeds, warm-ups, and repetitions. The Base Sepolia evidence additionally retains public transaction hashes and canonical contract addresses. Secrets and deployment keys belong in `.env` and are never committed.

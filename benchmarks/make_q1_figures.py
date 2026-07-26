@@ -52,9 +52,6 @@ def save(fig, sub: str, name: str) -> Path:
     return out
 
 
-# ===========================================================================
-# E2E ablation
-# ===========================================================================
 E2E_ORDER = ["OffChain", "ACL-Only", "NoBudget", "NoZK", "TC-Full-MockZK",
              "TC-Full-ZK-VerifyOnly", "TC-Full-ZK-ProveAndVerify"]
 E2E_SHORT = {"OffChain": "OffChain", "ACL-Only": "ACL", "NoBudget": "NoBudget",
@@ -68,7 +65,6 @@ def fig_e2e() -> list[Path]:
     labels = [E2E_SHORT[v] for v in variants]
     paths = []
 
-    # (1) latency: bars (mean) with p95/p99 markers overlaid -> structured.
     mean_l = np.array([float(rows[v]["mean_latency_ms"]) for v in variants])
     p95 = np.array([float(rows[v]["p95_latency_ms"]) for v in variants])
     p99 = np.array([float(rows[v]["p99_latency_ms"]) for v in variants])
@@ -86,7 +82,6 @@ def fig_e2e() -> list[Path]:
     ax.legend(); ax.grid(axis="y", alpha=0.3)
     paths.append(save(fig, "e2e", "q1_e2e_latency"))
 
-    # (2) gas: stacked bars settlement vs proof gas.
     total = np.array([float(rows[v]["total_gas"]) for v in variants]) / 1000.0
     proof = np.array([float(rows[v]["proof_gas"]) for v in variants]) / 1000.0
     settle = np.clip(total - proof, 0, None)
@@ -101,7 +96,6 @@ def fig_e2e() -> list[Path]:
     ax.legend(); ax.grid(axis="y", alpha=0.3)
     paths.append(save(fig, "e2e", "q1_e2e_gas"))
 
-    # (3) throughput vs latency scatter (sized by gas) -> non-linear spread.
     thr = np.array([float(rows[v]["throughput_req_s"]) for v in variants])
     style()
     fig, ax = plt.subplots()
@@ -116,16 +110,12 @@ def fig_e2e() -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# Budget composition + double-spend
-# ===========================================================================
 def fig_budget() -> list[Path]:
     comp = read(SUM / "budget_composition_summary.csv")
     regimes = sorted({r["regime"] for r in comp})
     eps = sorted({float(r["epsilon"]) for r in comp})
     paths = []
 
-    # (1) heatmap regime x epsilon -> accepted requests (utility surface).
     acc = {}
     for r in comp:
         acc[(r["regime"], float(r["epsilon"]))] = int(r["accepted_requests"])
@@ -143,7 +133,6 @@ def fig_budget() -> list[Path]:
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).set_label("accepted requests")
     paths.append(save(fig, "budget", "q1_budget_accept_heatmap"))
 
-    # (2) overspend / invariant violations per regime (averaged over epsilon).
     over = {rg: np.mean([float(r["overspend_amount"]) for r in comp if r["regime"] == rg]) for rg in regimes}
     viol = {rg: np.mean([int(r["budget_invariant_violations"]) for r in comp if r["regime"] == rg]) for rg in regimes}
     style()
@@ -161,7 +150,6 @@ def fig_budget() -> list[Path]:
     ax.set_title("Only the unaccounted regime overspends; all ledger regimes conserve")
     paths.append(save(fig, "budget", "q1_budget_violations"))
 
-    # (3) double-spend: grouped bars blocked vs attack-success vs consistency.
     ds = read(SUM / "budget_double_spend_by_concurrency.csv")
     conc = [int(r["concurrency"]) for r in ds]
     blocked = [float(r["blocked_rate"]) for r in ds]
@@ -183,9 +171,6 @@ def fig_budget() -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# TEE redundancy
-# ===========================================================================
 def fig_tee() -> list[Path]:
     rows = read(SUM / "tee_redundancy_attacks_summary.csv")
     configs = ["single_worker", "3_worker_majority", "5_worker_majority", "7_worker_majority"]
@@ -195,7 +180,6 @@ def fig_tee() -> list[Path]:
     succ = {(r["config"], float(r["malicious_fraction"])): float(r["mean_attack_success_rate"]) for r in rows}
     det = {(r["config"], float(r["malicious_fraction"])): float(r["mean_detection_rate"]) for r in rows}
 
-    # (1) heatmap config x malicious fraction -> attack success rate.
     mat = np.array([[succ[(c, f)] for f in fracs] for c in configs])
     style()
     fig, ax = plt.subplots()
@@ -209,7 +193,6 @@ def fig_tee() -> list[Path]:
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).set_label("attack success rate")
     paths.append(save(fig, "tee", "q1_tee_attack_success_heatmap"))
 
-    # (2) grouped bars: detection rate per config across a few fractions.
     sel = [f for f in fracs if f in (0.1, 0.25, 0.33, 0.5)]
     style()
     fig, ax = plt.subplots()
@@ -224,9 +207,6 @@ def fig_tee() -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# DP: public vs synthetic (grouped bars, NOT a line chart)
-# ===========================================================================
 def fig_dp() -> list[Path]:
     pub = read(SUM / "public_dp_utility_summary.csv")
     syn_path = Path("results/summary/dp_utility_summary.csv")
@@ -258,9 +238,6 @@ def fig_dp() -> list[Path]:
     return [save(fig, "dp", "q1_public_vs_synthetic")]
 
 
-# ===========================================================================
-# Modern SOTA capability heatmap (replaces the legacy comparison table figure)
-# ===========================================================================
 CAP_SCORE = {"yes": 1.0, "partial": 0.5, "no": 0.0, "n/r": 0.0}
 CAP_LABEL = {"verifiable_dp": "Verif. DP", "zk_compliance": "ZK compliance",
              "blockchain_settlement": "Blockchain", "budget_accounting": "Budget acct.",
@@ -289,9 +266,6 @@ def fig_sota() -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# Proof-binding outcome heatmap
-# ===========================================================================
 def fig_binding() -> list[Path]:
     rows = read(SUM / "proof_binding_attacks_summary.csv")
     cases = [r["attack_case"] for r in rows]
@@ -300,7 +274,6 @@ def fig_binding() -> list[Path]:
     mat = np.array([[int(r[v]) for v in verifiers] for r in rows])
     style()
     fig, ax = plt.subplots()
-    # green = correct outcome, red = insecure accept. Honest row: accept=good.
     color = np.zeros_like(mat, dtype=float)
     for i, case in enumerate(cases):
         for j in range(len(verifiers)):
