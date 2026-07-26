@@ -1,10 +1,16 @@
 # TrustCircuit
 
-TrustCircuit là prototype kết hợp smart contract, differential privacy, zero-knowledge proof và Windows VBS Enclave cho xử lý dữ liệu ngoài chuỗi.
+TrustCircuit is a reproducible research prototype combining smart contracts, differential privacy, zero-knowledge proofs, and a Windows VBS Enclave.
 
-## Triển khai lại
+## Repository scope
 
-Yêu cầu: Node.js, Python 3, Visual Studio 2022 x64, Windows SDK 10.0.26100.0 và môi trường VBS Enclave đã cấu hình.
+The repository contains source code, tests, dependency locks, the public Adult dataset, and canonical raw evidence under `results/raw/phase8`. Paper sources, generated figures, processed tables, transient request bundles, build outputs, credentials, and local machine state are intentionally excluded.
+
+`REPRODUCIBILITY.json` records the SHA-256 hash, row count, measurement class, and experiment config for every retained evidence file. Direct measurements, analytical results, functional evidence, and model-calibrated rows remain explicitly distinguished by `measurement_type`; they are not presented as the same evidence class.
+
+## Install and test
+
+Requirements: Node.js, Python 3, Visual Studio 2022 x64, Windows SDK 10.0.26100.0, and a configured VBS Enclave development environment.
 
 ```powershell
 npm ci
@@ -15,7 +21,7 @@ npm run compile
 npm test
 ```
 
-Sao chép `tee/vbs/TrustCircuitVbs.Local.props.example` thành `tee/vbs/TrustCircuitVbs.Local.props`, điền đường dẫn tooling và certificate local, rồi build:
+Copy `tee/vbs/TrustCircuitVbs.Local.props.example` to `tee/vbs/TrustCircuitVbs.Local.props`, configure local tooling and signing, then run:
 
 ```powershell
 msbuild tee/vbs/TrustCircuitVbs.sln /m /p:Configuration=Debug /p:Platform=x64
@@ -24,4 +30,19 @@ npm run phase7:build
 npm run phase7:e2e
 ```
 
-Biến môi trường và khóa triển khai phải đặt trong `.env`; không commit secrets, private keys, certificate hay dữ liệu riêng tư.
+## Reproduce experiments
+
+Regenerate processed tables and figures from the retained raw evidence:
+
+```powershell
+python scripts/process_phase8_results.py
+python scripts/plot_all_results.py
+```
+
+Rerun the full local experiment suite:
+
+```powershell
+npm run phase8:experiments
+```
+
+Historical configs preserve their original commit, dirty-worktree flag, environment, seeds, warm-ups, and repetitions. The Base Sepolia evidence additionally retains public transaction hashes and canonical contract addresses. Secrets and deployment keys belong in `.env` and are never committed.
