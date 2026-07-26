@@ -35,7 +35,8 @@ def percentile(values: list[float], probability: float) -> float:
 def verify_files(manifest: dict) -> None:
     for item in manifest["files"]:
         path = ROOT / item["file"]
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        content = path.read_bytes().replace(b"\r\n", b"\n")
+        digest = hashlib.sha256(content).hexdigest()
         if digest != item["sha256"]:
             raise AssertionError(f"hash mismatch: {item['file']}")
         if "rows" in item and len(rows(item["file"])) != item["rows"]:
