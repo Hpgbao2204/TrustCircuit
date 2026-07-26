@@ -1,11 +1,3 @@
-/*
- * TrustCircuit public-testnet settlement experiment.
- *
- * Scope: Base Sepolia blockchain deployment and settlement only. Synthetic
- * request contexts and Groth16 proofs are prepared before any measured chain
- * transaction. No VBS/Nitro execution or proof-generation latency is included
- * in the blockchain measurements.
- */
 "use strict";
 
 const crypto = require("crypto");
@@ -278,7 +270,6 @@ class ConfirmationTracker {
         );
         if (changed) this.store.checkpoint();
       } catch {
-        // Transient read failures are retried; transaction rows remain checkpointed.
       }
       await delay(500);
     }
@@ -718,7 +709,6 @@ function parseRevertName(error, interfaces) {
       try {
         return iface.parseError(data)?.name || "unknown";
       } catch {
-        // Try the next ABI.
       }
     }
   }

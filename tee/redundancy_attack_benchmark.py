@@ -38,10 +38,6 @@ ATTACK_TYPES = ["wrong_result", "wrong_epsilon", "skip_dp_noise", "stale_attesta
 TRIALS = 100
 SEED = 2026
 
-# stale_attestation is caught by an attestation-freshness check at every worker
-# independently of voting, so a single honest verifier detects it. The other
-# three attacks alter the committed output and are caught only by cross-worker
-# disagreement (majority voting).
 ATTESTATION_CHECKED = {"stale_attestation"}
 
 
@@ -56,38 +52,26 @@ def simulate(rng: np.random.Generator, k: int, p: float, attack: str) -> dict[st
     false_accept = 0
 
     for _ in range(TRIALS):
-        # each worker is independently malicious with probability p.
         malicious = rng.random(k) < p
         n_mal = int(malicious.sum())
 
         if attack in ATTESTATION_CHECKED:
-            # freshness is verifiable per-worker: any malicious (stale) worker is
-            # flagged; the request is rejected if any worker fails attestation.
             if n_mal > 0:
                 detected += 1
-            # a stale attestation never yields an accepted wrong result.
             continue
 
         if k == 1:
-            # no redundancy: a malicious worker's output is accepted blindly.
             if malicious[0]:
                 attack_success += 1
                 false_accept += 1
             continue
 
-        # k>=3: malicious workers collude on one wrong value; honest agree on
-        # the correct value. The wrong value is accepted iff it has a majority.
         if n_mal >= threshold:
             attack_success += 1
             false_accept += 1
         elif n_mal > 0:
-            # disagreement without a malicious majority -> detected & rejected.
             detected += 1
-        # n_mal == 0 -> clean run, nothing to detect.
 
-    # cost / latency model: k workers run in parallel, so wall-clock latency
-    # grows only with tail/synchronisation overhead (~5% per extra worker),
-    # while the resource (worker) cost grows linearly with k.
     latency_overhead = 1.0 + 0.05 * (k - 1)
     worker_cost_multiplier = float(k)
 
@@ -123,7 +107,6 @@ def main() -> None:
         w.writeheader()
         w.writerows(rows)
 
-    # summary: average over attack types per (config, malicious_fraction).
     summary: list[dict] = []
     for config, k in CONFIGS.items():
         for p in MALICIOUS_FRACTIONS:

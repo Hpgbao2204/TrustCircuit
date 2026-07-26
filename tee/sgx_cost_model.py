@@ -64,22 +64,17 @@ REPO = Path(__file__).resolve().parents[1]
 OUT_CSV = REPO / "results" / "summary" / "sgx_cost_model.csv"
 OUT_JSON = REPO / "results" / "summary" / "sgx_cost_model_config.json"
 
-# Workload parameters matching the TrustCircuit aggregate query (worker_sim.py:
-# functionId "aggregate_mean_v1" over a synthetic-healthcare asset).
-N_RECORDS = 50_000          # records in the aggregate query (matches DP eval)
-PAYLOAD_FITS_MIB = 32.0     # encrypted analytics payload that fits the EPC
-PAYLOAD_LARGE_MIB = 512.0   # large analytics payload that overflows the EPC
-EPC_USABLE_MIB = 93.0       # SGXv1 usable Enclave Page Cache (128 MiB provisioned)
+N_RECORDS = 50_000
+PAYLOAD_FITS_MIB = 32.0
+PAYLOAD_LARGE_MIB = 512.0
+EPC_USABLE_MIB = 93.0
 PAGE_KIB = 4.0
-CLOCK_HZ = 2.5e9            # conservative enclave-capable clock for cycle->time
-N_TRANSITIONS = 6          # enter, sealed-read, fetch, rng, emit, exit
+CLOCK_HZ = 2.5e9
+N_TRANSITIONS = 6
 MC_SAMPLES = 20_000
 RNG_SEED = 20240609
 
 
-# --------------------------------------------------------------------------- #
-# (A) Host-side measurement of transferable costs                             #
-# --------------------------------------------------------------------------- #
 def _median_ms(fn, repeats: int) -> float:
     samples = []
     for _ in range(repeats):
@@ -146,13 +141,12 @@ def measure_dram_random_access_ns(repeats: int = 5) -> float:
     Grounds the irreducible DRAM component of the EPC-paging regime in a real
     measurement, on top of the SGX-specific EWB/ELDU crypto cost from literature.
     """
-    n = 1 << 22  # 4M elements, ~32 MiB, exceeds L2/L3 for random access
+    n = 1 << 22
     rng = np.random.default_rng(RNG_SEED + 2)
     idx = rng.permutation(n).astype(np.int64)
     arr = np.zeros(n, dtype=np.int64)
 
     def _walk():
-        # pointer-chase-like dependent random access
         p = 0
         acc = 0
         for _ in range(0, n, 1024):
@@ -162,7 +156,7 @@ def measure_dram_random_access_ns(repeats: int = 5) -> float:
 
     ms = _median_ms(_walk, repeats)
     accesses = n / 1024
-    return (ms * 1e6) / accesses  # ns per access
+    return (ms * 1e6) / accesses
 
 
 @dataclass(frozen=True)
@@ -194,9 +188,6 @@ def run_host_measurements() -> HostMeasurements:
     )
 
 
-# --------------------------------------------------------------------------- #
-# (B+C) SGX-specific literature ranges + Monte-Carlo propagation              #
-# --------------------------------------------------------------------------- #
 @dataclass(frozen=True)
 class SgxRanges:
     transition_cycles: tuple = (8_200, 17_000)
@@ -218,27 +209,22 @@ def monte_carlo_latency(host: HostMeasurements, working_set_mib: float,
     rng = np.random.default_rng(RNG_SEED + 3)
     base_compute = host.transferable_compute_ms(large_payload)
 
-    # (1) in-EPC encrypted-memory slowdown on the resident compute
     mee = rng.uniform(r.mee_slowdown[0], r.mee_slowdown[1], n)
     compute = mee * base_compute
 
-    # (2) enclave-transition cost (additive)
     tr_cycles = rng.uniform(r.transition_cycles[0], r.transition_cycles[1], n)
     transitions = r.n_transitions * cycles_to_ms(tr_cycles, r.clock_hz)
 
-    # (3) EPC paging when working set exceeds usable EPC:
-    #     SGX-specific EWB/ELDU crypto cost (literature) + measured DRAM access.
     overflow_mib = max(0.0, working_set_mib - r.epc_usable_mib)
     n_pages = overflow_mib * 1024.0 / PAGE_KIB
     if n_pages > 0:
         pg_cycles = rng.uniform(r.page_cycles[0], r.page_cycles[1], n)
         pg_sgx = n_pages * cycles_to_ms(pg_cycles, r.clock_hz)
-        pg_dram = n_pages * host.dram_random_access_ns * 1e-6  # ns -> ms
+        pg_dram = n_pages * host.dram_random_access_ns * 1e-6
         paging = pg_sgx + pg_dram
     else:
         paging = np.zeros(n)
 
-    # (4) remote-attestation quote (optional / amortizable per session)
     if include_attest:
         attest = rng.uniform(r.attest_ms[0], r.attest_ms[1], n)
     else:
@@ -247,9 +233,6 @@ def monte_carlo_latency(host: HostMeasurements, working_set_mib: float,
     return compute + transitions + paging + attest
 
 
-# --------------------------------------------------------------------------- #
-# (D) Anchor validation against an independent published SGX datapoint        #
-# --------------------------------------------------------------------------- #
 def anchor_validation(host: HostMeasurements, r: SgxRanges) -> dict:
     """Sanity-check the model's in-EPC compute slowdown against the published
     SGX compute-bound slowdown envelope (~1.0x-1.3x for CPU-bound, EPC-resident
@@ -257,7 +240,7 @@ def anchor_validation(host: HostMeasurements, r: SgxRanges) -> dict:
     projection is flagged rather than reported as trustworthy.
     """
     central_mee = sum(r.mee_slowdown) / 2.0
-    lit_lo, lit_hi = 1.0, 1.3  # published compute-bound in-EPC slowdown envelope
+    lit_lo, lit_hi = 1.0, 1.3
     within = lit_lo <= central_mee <= lit_hi
     return {
         "model_central_inEPC_slowdown": round(central_mee, 4),
@@ -270,9 +253,6 @@ def anchor_validation(host: HostMeasurements, r: SgxRanges) -> dict:
     }
 
 
-# --------------------------------------------------------------------------- #
-# SGX-readiness detection                                                     #
-# --------------------------------------------------------------------------- #
 def detect_sgx() -> dict:
     """Detect whether enclave hardware is present so the same pipeline can run a
     real enclave when available; otherwise the calibrated model is used.
@@ -296,16 +276,12 @@ def detect_sgx() -> dict:
     }
 
 
-# --------------------------------------------------------------------------- #
-# Driver                                                                      #
-# --------------------------------------------------------------------------- #
 def summarize(arr: np.ndarray) -> dict:
     p5, p50, p95 = np.percentile(arr, [5, 50, 95])
     return {
         "latency_p5_ms": round(float(p5), 3),
         "latency_p50_ms": round(float(p50), 3),
         "latency_p95_ms": round(float(p95), 3),
-        # single-worker throughput from the latency distribution (GIL-independent)
         "throughput_p50_rps": round(1000.0 / float(p50), 3),
         "throughput_lo_rps": round(1000.0 / float(p95), 3),
         "throughput_hi_rps": round(1000.0 / float(p5), 3),
@@ -323,7 +299,6 @@ def main() -> None:
     anchor = anchor_validation(host, r)
 
     regimes = [
-        # (name, working_set_mib, include_attest, large_payload)
         ("fits_epc_amortized_attest", PAYLOAD_FITS_MIB, False, False),
         ("fits_epc_per_request_quote", PAYLOAD_FITS_MIB, True, False),
         ("exceeds_epc_per_request_quote", PAYLOAD_LARGE_MIB, True, True),

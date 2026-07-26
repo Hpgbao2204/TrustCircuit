@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# TrustCircuit Nitro Enclaves worker-pool benchmark for m6i.8xlarge.
-#
-# m6i.8xlarge has 32 vCPUs and 128 GiB RAM. AWS Nitro Enclaves allows at most
-# four enclaves per parent EC2 instance, so this script measures 1--4 real
-# workers. plot_nitro_results.py then extrapolates the scaling curves to 64
-# workers and labels those points as projected.
 
 cd ~/TrustCircuit || exit 1
 

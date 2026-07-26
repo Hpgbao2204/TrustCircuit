@@ -1,13 +1,3 @@
-/*
- * Measure on-chain Groth16 verification gas for the exported compliance verifier.
- *
- * Uses the real proof/public-signal calldata produced by benchmark_zk.js
- * (zk/build/compliance_2_calldata.txt) against the exported
- * contracts/ComplianceGroth16Verifier.sol (snarkjs Groth16Verifier).
- *
- * Appends a row to results/raw/zk_benchmark.csv-companion file
- * results/summary/zk_onchain_gas.csv.
- */
 const fs = require("fs");
 const path = require("path");
 const { ethers, artifacts } = require("hardhat");
@@ -28,7 +18,6 @@ async function main() {
   const ok = await verifier.verifyProof(a, b, c, input);
   if (!ok) throw new Error("on-chain verification returned false");
 
-  // estimateGas on the view function = intrinsic + calldata + execution cost
   const gas = await verifier.verifyProof.estimateGas(a, b, c, input);
 
   const deployTx = verifier.deploymentTransaction();

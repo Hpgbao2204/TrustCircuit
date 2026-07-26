@@ -8,9 +8,6 @@ const DEFAULT_VARIANTS = ["TC-Full", "TC-Full-ZK", "NoZK", "NoBudget", "ACL-Only
 const ZK_CALLDATA_PATH = path.join(__dirname, "..", "zk", "build", "compliance_2_calldata.txt");
 const ZK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
-// Load the real Groth16 proof/calldata produced by `npm run zk:benchmark`.
-// Returns null if the artifact is missing so the runner can skip TC-Full-ZK
-// gracefully instead of failing the whole benchmark.
 function loadZkCalldata() {
   try {
     if (!fs.existsSync(ZK_CALLDATA_PATH)) return null;
@@ -105,8 +102,6 @@ async function deployContracts() {
   return { registry, access, budget, audit, verifier };
 }
 
-// Deploy the real ZK stack: the snarkjs-exported Groth16 verifier plus the
-// request-bound ComplianceVerifier adapter used by the TC-Full-ZK variant.
 async function deployZkStack() {
   const Groth16Verifier = await ethers.getContractFactory("Groth16Verifier");
   const ComplianceVerifier = await ethers.getContractFactory("ComplianceVerifier");
@@ -225,9 +220,6 @@ async function runPipeline({ rows, variant, runIndex, clientCount, seed, teeRows
     return;
   }
 
-  // Real end-to-end variant: the compliance stage submits an actual Groth16
-  // proof to the on-chain ComplianceVerifier adapter (no mock proof). Ids are
-  // derived from the proof's public signals so the binding checks pass.
   if (variant === "TC-Full-ZK") {
     const zk = loadZkCalldata();
     if (!zk) {
@@ -265,7 +257,6 @@ async function runPipeline({ rows, variant, runIndex, clientCount, seed, teeRows
       return runHashWorkload(64, JSON.stringify(result));
     });
 
-    // bind the request to the proof's public commitments, then verify on-chain
     await recordTx(rows, zkBase, "zk_register_expectation",
       adapter.registerExpectation(zkRequestId, {
         requestId: requestSignal,

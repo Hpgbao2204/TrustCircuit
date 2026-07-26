@@ -63,15 +63,6 @@ interface IAuditLedgerPhase7 {
     ) external;
 }
 
-/**
- * @title TrustCircuitSettlement
- * @notice Atomic Phase 7 transition from verified evidence to consumed budget.
- *
- * Budget reservation is deliberately a pre-computation transaction. The final
- * `settle` call performs Groth16 verification/nullifier consumption, privacy
- * budget consumption, access completion, and audit emission atomically. A
- * revert in any downstream contract rolls the whole state transition back.
- */
 contract TrustCircuitSettlement {
     uint256 private constant SCALAR_FIELD =
         21888242871839275222246405745257275088548364400416034343698204186575808495617;

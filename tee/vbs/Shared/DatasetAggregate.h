@@ -41,9 +41,6 @@ inline std::int64_t readInt64LittleEndian(
     return static_cast<std::int64_t>(value);
 }
 
-// This is the single native/enclave implementation of the TCVBSDS1 parser,
-// bounds checks, COUNT, and MEAN. Timing is returned from the same TSC path in
-// both builds; it is performance metadata and never a security input.
 inline HRESULT aggregateDataset(
     const std::vector<std::uint8_t>& payload,
     std::uint32_t functionId,

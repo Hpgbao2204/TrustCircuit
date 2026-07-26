@@ -93,9 +93,6 @@ def save(fig, out_dir: Path, name: str) -> Path:
     return out
 
 
-# ===========================================================================
-# Group 1: blockchain settlement gas
-# ===========================================================================
 PIPELINE_ORDER = [
     "registerAsset", "registerBudget", "requestAccess", "approveRequest",
     "reserveBudget", "submitProof", "consumeBudget", "recordAudit", "completeRequest",
@@ -123,7 +120,6 @@ def figures_gas(gas_rows: list[dict[str, str]], out_dir: Path, deploy_rows: list
     tc_gas = np.array([gas_of("TC-Full", op) for op in tc_ops])
     labels = [SHORT_OP.get(op, op) for op in tc_ops]
 
-    # --- Aspect A: per-operation recurring execution gas (ranked) ---------
     fig, ax = new_fig()
     order = np.argsort(tc_gas)
     bars = ax.barh(np.array(labels)[order], tc_gas[order], color=cm.plasma(np.linspace(0.1, 0.9, len(tc_ops))))
@@ -132,9 +128,6 @@ def figures_gas(gas_rows: list[dict[str, str]], out_dir: Path, deploy_rows: list
         ax.text(v, i, f" {v:.1f}", va="center", fontsize=13)
     paths.append(save(fig, out_dir, "gA_runtime_perop"))
 
-    # --- Aspect B: marginal settlement gas attributed to each module ------
-    # Derived from ablation totals: base (registry/access/audit), +budget
-    # ledger, +compliance-proof record. The real ZK verify is shown separately.
     base = float(totals["ACL-Only"]["mean_gas"]) / 1000.0
     budget_mod = (float(totals["NoZK"]["mean_gas"]) - float(totals["ACL-Only"]["mean_gas"])) / 1000.0
     zk_record = (float(totals["TC-Full"]["mean_gas"]) - float(totals["NoZK"]["mean_gas"])) / 1000.0
@@ -153,7 +146,6 @@ def figures_gas(gas_rows: list[dict[str, str]], out_dir: Path, deploy_rows: list
     ax.set_ylim(0, 330)
     paths.append(save(fig, out_dir, "gB_module_marginal"))
 
-    # --- Aspect C: one-time deployment gas vs runtime bytecode size -------
     if deploy_rows:
         names = [r["contract"].replace("Verifier", "Vrf") for r in deploy_rows]
         dgas = np.array([float(r["deploy_gas"]) for r in deploy_rows]) / 1000.0
@@ -170,7 +162,6 @@ def figures_gas(gas_rows: list[dict[str, str]], out_dir: Path, deploy_rows: list
         ax.legend(loc="lower right")
         paths.append(save(fig, out_dir, "gC_deploy_vs_size"))
 
-    # --- Aspect D: cost-time efficiency (gas vs latency per op) -----------
     fig, ax = new_fig()
     lat = np.array([float(next(r for r in ops_rows if r["variant"] == "TC-Full" and r["operation"] == op)["mean_latency_ms"]) for op in tc_ops])
     p95 = np.array([float(next(r for r in ops_rows if r["variant"] == "TC-Full" and r["operation"] == op)["p95_gas"]) / 1000.0 for op in tc_ops])
@@ -185,9 +176,6 @@ def figures_gas(gas_rows: list[dict[str, str]], out_dir: Path, deploy_rows: list
 
 
 
-# ===========================================================================
-# Group 2: end-to-end latency / throughput
-# ===========================================================================
 E2E_STAGE_ORDER = [
     "registerAsset", "requestAccess", "approveRequest", "registerBudget", "reserveBudget",
     "tee_compute", "mock_prove", "submitProof", "consumeBudget", "recordAudit", "completeRequest",
@@ -226,7 +214,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     thr = np.array([float(totals[v]["throughput_req_s"]) for v in variants])
     gas = np.array([float(totals[v]["mean_gas_used"]) / 1000.0 for v in variants])
 
-    # e1: 3D trajectory
     fig, ax = new_fig("3d")
     order = np.argsort(lat)
     ax.plot(lat[order], gas[order], thr[order], color="#555555", lw=1.6)
@@ -237,7 +224,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.view_init(elev=22, azim=-52)
     paths.append(save(fig, out_dir, "e1_latency_gas_thr_3d"))
 
-    # e2: TC-Full stacked stage breakdown
     fig, ax = new_fig()
     tc = stages_of("TC-Full")
     bottom = 0.0
@@ -249,7 +235,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend(ncol=2, fontsize=12, loc="center left", bbox_to_anchor=(1.02, 0.5))
     paths.append(save(fig, out_dir, "e2_tcfull_breakdown"))
 
-    # e3: total latency per variant (log)
     fig, ax = new_fig()
     ax.bar(variants, lat, yerr=std, capsize=6, color=cm.viridis(np.linspace(0.1, 0.9, len(variants))))
     ax.set_yscale("log"); ax.set_ylabel("total latency (ms, log)")
@@ -258,7 +243,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.set_xticks(range(len(variants))); ax.set_xticklabels(variants, rotation=20, ha="right")
     paths.append(save(fig, out_dir, "e3_total_latency"))
 
-    # e4: throughput per variant
     fig, ax = new_fig()
     ax.bar(variants, thr, color=cm.cividis(np.linspace(0.1, 0.9, len(variants))))
     ax.set_ylabel("throughput (req/s)")
@@ -267,7 +251,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.set_xticks(range(len(variants))); ax.set_xticklabels(variants, rotation=20, ha="right")
     paths.append(save(fig, out_dir, "e4_throughput"))
 
-    # e5: stage latency heatmap
     fig, ax = new_fig()
     mat = np.full((len(variants), len(ONCHAIN_STAGES)), np.nan)
     for i, v in enumerate(variants):
@@ -281,7 +264,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).set_label("log10 latency (ms)")
     paths.append(save(fig, out_dir, "e5_stage_latency_heatmap"))
 
-    # e6: TC-Full percentile profile
     fig, ax = new_fig()
     names = [SHORT_STAGE.get(st, st) for st, *_ in tc]
     x = np.arange(len(tc))
@@ -293,7 +275,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend()
     paths.append(save(fig, out_dir, "e6_percentiles"))
 
-    # e7: latency waterfall -- per-stage bars + cumulative curve (dual axis)
     fig, ax = new_fig()
     stage_lat = [m for _, m, *_ in tc]
     names = [SHORT_STAGE.get(st, st) for st, *_ in tc]
@@ -308,7 +289,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend(loc="upper left", fontsize=12)
     paths.append(save(fig, out_dir, "e7_latency_waterfall"))
 
-    # e8: efficiency frontier
     fig, ax = new_fig()
     sc = ax.scatter(lat, thr, s=260, c=gas, cmap="cool", edgecolor="k")
     for v, x, y in zip(variants, lat, thr):
@@ -320,9 +300,6 @@ def figures_e2e(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# Group 3: differential-privacy utility
-# ===========================================================================
 def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     queries = sorted({r["query"] for r in rows})
     eps = sorted({float(r["epsilon"]) for r in rows})
@@ -334,7 +311,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     short_q = [q.replace("_", " ") for q in queries]
     paths: list[Path] = []
 
-    # d1: 3D surface
     fig, ax = new_fig("3d")
     X, Y = np.meshgrid(np.arange(len(eps)), np.arange(len(queries)))
     ax.plot_surface(X, Y, mat, cmap="viridis", edgecolor="k", linewidth=0.3, antialiased=True)
@@ -344,7 +320,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.view_init(elev=26, azim=-60)
     paths.append(save(fig, out_dir, "d1_error_surface_3d"))
 
-    # d2: log-log error vs epsilon
     fig, ax = new_fig()
     for i, q in enumerate(queries):
         ax.loglog(eps, [err[(q, e)] for e in eps], marker="o", color=PALETTE[i % len(PALETTE)], label=q.replace("_", " "))
@@ -352,7 +327,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend(fontsize=12, ncol=2)
     paths.append(save(fig, out_dir, "d2_error_vs_eps"))
 
-    # d3: contour
     fig, ax = new_fig()
     cf = ax.contourf(X, Y, mat, levels=16, cmap="Blues")
     ax.contour(X, Y, mat, levels=8, colors="white", linewidths=0.7, alpha=0.7)
@@ -362,7 +336,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     fig.colorbar(cf, ax=ax, fraction=0.046, pad=0.04).set_label("rel error (%)")
     paths.append(save(fig, out_dir, "d3_error_contour"))
 
-    # d4: phase space mean vs p95
     fig, ax = new_fig()
     for i, q in enumerate(queries):
         mv = np.array([err[(q, e)] for e in eps]); pv = np.array([p95[(q, e)] for e in eps])
@@ -373,7 +346,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend(fontsize=11, ncol=2)
     paths.append(save(fig, out_dir, "d4_utility_phase_space"))
 
-    # d5: error at eps=1.0
     fig, ax = new_fig()
     e1 = 1.0 if 1.0 in eps else eps[len(eps) // 2]
     vals = [err[(q, e1)] for q in queries]
@@ -383,7 +355,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.set_xlabel(f"mean relative error (%) at epsilon = {e1}")
     paths.append(save(fig, out_dir, "d5_error_at_eps1"))
 
-    # d6: heatmap query x epsilon
     fig, ax = new_fig()
     im = ax.imshow(mat, aspect="auto", cmap="YlGnBu")
     ax.set_xticks(range(len(eps))); ax.set_xticklabels([str(e) for e in eps])
@@ -395,7 +366,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).set_label("rel error (%)")
     paths.append(save(fig, out_dir, "d6_query_eps_heatmap"))
 
-    # d7: aggregated percentile band
     fig, ax = new_fig()
     a50 = np.array([np.mean([p50[(q, e)] for q in queries]) for e in eps])
     a95 = np.array([np.mean([p95[(q, e)] for q in queries]) for e in eps])
@@ -408,7 +378,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend()
     paths.append(save(fig, out_dir, "d7_percentile_band"))
 
-    # d8: noise-scaling law error vs 1/eps
     fig, ax = new_fig()
     inv = 1.0 / np.array(eps)
     counts = np.array([np.mean([err[(q, e)] for q in queries if "count" in q]) for e in eps])
@@ -422,9 +391,6 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# Group 4: TEE worker-pool scaling
-# ===========================================================================
 def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 16) -> list[Path]:
     rows = sorted(rows, key=lambda r: int(r["worker_count"]))
     w = np.array([int(r["worker_count"]) for r in rows])
@@ -436,7 +402,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     cpu = np.array([float(r["cpu_utilization_estimate_pct"]) for r in rows])
     paths: list[Path] = []
 
-    # s1: 3D trajectory
     fig, ax = new_fig("3d")
     ax.plot(w, thr, p95, color="#555555", lw=1.6)
     ax.scatter(w, thr, p95, s=90, c=w, cmap="viridis", edgecolor="k", linewidth=0.5)
@@ -444,7 +409,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     ax.view_init(elev=24, azim=-58)
     paths.append(save(fig, out_dir, "s1_scaling_trajectory_3d"))
 
-    # s2: throughput saturation
     fig, ax = new_fig()
     ax.plot(w, thr, marker="o", color=PALETTE[0], label="measured")
     ax.plot(w, thr[0] * w, "--", color="gray", label="ideal linear")
@@ -453,7 +417,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     ax.set_ylim(0, max(thr) * 1.4); ax.legend()
     paths.append(save(fig, out_dir, "s2_throughput_saturation"))
 
-    # s3: latency bands
     fig, ax = new_fig()
     ax.fill_between(w, p50, p99, alpha=0.2, color="#4477aa", label="p50-p99 band")
     ax.plot(w, p95, marker="o", color="#cc3311", label="p95")
@@ -461,7 +424,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     ax.set_xlabel("worker count"); ax.set_ylabel("latency (ms)"); ax.legend()
     paths.append(save(fig, out_dir, "s3_latency_bands"))
 
-    # s4: efficiency -- per-worker throughput + parallel efficiency (dual axis)
     fig, ax = new_fig()
     eff = (thr / thr[0]) / w * 100.0
     l1, = ax.plot(w, thr_pw, marker="o", color=PALETTE[4], label="per-worker throughput")
@@ -476,7 +438,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     ax.legend([l1, l2], ["per-worker throughput", "parallel efficiency"], fontsize=12, loc="upper right")
     paths.append(save(fig, out_dir, "s4_efficiency_decay"))
 
-    # s5: resource saturation -- CPU utilization + total throughput (dual axis)
     fig, ax = new_fig()
     l1, = ax.plot(w, cpu, marker="o", color=PALETTE[3], label="CPU utilization")
     ax.axvline(cores, color="#cc3311", ls=":", lw=2, label=f"{cores} physical cores")
@@ -489,7 +450,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     ax.legend([l1, l2, ax.lines[1]], ["CPU utilization", "throughput", f"{cores} cores"], fontsize=12, loc="center right")
     paths.append(save(fig, out_dir, "s5_cpu_utilization"))
 
-    # s6: speedup
     fig, ax = new_fig()
     speedup = thr / thr[0]
     ax.plot(w, speedup, marker="o", color=PALETTE[0], label="measured speedup")
@@ -498,7 +458,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     ax.set_xlabel("worker count"); ax.set_ylabel("speedup vs 1 worker"); ax.legend()
     paths.append(save(fig, out_dir, "s6_speedup"))
 
-    # s7: latency heatmap workers x percentile
     fig, ax = new_fig()
     stack = np.vstack([p50, p95, p99])
     im = ax.imshow(stack, aspect="auto", cmap="inferno")
@@ -508,7 +467,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).set_label("latency (ms)")
     paths.append(save(fig, out_dir, "s7_latency_heatmap"))
 
-    # s8: throughput vs cpu util phase space
     fig, ax = new_fig()
     sc = ax.scatter(cpu, thr, s=60 + w * 12, c=w, cmap="turbo", edgecolor="k", linewidth=0.5)
     ax.plot(cpu, thr, color="gray", alpha=0.4, lw=1.2)
@@ -519,9 +477,6 @@ def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 
     return paths
 
 
-# ===========================================================================
-# Group 5: TEE attack robustness
-# ===========================================================================
 SUBTLE = ["skip_dp_noise", "tampered_result", "tampered_attestation", "wrong_epsilon"]
 
 
@@ -534,7 +489,6 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     lat = {(r["attack_type"], float(r["severity"])): float(r["mean_total_tee_latency_ms"]) for r in rows}
     paths: list[Path] = []
 
-    # r1: 3D detection surface (subtle)
     fig, ax = new_fig("3d")
     Z = np.array([[det[(a, s)] for s in sev] for a in SUBTLE])
     X, Y = np.meshgrid(np.arange(len(sev)), np.arange(len(SUBTLE)))
@@ -545,21 +499,18 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.view_init(elev=26, azim=-60)
     paths.append(save(fig, out_dir, "r1_detection_surface_3d"))
 
-    # r2: detection vs severity (subtle)
     fig, ax = new_fig()
     for i, a in enumerate(SUBTLE):
         ax.plot(sev, [det[(a, s)] for s in sev], marker="o", color=PALETTE[i], label=a.replace("_", " "))
     ax.set_xlabel("deviation severity"); ax.set_ylabel("detection rate"); ax.set_ylim(0, 1.05); ax.legend()
     paths.append(save(fig, out_dir, "r2_subtle_detection"))
 
-    # r3: attack success vs severity
     fig, ax = new_fig()
     for i, a in enumerate(SUBTLE):
         ax.plot(sev, [suc[(a, s)] for s in sev], marker="s", color=PALETTE[i], label=a.replace("_", " "))
     ax.set_xlabel("deviation severity"); ax.set_ylabel("evasion rate"); ax.set_ylim(0, 1.05); ax.legend()
     paths.append(save(fig, out_dir, "r3_attack_success"))
 
-    # r4: detection heatmap attack x severity
     fig, ax = new_fig()
     M = np.array([[det[(a, s)] for s in sev] for a in attacks])
     im = ax.imshow(M, aspect="auto", cmap="RdYlGn", vmin=0, vmax=1)
@@ -572,7 +523,6 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).set_label("detection rate")
     paths.append(save(fig, out_dir, "r4_detection_heatmap"))
 
-    # r5: mean detection per attack
     fig, ax = new_fig()
     means = [np.mean([det[(a, s)] for s in sev]) for a in attacks]
     colors = ["#117733" if m > 0.99 else "#cc3311" for m in means]
@@ -582,7 +532,6 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.set_xlabel("mean detection rate"); ax.set_xlim(0, 1.08)
     paths.append(save(fig, out_dir, "r5_mean_detection"))
 
-    # r6: detection vs false-accept (subtle)
     fig, ax = new_fig()
     for i, a in enumerate(SUBTLE):
         ax.plot([fa[(a, s)] for s in sev], [det[(a, s)] for s in sev], marker="o", color=PALETTE[i], label=a.replace("_", " "))
@@ -590,7 +539,6 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.set_xlabel("false-accept rate"); ax.set_ylabel("detection rate"); ax.legend()
     paths.append(save(fig, out_dir, "r6_detection_vs_false_accept"))
 
-    # r7: per-attack latency
     fig, ax = new_fig()
     lmean = [np.mean([lat[(a, s)] for s in sev]) for a in attacks]
     ax.bar(range(len(attacks)), lmean, color=cm.cividis(np.linspace(0.1, 0.9, len(attacks))))
@@ -598,7 +546,6 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.set_ylabel("mean TEE latency (ms)")
     paths.append(save(fig, out_dir, "r7_per_attack_latency"))
 
-    # r8: robustness phase space
     fig, ax = new_fig()
     for i, a in enumerate(SUBTLE):
         d = np.array([det[(a, s)] for s in sev]); u = np.array([suc[(a, s)] for s in sev])
@@ -610,9 +557,6 @@ def figures_tee_attack(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# Group 6: ZK Groth16 compliance proofs
-# ===========================================================================
 def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     rows = sorted(rows, key=lambda r: int(r["n_rules"]))
     nr = np.array([int(r["n_rules"]) for r in rows])
@@ -630,7 +574,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     deploy_gas = float(gas_rows[0]["deploy_gas"]) if gas_rows else 470580.0
     paths: list[Path] = []
 
-    # z1: 3D trajectory constraints-prove-RSS
     fig, ax = new_fig("3d")
     ax.plot(cons, prove, rss, color="#555555", lw=1.6)
     ax.scatter(cons, prove, rss, s=100, c=nr, cmap="viridis", edgecolor="k", linewidth=0.5)
@@ -638,7 +581,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     ax.view_init(elev=24, azim=-58)
     paths.append(save(fig, out_dir, "z1_constraints_prove_rss_3d"))
 
-    # z2: prove time vs constraints with std band + p95
     fig, ax = new_fig()
     ax.fill_between(cons, prove - prove_sd, prove + prove_sd, alpha=0.2, color="#4477aa", label="mean +/- std")
     ax.plot(cons, prove, marker="o", color=PALETTE[0], label="mean prove time")
@@ -646,7 +588,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     ax.set_xlabel("R1CS constraints"); ax.set_ylabel("prove time (ms)"); ax.legend()
     paths.append(save(fig, out_dir, "z2_prove_time"))
 
-    # z3: prove vs verify time vs rules (dual axis)
     fig, ax = new_fig()
     l1, = ax.plot(nr, prove, marker="o", color=PALETTE[0], label="prove (ms)")
     ax.set_xlabel("active compliance rules"); ax.set_ylabel("prove time (ms)", color=PALETTE[0])
@@ -658,7 +599,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     ax.legend([l1, l2], ["prove time", "off-chain verify time"], fontsize=12, loc="upper left")
     paths.append(save(fig, out_dir, "z3_prove_verify_vs_rules"))
 
-    # z4: key/circuit sizes vs rules (grouped bars)
     fig, ax = new_fig()
     width = 0.4
     x = np.arange(len(nr))
@@ -668,7 +608,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     ax.set_xlabel("active compliance rules"); ax.set_ylabel("size (MB)"); ax.legend()
     paths.append(save(fig, out_dir, "z4_key_sizes"))
 
-    # z5: constraints scaling vs rules with linear fit
     fig, ax = new_fig()
     coef = np.polyfit(nr, cons, 1)
     ax.plot(nr, cons, marker="o", color=PALETTE[0], label="measured constraints")
@@ -676,7 +615,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     ax.set_xlabel("active compliance rules"); ax.set_ylabel("R1CS constraints"); ax.legend()
     paths.append(save(fig, out_dir, "z5_constraint_scaling"))
 
-    # z6: succinctness -- proof + vkey sizes stay O(1)
     fig, ax = new_fig()
     l1, = ax.plot(nr, proof_b, marker="o", color=PALETTE[0], label="proof size (bytes)")
     ax.set_xlabel("active compliance rules"); ax.set_ylabel("proof size (bytes)", color=PALETTE[0])
@@ -689,7 +627,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     ax.legend([l1, l2], ["proof size", "verification key"], fontsize=12, loc="center right")
     paths.append(save(fig, out_dir, "z6_succinctness"))
 
-    # z7: on-chain verification cost context
     fig, ax = new_fig()
     names = ["Groth16\nverify", "verifier\ndeploy", "ECPAIRING\nbudget (3M)"]
     vals = [verify_gas / 1000, deploy_gas / 1000, 3000]
@@ -700,7 +637,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     ax.set_yscale("log")
     paths.append(save(fig, out_dir, "z7_onchain_gas"))
 
-    # z8: prove time vs peak RSS phase space, bubble=constraints
     fig, ax = new_fig()
     sc = ax.scatter(prove, rss, s=60 + (cons - cons.min()) / (np.ptp(cons) + 1e-9) * 500, c=nr, cmap="turbo", edgecolor="k", linewidth=0.5)
     ax.plot(prove, rss, color="gray", alpha=0.4, lw=1)
@@ -711,9 +647,6 @@ def figures_zk(rows: list[dict[str, str]], gas_rows: list[dict[str, str]], out_d
     return paths
 
 
-# ===========================================================================
-# Group 7: multi-scheme ZK comparison (Groth16 / PLONK / fflonk)
-# ===========================================================================
 SCHEME_LABEL = {"groth16": "Groth16", "plonk": "PLONK", "fflonk": "fflonk"}
 SCHEME_COLOR = {"groth16": "#1f77b4", "plonk": "#d62728", "fflonk": "#2ca02c"}
 
@@ -737,7 +670,6 @@ def figures_zk_schemes(rows: list[dict[str, str]], gas_rows: list[dict[str, str]
     deploy = np.array([deploy_map.get(s, 0.0) for s in schemes]) / 1000.0
     paths: list[Path] = []
 
-    # zs1: proving cost -- prove time (bars + std)
     fig, ax = new_fig()
     bars = ax.bar(labels, prove, yerr=prove_sd, capsize=6, color=colors)
     ax.set_ylabel("proof generation time (ms)")
@@ -745,7 +677,6 @@ def figures_zk_schemes(rows: list[dict[str, str]], gas_rows: list[dict[str, str]
         ax.text(b.get_x() + b.get_width() / 2, v, f"{v:.0f}", ha="center", va="bottom", fontsize=14)
     paths.append(save(fig, out_dir, "zs1_prove_time"))
 
-    # zs2: on-chain verification + deploy gas (grouped bars) -- EVM cost
     fig, ax = new_fig()
     x = np.arange(len(labels)); w = 0.38
     b1 = ax.bar(x - w / 2, gas, w, color=colors, label="verify")
@@ -757,7 +688,6 @@ def figures_zk_schemes(rows: list[dict[str, str]], gas_rows: list[dict[str, str]
     ax.legend()
     paths.append(save(fig, out_dir, "zs2_onchain_gas"))
 
-    # zs3: artifact sizes -- proof bytes (left) + proving key MB (right), distinct metrics
     fig, ax = new_fig()
     l1 = ax.bar(x - w / 2, proof_b, w, color=colors, label="proof size (B)")
     ax.set_ylabel("proof size (bytes)")
@@ -770,7 +700,6 @@ def figures_zk_schemes(rows: list[dict[str, str]], gas_rows: list[dict[str, str]
     ax.legend(loc="upper left"); ax2.legend(loc="upper right")
     paths.append(save(fig, out_dir, "zs3_sizes"))
 
-    # zs4: normalized cost radar across 5 axes (lower is better)
     metrics = ["prove\ntime", "verify\ngas", "proof\nsize", "proving\nkey", "peak\nRAM"]
     raw = np.vstack([prove, gas, proof_b, pk, rss]).astype(float)
     norm = raw / raw.max(axis=1, keepdims=True)
@@ -790,9 +719,6 @@ def figures_zk_schemes(rows: list[dict[str, str]], gas_rows: list[dict[str, str]
     return paths
 
 
-# ===========================================================================
-# Group 8: SOTA on-chain mechanism comparison
-# ===========================================================================
 def figures_sota(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     systems = [r["system"] for r in rows]
     short = [s.replace(" et al.", "+") for s in systems]
@@ -805,7 +731,6 @@ def figures_sota(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     is_tc = np.array([s == "TrustCircuit" for s in systems])
     paths: list[Path] = []
 
-    # so1: total per-access on-chain gas, sorted ascending (differentiated gradient)
     fig, ax = new_fig()
     order = np.argsort(total)
     col = ["#2ca02c" if is_tc[i] else ("#cc3311" if proof[i] > 0 else "#4477aa") for i in order]
@@ -819,7 +744,6 @@ def figures_sota(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend(fontsize=11, loc="lower right")
     paths.append(save(fig, out_dir, "so1_total_gas"))
 
-    # so2: gas decomposition per system (storage / logic / proof)
     fig, ax = new_fig()
     order = np.argsort(total)
     s_short = np.array(short)[order]
@@ -832,13 +756,11 @@ def figures_sota(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend(fontsize=12)
     paths.append(save(fig, out_dir, "so2_gas_breakdown"))
 
-    # so3: cost vs capability-coverage Pareto frontier
     fig, ax = new_fig()
     col = ["#2ca02c" if t else "#cc3311" if p > 0 else "#4477aa" for t, p in zip(is_tc, proof)]
     ax.scatter(cov, total, s=240, c=col, edgecolor="k", linewidth=0.8, zorder=3)
     for sname, xx, yy in zip(short, cov, total):
         ax.annotate(sname, (xx, yy), fontsize=10, xytext=(5, 4), textcoords="offset points")
-    # Pareto frontier: minimal gas at each coverage level moving up-right.
     pts = sorted(zip(cov, total))
     fx, fy = [], []
     best = -1
@@ -850,7 +772,6 @@ def figures_sota(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.set_xlim(1.5, 6.6); ax.legend(fontsize=11, loc="upper left")
     paths.append(save(fig, out_dir, "so3_cost_vs_coverage"))
 
-    # so4: per-access on-chain storage footprint (state-growth scalability)
     fig, ax = new_fig()
     order = np.argsort(slots)
     col = ["#2ca02c" if is_tc[i] else "#4477aa" for i in order]
@@ -863,9 +784,6 @@ def figures_sota(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# Group 9: per-scheme end-to-end pipeline projection
-# ===========================================================================
 def figures_e2e_schemes(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     order = ["groth16", "plonk", "fflonk"]
     rows = sorted(rows, key=lambda r: order.index(r["scheme"]))
@@ -881,7 +799,6 @@ def figures_e2e_schemes(rows: list[dict[str, str]], out_dir: Path) -> list[Path]
     x = np.arange(len(labels))
     paths: list[Path] = []
 
-    # ez1: total end-to-end latency per scheme (log bars)
     fig, ax = new_fig()
     bars = ax.bar(labels, e2e, color=colors)
     ax.set_ylabel("end-to-end latency (ms)"); ax.set_yscale("log")
@@ -889,7 +806,6 @@ def figures_e2e_schemes(rows: list[dict[str, str]], out_dir: Path) -> list[Path]
         ax.text(b.get_x() + b.get_width() / 2, v, f"{v:.0f}", ha="center", va="bottom", fontsize=13)
     paths.append(save(fig, out_dir, "ez1_e2e_latency"))
 
-    # ez2: critical-path composition per scheme (stacked stages)
     fig, ax = new_fig()
     ax.bar(x, tee, label="TEE compute", color="#4477aa")
     ax.bar(x, onchain, bottom=tee, label="on-chain settle", color="#ccbb44")
@@ -900,7 +816,6 @@ def figures_e2e_schemes(rows: list[dict[str, str]], out_dir: Path) -> list[Path]
     ax.legend(fontsize=12)
     paths.append(save(fig, out_dir, "ez2_stage_stack"))
 
-    # ez3: single-client throughput per scheme
     fig, ax = new_fig()
     bars = ax.bar(labels, thr, color=colors)
     ax.set_ylabel("single-client throughput (circ/s)")
@@ -908,7 +823,6 @@ def figures_e2e_schemes(rows: list[dict[str, str]], out_dir: Path) -> list[Path]
         ax.text(b.get_x() + b.get_width() / 2, v, f"{v:.2f}", ha="center", va="bottom", fontsize=13)
     paths.append(save(fig, out_dir, "ez3_throughput"))
 
-    # ez4: latency vs on-chain gas trade-off
     fig, ax = new_fig()
     ax.scatter(e2e, gas, s=260, c=colors, edgecolor="k", linewidth=0.8, zorder=3)
     for lab, xx, yy in zip(labels, e2e, gas):
@@ -920,9 +834,6 @@ def figures_e2e_schemes(rows: list[dict[str, str]], out_dir: Path) -> list[Path]
     return paths
 
 
-# ===========================================================================
-# Group 10: ZK scheme-selection matrix (measured + literature)
-# ===========================================================================
 SEL_COLOR = {"groth16": "#1f77b4", "plonk": "#d62728", "fflonk": "#2ca02c",
              "stark": "#9467bd", "bulletproofs": "#8c564b"}
 SEL_LABEL = {"groth16": "Groth16", "plonk": "PLONK", "fflonk": "fflonk",
@@ -939,7 +850,6 @@ def figures_zk_select(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     x = np.arange(len(labels))
     paths: list[Path] = []
 
-    # zsel1: proof size across schemes (log)
     fig, ax = new_fig()
     for i in range(len(labels)):
         ax.bar(i, proof[i], color=colors[i], hatch=hatch[i], edgecolor="k", linewidth=0.6)
@@ -950,7 +860,6 @@ def figures_zk_select(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.text(0.02, 0.96, "* literature value (not measured here)", transform=ax.transAxes, fontsize=11, va="top")
     paths.append(save(fig, out_dir, "zsel1_proof_size"))
 
-    # zsel2: on-chain verify gas across schemes (log)
     fig, ax = new_fig()
     for i in range(len(labels)):
         ax.bar(i, gas[i], color=colors[i], hatch=hatch[i], edgecolor="k", linewidth=0.6)
@@ -962,7 +871,6 @@ def figures_zk_select(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.text(len(labels) - 0.5, 3300, "3M EVM block budget guide", fontsize=10, ha="right")
     paths.append(save(fig, out_dir, "zsel2_verify_gas"))
 
-    # zsel3: proof size vs verify gas trade-off (EVM-friendliness frontier)
     fig, ax = new_fig()
     ax.scatter(proof, gas, s=260, c=colors, edgecolor="k", linewidth=0.8, zorder=3)
     for lab, xx, yy in zip(labels, proof, gas):
@@ -972,7 +880,6 @@ def figures_zk_select(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.text(0.02, 0.06, "bottom-left = most EVM-friendly", transform=ax.transAxes, fontsize=11)
     paths.append(save(fig, out_dir, "zsel3_size_vs_gas"))
 
-    # zsel4: qualitative property matrix (scheme x property)
     props = ["universal\nsetup", "transparent\n(no setup)", "post-\nquantum", "EVM-cheap\nverify", "measured\nhere"]
     pm = []
     for r in rows:
@@ -994,9 +901,6 @@ def figures_zk_select(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# Group 11: CP-ABE hybrid encryption (policy scaling, payload scaling, security)
-# ===========================================================================
 def figure_cpabe_policy_comparison(rows, out_dir: Path) -> Path:
     pr = sorted(rows, key=lambda row: int(row["policy_attributes"]))
     attributes = np.array([int(row["policy_attributes"]) for row in pr])
@@ -1061,7 +965,6 @@ def figure_cpabe_policy_comparison_revised(rows, out_dir: Path) -> Path:
     for prefix, label, marker, linestyle, color in series:
         means = np.array([float(row[f"{prefix}_mean"]) for row in pr])
         stddevs = np.array([float(row[f"{prefix}_std"]) for row in pr])
-        # Two-sided 95% Student-t interval with 29 degrees of freedom.
         ci95 = 2.04523 * stddevs / np.sqrt(repetitions)
         ax.errorbar(
             attributes,
@@ -1227,7 +1130,6 @@ def figure_aes_gcm_memory_revised(rows, out_dir: Path) -> Path:
 def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy_rows=None) -> list[Path]:
     paths: list[Path] = []
 
-    # --- policy scaling: encrypt/decrypt time + key-encapsulation size ----
     if policy_rows:
         pr = sorted(policy_rows, key=lambda r: int(r["policy_leaves"]))
         leaves = np.array([int(r["policy_leaves"]) for r in pr])
@@ -1236,7 +1138,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
         dec = np.array([float(r["decrypt_ms_mean"]) for r in pr])
         kenc = np.array([int(r["kenc_bytes"]) for r in pr])
 
-        # ab1: matched KEM-DEM baseline versus real pairing-based CP-ABE.
         if cpabe_policy_rows:
             paths.append(figure_cpabe_policy_comparison(cpabe_policy_rows, out_dir))
         else:
@@ -1248,7 +1149,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
             ax.legend()
             paths.append(save(fig, out_dir, "ab1_policy_time"))
 
-        # ab2: key-encapsulation size grows linearly with policy size
         fig, ax = new_fig()
         coef = np.polyfit(leaves, kenc, 1)
         ax.plot(leaves, kenc, marker="o", color=PALETTE[2], label="measured KEM size")
@@ -1257,7 +1157,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
         ax.legend()
         paths.append(save(fig, out_dir, "ab2_kenc_size"))
 
-    # --- payload scaling: AES-256-GCM bulk path -------------------------------
     if payload_rows:
         pay = sorted(payload_rows, key=lambda r: int(r["payload_mb"]))
         mb = np.array([int(r["payload_mb"]) for r in pay])
@@ -1268,7 +1167,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
         frac = np.array([float(r["kenc_fraction_pct"]) for r in pay])
         rss = np.array([float(r["peak_rss_mb"]) for r in pay])
 
-        # ab3: encrypt/decrypt time vs payload (log-log, ~linear in size)
         fig, ax = new_fig()
         ax.loglog(mb, penc, marker="o", color=PALETTE[0], label="encrypt")
         ax.loglog(mb, pdec, marker="s", color=PALETTE[1], label="decrypt")
@@ -1276,7 +1174,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
         ax.legend()
         paths.append(save(fig, out_dir, "ab3_payload_time"))
 
-        # ab4: bulk throughput vs payload size
         fig, ax = new_fig()
         ax.semilogx(mb, ethr, marker="o", color=PALETTE[0], label="encrypt throughput")
         ax.semilogx(mb, dthr, marker="s", color=PALETTE[1], label="decrypt throughput")
@@ -1284,7 +1181,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
         ax.legend()
         paths.append(save(fig, out_dir, "ab4_throughput"))
 
-        # ab5: key-encapsulation overhead is amortised away as payload grows
         fig, ax = new_fig()
         ax.loglog(mb, frac, marker="o", color=PALETTE[4])
         ax.set_xlabel("payload size (MB, log)")
@@ -1294,7 +1190,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
                 ax.annotate(f"{y:.1e}%", (x, y), fontsize=11, xytext=(4, 4), textcoords="offset points")
         paths.append(save(fig, out_dir, "ab5_overhead_amortization"))
 
-        # ab6: peak RSS vs payload (memory footprint of the bulk path)
         fig, ax = new_fig()
         ax.plot(mb, rss, marker="o", color=PALETTE[3], label="peak RSS")
         ax.plot(mb, mb, "--", color="gray", label="1x payload")
@@ -1302,7 +1197,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
         ax.legend()
         paths.append(save(fig, out_dir, "ab6_peak_rss"))
 
-    # --- security stress: authorised success vs unauthorised block ------------
     if sec_rows:
         sr = sorted(sec_rows, key=lambda r: int(r["policy_leaves"]))
         labels = [f"{r['threshold_k']}/{r['policy_leaves']}" for r in sr]
@@ -1324,9 +1218,6 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
     return paths
 
 
-# ===========================================================================
-# Group 12: SOTA multi-dimensional capability comparison (closest systems)
-# ===========================================================================
 CAP_AXES = [
     ("confidential_compute", "confidential\ncompute"),
     ("composable_dp_budget", "composable\nDP budget"),
@@ -1348,7 +1239,6 @@ def figures_sota_capability(rows, out_dir: Path) -> list[Path]:
     labels = [lab for _, lab in CAP_AXES]
     mat = np.array([[float(r[k]) for k in keys] for r in rows])
 
-    # so5: capability radar across the closest systems + TrustCircuit
     ang = np.linspace(0, 2 * np.pi, len(labels), endpoint=False)
     ang = np.concatenate([ang, ang[:1]])
     fig = plt.figure(figsize=FIG_SIZE)
@@ -1365,7 +1255,6 @@ def figures_sota_capability(rows, out_dir: Path) -> list[Path]:
     ax.legend(loc="upper right", bbox_to_anchor=(1.28, 1.12), fontsize=12)
     paths.append(save(fig, out_dir, "so5_capability_radar"))
 
-    # so6: capability heatmap (system x dimension), score annotated
     fig, ax = new_fig()
     im = ax.imshow(mat, aspect="auto", cmap="RdYlGn", vmin=0, vmax=1)
     ax.set_yticks(range(len(systems))); ax.set_yticklabels(systems)
@@ -1381,9 +1270,6 @@ def figures_sota_capability(rows, out_dir: Path) -> list[Path]:
     return paths
 
 
-# ===========================================================================
-# main
-# ===========================================================================
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--summary-dir", type=Path, default=Path("results/summary"))
@@ -1419,7 +1305,6 @@ def main() -> None:
     sel_path = s / "zk_scheme_selection.csv"
     if sel_path.exists():
         produced += figures_zk_select(read_csv(sel_path), args.out_dir / "zk_select")
-    # CP-ABE hybrid encryption figures
     abe_policy = read_csv(s / "abe_summary.csv") if (s / "abe_summary.csv").exists() else []
     abe_payload = read_csv(s / "abe_payload_summary.csv") if (s / "abe_payload_summary.csv").exists() else []
     abe_sec_path = Path("results/raw/abe_security.csv")
@@ -1434,7 +1319,6 @@ def main() -> None:
             args.out_dir / "abe",
             cpabe_policy_rows,
         )
-    # SOTA capability comparison (closest systems)
     cap_path = s / "sota_capability.csv"
     if cap_path.exists():
         produced += figures_sota_capability(read_csv(cap_path), args.out_dir / "sota")

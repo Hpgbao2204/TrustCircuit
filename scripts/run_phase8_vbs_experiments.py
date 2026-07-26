@@ -44,8 +44,6 @@ from tests.vbs_reference import (  # noqa: E402
 
 
 PAYLOAD_ROWS = (126, 510, 2046, 8190, 32766, 99998)
-# The enclave deliberately rejects epsilon > 1.0; stay within its validated
-# Phase 5 request bounds instead of weakening validation for an experiment.
 EPSILON_GRID = (0.05, 0.1, 0.2, 0.25, 0.5, 1.0)
 RDP_ORDERS = tuple(range(2, 65))
 
@@ -451,9 +449,6 @@ def main() -> int:
         round(10_000 + index * (980_000 / 47)) for index in range(48)
     ]
     for boundary_index, center_fixed in enumerate(boundary_centers):
-        # Stay a half micro-unit to either side. Exact decimal boundaries can
-        # be represented infinitesimally above the integer by long double and
-        # would exercise JSON floating representation rather than accounting.
         for offset_micro in (-0.49, 0.49):
             epsilon = (center_fixed + offset_micro) / FIXED_SCALE
             epsilon_fixed = epsilon_to_fixed(epsilon)

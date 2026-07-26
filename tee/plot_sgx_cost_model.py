@@ -54,31 +54,23 @@ def _mid(rng_pair) -> float:
     return 0.5 * (rng_pair[0] + rng_pair[1])
 
 
-# --------------------------------------------------------------------------- #
-# g1: stacked AREA chart of latency composition vs encrypted working set       #
-# --------------------------------------------------------------------------- #
 def fig_latency_composition_area(host: HostMeasurements, r: SgxRanges) -> None:
-    ws = np.linspace(8.0, 1024.0, 400)  # encrypted working set (MiB)
+    ws = np.linspace(8.0, 1024.0, 400)
 
-    # measured symmetric-crypto bandwidth proxy -> ms per MiB
     rate_ms_per_mib = host.symmetric_crypto_fits_ms / 32.0
     mee = _mid(r.mee_slowdown)
 
-    # component 1: in-EPC compute + payload decryption under MEE slowdown
     base_cpu = host.aggregate_compute_ms + host.dp_noise_ms + host.attest_hash_ms
     comp_compute = mee * (base_cpu + rate_ms_per_mib * ws)
 
-    # component 2: enclave transitions (constant, additive)
     comp_transitions = np.full_like(
         ws, N_TRANSITIONS * cycles_to_ms(_mid(r.transition_cycles), r.clock_hz))
 
-    # component 3: EPC paging (zero until working set exceeds usable EPC)
     overflow = np.clip(ws - EPC_USABLE_MIB, 0.0, None)
     n_pages = overflow * 1024.0 / PAGE_KIB
     page_ms = cycles_to_ms(_mid(r.page_cycles), r.clock_hz) + host.dram_random_access_ns * 1e-6
     comp_paging = n_pages * page_ms
 
-    # component 4: DCAP attestation quote (per request)
     comp_attest = np.full_like(ws, _mid(r.attest_ms))
 
     layers = [comp_compute, comp_transitions, comp_attest, comp_paging]
@@ -108,9 +100,6 @@ def fig_latency_composition_area(host: HostMeasurements, r: SgxRanges) -> None:
     save_pdf(fig, OUT_DIR, "g1_latency_composition_area")
 
 
-# --------------------------------------------------------------------------- #
-# g2: Monte-Carlo latency distribution per deployment regime (violin, log)     #
-# --------------------------------------------------------------------------- #
 def fig_latency_distribution(host: HostMeasurements, r: SgxRanges) -> None:
     regimes = [
         ("Fits EPC\namortized attest.", 32.0, False, False, PALETTE[0]),
@@ -143,9 +132,6 @@ def fig_latency_distribution(host: HostMeasurements, r: SgxRanges) -> None:
     save_pdf(fig, OUT_DIR, "g2_latency_distribution")
 
 
-# --------------------------------------------------------------------------- #
-# g3: throughput recovery vs attestation amortization batch size               #
-# --------------------------------------------------------------------------- #
 def fig_attestation_amortization(host: HostMeasurements, r: SgxRanges) -> None:
     batch = np.arange(1, 65)
     rng = np.random.default_rng(7)
@@ -156,11 +142,11 @@ def fig_attestation_amortization(host: HostMeasurements, r: SgxRanges) -> None:
     tr = N_TRANSITIONS * cycles_to_ms(
         rng.uniform(r.transition_cycles[0], r.transition_cycles[1], n), r.clock_hz)
     quote = rng.uniform(r.attest_ms[0], r.attest_ms[1], n)
-    per_req_compute = mee * base_cpu + tr  # ms, excluding attestation
+    per_req_compute = mee * base_cpu + tr
 
     p50, lo, hi = [], [], []
     for b in batch:
-        lat = per_req_compute + quote / b          # amortize one quote over b requests
+        lat = per_req_compute + quote / b
         thr = 1000.0 / lat
         p50.append(np.percentile(thr, 50))
         lo.append(np.percentile(thr, 5))

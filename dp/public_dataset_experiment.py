@@ -96,9 +96,8 @@ def load_adult() -> tuple[dict[str, np.ndarray], str]:
                 "high_income": np.array(incomes),
             }, source)
 
-    # deterministic fallback (clearly labelled) so the pipeline never breaks.
     rng = np.random.default_rng(SEED)
-    n = 32561  # Adult train size
+    n = 32561
     age = rng.gamma(shape=10.0, scale=3.9, size=n).clip(17, 90)
     hours = rng.normal(40.4, 12.3, size=n).clip(1, 99)
     gains = (rng.random(n) < 0.085) * rng.gamma(2.0, 4000.0, size=n)
@@ -148,7 +147,6 @@ def run() -> str:
                     w.writerow(row)
                     raw_rows.append(row)
 
-    # summary
     grouped: dict[tuple[str, float], list[dict]] = {}
     for r in raw_rows:
         grouped.setdefault((r["query"], float(r["epsilon"])), []).append(r)

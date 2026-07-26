@@ -1,30 +1,8 @@
-/*
- * Experiment 5 (Q1 plan): proof-binding attacks.
- *
- * A cryptographically valid Groth16 proof is NOT sufficient for compliance: a
- * proof must be bound to the exact request, asset, consumer, policy, epsilon
- * ceiling and a single-use nullifier. We replay one honest proof under seven
- * misuse cases against three verifier designs:
- *
- *   MockComplianceVerifier  - records a boolean; no real check (always accepts).
- *   Groth16Verifier (raw)   - checks crypto validity only; ignores binding.
- *   ComplianceVerifier      - the TrustCircuit adapter; binds + budget + nullifier.
- *
- * A secure design must REJECT every attack while accepting the honest case.
- *
- * Output:
- *   results/q1/raw/proof_binding_attacks.csv
- *
- * Usage: npx hardhat run benchmarks/proof_binding_attacks.js
- */
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("hardhat");
 
 const ROOT = path.resolve(__dirname, "..");
-// benchmark_zk_schemes.js exports both this calldata and the final
-// ComplianceGroth16Verifier.sol from the same Groth16 setup. Using the scaling
-// benchmark's calldata here would pair a proof with a different proving key.
 const CALLDATA = path.join(ROOT, "zk", "build", "cmp_2_groth16_calldata.txt");
 const SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
@@ -50,13 +28,11 @@ function idToField(requestId) {
   return BigInt(requestId) % SCALAR_FIELD;
 }
 
-// requestId (bytes32) whose field reduction equals `signal`.
 function requestIdForSignal(signal) {
   return ethers.zeroPadValue(ethers.toBeHex(signal % SCALAR_FIELD), 32);
 }
 
 async function tryMock(mock, requestId, assetId) {
-  // an attacker simply asserts accepted=true; mock has no real verification.
   try {
     const tx = await mock.submitProof(requestId, assetId, ethers.id("p"), true);
     const rec = await tx.wait();
@@ -67,7 +43,6 @@ async function tryMock(mock, requestId, assetId) {
 }
 
 async function tryRaw(raw, a, b, c, input) {
-  // raw verifier only checks crypto validity, ignores application binding.
   try {
     const ok = await raw.verifyProof(a, b, c, input);
     return { accepted: Boolean(ok), gas: "", reason: ok ? "" : "crypto_invalid" };
@@ -77,7 +52,6 @@ async function tryRaw(raw, a, b, c, input) {
 }
 
 async function tryAdapter(adapter, requestId, expectation, a, b, c, input) {
-  // register expectation (owner) then submit; capture revert reason + gas.
   try {
     await (await adapter.registerExpectation(requestId, expectation)).wait();
   } catch (e) {
@@ -129,14 +103,12 @@ async function main() {
     return ad;
   }
 
-  // tampered proof: flip the low limb of a[0] while keeping field membership.
   const tamperedA = [...a];
   tamperedA[0] = (BigInt(a[0]) ^ 1n).toString();
 
   const cases = [
     {
       name: "honest_valid",
-      // baseline: must be accepted by the adapter.
       run: async () => {
         const ad = await freshAdapter();
         const m = await tryMock(mock, honestRequestId, requestIdForSignal(asset));
@@ -150,8 +122,6 @@ async function main() {
       run: async () => {
         const ad = await freshAdapter();
         const otherReq = requestIdForSignal(request + 12345n);
-        // register a DIFFERENT request, submit the proof whose request signal
-        // still encodes the original -> must mismatch.
         const m = await tryMock(mock, otherReq, requestIdForSignal(asset));
         const r = await tryRaw(raw, a, b, c, input);
         const ap = await tryAdapter(ad, otherReq, honestExp, a, b, c, input);
@@ -194,7 +164,6 @@ async function main() {
         const ad = await freshAdapter();
         const m = await tryMock(mock, honestRequestId, requestIdForSignal(asset));
         const r = await tryRaw(raw, a, b, c, input);
-        // register a budget ceiling BELOW the proven epsilon cost.
         const ap = await tryAdapter(ad, honestRequestId, { ...honestExp, maxEpsilon: epsilon - 1n }, a, b, c, input);
         return { m, r, ap };
       },
@@ -205,8 +174,6 @@ async function main() {
         const ad = await freshAdapter();
         const m = await tryMock(mock, honestRequestId, requestIdForSignal(asset));
         const r = await tryRaw(raw, a, b, c, input);
-        // first submission consumes the proof's nullifier and marks the request
-        // verified; resubmitting the SAME proof must be rejected (replay).
         await (await ad.registerExpectation(honestRequestId, honestExp)).wait();
         await (await ad.submitCompliance(honestRequestId, a, b, c, input)).wait();
         let ap;

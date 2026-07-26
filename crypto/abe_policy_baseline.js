@@ -1,9 +1,3 @@
-/*
- * Matched policy-latency benchmark for the existing TrustCircuit KEM-DEM
- * baseline. The all-of-N access tree ensures both encryption and decryption
- * process every policy attribute. Setup and user-key issuance are deliberately
- * outside the timed region, matching the pairing-based AC17/FAME benchmark.
- */
 "use strict";
 
 const abe = require("./abe_hybrid");

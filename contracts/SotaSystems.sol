@@ -1,23 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/**
- * SotaSystems reproduces a *representative per-access on-chain workflow* for
- * each related-work system class, so their EVM settlement cost can be measured
- * and decomposed under the identical compiler/network configuration as
- * TrustCircuit. Rather than three identical primitives, each system is
- * calibrated to the on-chain operations described in its paper via a profile
- * (persistent slots written, in-circuit hashes, policy comparisons). This
- * yields a differentiated, reproducible gas gradient instead of a flat bar.
- *
- * The cost decomposes into:
- *   storage settlement  - cold SSTOREs that persist the system's on-chain state,
- *   protocol logic      - keccak commitments and policy evaluation,
- *   proof verification   - measured separately for ZK systems (Groth16 verify).
- *
- * settle(id, slots, hashes, checks) writes `slots` cold storage words, performs
- * `hashes` keccak rounds, and `checks` policy comparisons, emitting one event.
- */
 contract SotaSystems {
     mapping(bytes32 => uint256[]) private state;
     event Settled(bytes32 indexed id, uint256 slots, uint256 marker);

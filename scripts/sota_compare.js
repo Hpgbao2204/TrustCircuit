@@ -1,23 +1,3 @@
-/*
- * SOTA comparison against the named related-work systems
- * (Table~\ref{tab:related_compare}).
- *
- * For each system we reproduce a *representative per-access on-chain workflow*
- * calibrated to the on-chain operations described in its paper, measure its EVM
- * gas under the same Hardhat / Solidity 0.8.24 config as TrustCircuit, and
- * decompose the cost into three measured dimensions:
- *
- *   storage_gas - cold SSTOREs persisting the system's on-chain state,
- *   logic_gas   - keccak commitments + policy evaluation,
- *   proof_gas   - on-chain ZK verification (measured Groth16 verify; 0 if none).
- *
- * We also report the per-access on-chain storage footprint (state slots) and
- * each system's capability coverage over the six design dimensions of the
- * related-work table. TrustCircuit uses its independently *measured* full
- * pipeline (contract_gas_summary) instead of the model.
- *
- * Output: results/summary/sota_compare.csv
- */
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("hardhat");
@@ -33,7 +13,6 @@ function readZkVerifyGas() {
   return 255757;
 }
 
-// (slots, hashes, checks) calibrated to each system's documented on-chain work.
 const SYS = [
   { system: "Zyskind et al.", mech: "access grant", slots: 2, hashes: 0, checks: 0, zk: false, cov: 2.0 },
   { system: "MedRec", mech: "record registry", slots: 3, hashes: 1, checks: 0, zk: false, cov: 2.5 },
@@ -67,10 +46,7 @@ async function main() {
     });
   }
 
-  // TrustCircuit: real measured numbers (no model).
-  // NoZK total = full settlement incl. budget ledger (base+budget, no proof);
-  // proof_gas = measured Groth16 on-chain verify; footprint = struct writes.
-  const tcSettlement = 612710; // measured NoZK TOTAL_PIPELINE
+  const tcSettlement = 612710;
   rows.push({
     system: "TrustCircuit", mech: "full lifecycle + ZK verify",
     storage_gas: tcSettlement - 60000, logic_gas: 60000, proof_gas: zkVerify,
@@ -88,14 +64,6 @@ async function main() {
   rows.forEach((r) => console.log(`${r.system}: total=${r.total_gas} (storage=${r.storage_gas} logic=${r.logic_gas} proof=${r.proof_gas}) slots=${r.storage_slots} cov=${r.coverage}`));
   console.log(out);
 
-  // -------------------------------------------------------------------------
-  // Multi-dimensional capability comparison against the 3-4 CLOSEST systems.
-  // Comparing only gas is unfair: these systems target different guarantees.
-  // We therefore score the systems most comparable to TrustCircuit (those that
-  // combine confidential computation, ZK, or verifiable audit) across the
-  // differentiating design dimensions of Table~\ref{tab:related_compare}.
-  // Scores: 1.0 supported, 0.5 partial/indirect, 0.0 absent.
-  // -------------------------------------------------------------------------
   const CAP_DIMS = [
     "confidential_compute",
     "composable_dp_budget",
@@ -104,7 +72,6 @@ async function main() {
     "public_input_binding",
     "end_to_end_lifecycle",
   ];
-  // closest related systems (confidential-compute / ZK / audit families).
   const CAP = [
     { system: "Ekiden", scores: [1.0, 0.0, 0.0, 0.0, 0.0, 0.5] },
     { system: "Hawk", scores: [0.5, 0.0, 1.0, 0.5, 0.5, 0.0] },

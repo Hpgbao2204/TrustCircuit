@@ -43,17 +43,17 @@ OUT_JSON = REPO / "results" / "summary" / "sgx_projection_config.json"
 
 @dataclass(frozen=True)
 class SgxConstants:
-    clock_hz: float = 2.5e9          # enclave-capable CPU clock (conservative)
+    clock_hz: float = 2.5e9
     transition_cycles_lo: int = 8_200
     transition_cycles_hi: int = 17_000
-    n_transitions: int = 6           # enter, sealed-read, fetch, rng, emit, exit
-    mee_slowdown_lo: float = 1.10    # in-EPC encrypted-memory overhead
+    n_transitions: int = 6
+    mee_slowdown_lo: float = 1.10
     mee_slowdown_hi: float = 1.20
-    epc_usable_mib: float = 93.0     # SGXv1 usable Enclave Page Cache
-    page_cycles_lo: int = 12_000     # EWB+ELDU per 4 KiB page when paging
+    epc_usable_mib: float = 93.0
+    page_cycles_lo: int = 12_000
     page_cycles_hi: int = 40_000
     page_kib: float = 4.0
-    attest_ms_lo: float = 10.0       # DCAP quote latency (amortizable)
+    attest_ms_lo: float = 10.0
     attest_ms_hi: float = 50.0
 
 
@@ -64,21 +64,17 @@ def cycles_to_ms(cycles: float, clock_hz: float) -> float:
 def project_request(sim_compute_ms: float, working_set_mib: float,
                     k: SgxConstants, include_attest: bool) -> tuple[float, float]:
     """Return (lo_ms, hi_ms) projected per-request SGX latency."""
-    # 1. encrypted-memory compute overhead (multiplicative, in-EPC)
     compute_lo = k.mee_slowdown_lo * sim_compute_ms
     compute_hi = k.mee_slowdown_hi * sim_compute_ms
 
-    # 2. enclave transition cost (additive)
     tr_lo = k.n_transitions * cycles_to_ms(k.transition_cycles_lo, k.clock_hz)
     tr_hi = k.n_transitions * cycles_to_ms(k.transition_cycles_hi, k.clock_hz)
 
-    # 3. EPC paging penalty, only when working set exceeds usable EPC
     overflow_mib = max(0.0, working_set_mib - k.epc_usable_mib)
     n_pages = overflow_mib * 1024.0 / k.page_kib
     pg_lo = n_pages * cycles_to_ms(k.page_cycles_lo, k.clock_hz)
     pg_hi = n_pages * cycles_to_ms(k.page_cycles_hi, k.clock_hz)
 
-    # 4. remote-attestation quote (optional / amortizable)
     att_lo = k.attest_ms_lo if include_attest else 0.0
     att_hi = k.attest_ms_hi if include_attest else 0.0
 
@@ -90,7 +86,6 @@ def read_honest_compute() -> list[tuple[int, float]]:
     """(pool_size, honest compute_latency_mean_ms) from the simulator summary."""
     rows: list[tuple[int, float]] = []
     if not POOL_SUMMARY.exists():
-        # fall back to documented single-worker simulator compute time
         return [(1, 0.415)]
     with POOL_SUMMARY.open(newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
@@ -103,8 +98,6 @@ def main() -> None:
     k = SgxConstants()
     honest = read_honest_compute()
 
-    # Two regimes: the 50k-record aggregate query fits the EPC (no paging),
-    # while a large analytics payload (~512 MiB) forces protected paging.
     scenarios = [
         ("fits_epc_no_attest", 32.0, False),
         ("fits_epc_attested", 32.0, True),

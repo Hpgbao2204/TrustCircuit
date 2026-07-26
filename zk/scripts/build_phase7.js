@@ -1,9 +1,3 @@
-/*
- * Build the canonical Phase 7 Groth16 circuit used by the reproducible E2E
- * command. This is intentionally narrower than benchmark_zk.js: it compiles
- * one two-rule circuit, prepares a local development proving key when the R1CS
- * changes, and exports a verifier with a unique Solidity contract name.
- */
 "use strict";
 
 const crypto = require("crypto");

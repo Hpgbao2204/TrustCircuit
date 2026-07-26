@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run on an AWS Nitro Enclaves parent instance with enough vCPUs.
-# Recommended: m6i.4xlarge or larger.
-#
-# Each Nitro Enclave is assigned 2 vCPUs because Nitro requires full CPU cores.
-# Worker counts 1, 2, and 4 therefore reserve 2, 4, and 8 vCPUs respectively.
 
 cd ~/TrustCircuit
 

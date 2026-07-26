@@ -51,7 +51,6 @@ def main() -> None:
     measured_row("plonk", 0, 0, "Universal setup: edit rules without a new ceremony; larger proof and verify gas.")
     measured_row("fflonk", 0, 0, "Universal setup: lowest verify gas of the three but heaviest prover and key.")
 
-    # Literature-characterised families (not measured in this toolchain).
     rows.append({
         "scheme": "stark", "setup_model": "transparent", "transparent": 1, "post_quantum": 1,
         "proof_size_bytes": 100000, "prove_time_ms": 800, "verify_onchain_gas": 5000000,
