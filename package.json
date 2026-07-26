@@ -24,6 +24,7 @@
     "testnet:base:smoke": "node benchmarks/base_sepolia_settlement.js --smoke",
     "testnet:base": "node benchmarks/base_sepolia_settlement.js",
     "testnet:base:process": "python benchmarks/process_base_sepolia_results.py",
+    "paper:verify": "python scripts/verify_paper_evidence.py",
     "lint": "echo \"TODO: add lint command\""
   },
   "devDependencies": {
