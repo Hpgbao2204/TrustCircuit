@@ -555,9 +555,10 @@ def main() -> int:
             asset_id="asset-phase8-concurrency",
             consumer_id="consumer-phase8-local",
         )
+        pipeline["request"]["purpose_id"] = 1
         phase7 = encode_phase7_context(pipeline["request"], pipeline["execution"])
         bundle = {
-            "schema": "TrustCircuit.Phase7Bundle.v1",
+            "schema": "TrustCircuit.VCPBundle.v2",
             "measurement_type": "measured",
             "created_at": datetime.now(timezone.utc).isoformat(),
             **pipeline,
@@ -574,7 +575,7 @@ def main() -> int:
                 "request_id": pipeline["request"]["request_id"],
                 "request_key": phase7["request_key"],
                 "transcript_hash": pipeline["execution"]["transcript_hash"],
-                "attestation_digest": phase7["attestation_digest"],
+                "native_digest": phase7["native_digest"],
                 "expires_at_unix_ms": phase7[
                     "attestation_expires_at_unix_ms"
                 ],

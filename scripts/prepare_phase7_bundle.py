@@ -44,6 +44,7 @@ def main() -> int:
     parser.add_argument("--request-id")
     parser.add_argument("--asset-id", default="asset-phase7-synthetic")
     parser.add_argument("--consumer-id", default="consumer-phase7-local")
+    parser.add_argument("--purpose-id", type=int, choices=(1, 2), default=1)
     args = parser.parse_args()
 
     started_ns = time.perf_counter_ns()
@@ -60,9 +61,10 @@ def main() -> int:
         asset_id=args.asset_id,
         consumer_id=args.consumer_id,
     )
+    pipeline["request"]["purpose_id"] = args.purpose_id
     encoding = encode_phase7_context(pipeline["request"], pipeline["execution"])
     bundle = {
-        "schema": "TrustCircuit.Phase7Bundle.v1",
+        "schema": "TrustCircuit.VCPBundle.v2",
         "measurement_type": "measured",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "configuration": {
@@ -104,4 +106,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -144,7 +144,7 @@ async function main() {
   ensureDir(path.dirname(RAW));
   ensureDir(path.dirname(SUMMARY));
 
-  fs.copyFileSync(path.join(ROOT, "zk", "circuits", "compliance_check.circom"),
+  fs.copyFileSync(path.join(ROOT, "zk", "circuits", "phase7_11_input_legacy.circom"),
     path.join(ROOT, "zk", "circuits", "compliance_lib.circom"));
   const libPath = path.join(ROOT, "zk", "circuits", "compliance_lib.circom");
   let lib = fs.readFileSync(libPath, "utf8").replace(/component main[\s\S]*$/m, "\n");

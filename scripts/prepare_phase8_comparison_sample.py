@@ -84,6 +84,7 @@ def main() -> int:
         },
     }
     if args.variant == "trustcircuit":
+        pipeline["request"]["purpose_id"] = 1
         result["phase7"] = encode_phase7_context(
             pipeline["request"], pipeline["execution"]
         )

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract BudgetLedger {
+import "./LifecycleRoles.sol";
+
+contract BudgetLedger is LifecycleRoles {
     uint256 public constant EPSILON_SCALE = 1_000_000;
 
     struct Budget {
@@ -41,7 +43,7 @@ contract BudgetLedger {
     error InvalidReservationState(bytes32 requestId, ReservationStatus status);
     error UnauthorizedReservationConsumer(bytes32 requestId, address caller);
 
-    function registerBudget(bytes32 assetId, uint256 totalBudget) external {
+    function registerBudget(bytes32 assetId, uint256 totalBudget) external onlyCoordinator {
         if (totalBudget == 0) revert InvalidAmount();
         if (budgets[assetId].exists) revert BudgetAlreadyExists(assetId);
 
@@ -49,7 +51,10 @@ contract BudgetLedger {
         emit BudgetRegistered(assetId, totalBudget);
     }
 
-    function reserveBudget(bytes32 assetId, bytes32 requestId, uint256 amount) external {
+    function reserveBudget(bytes32 assetId, bytes32 requestId, uint256 amount)
+        external
+        onlyCoordinator
+    {
         Budget storage budget = _budgetOf(assetId);
         if (amount == 0) revert InvalidAmount();
         if (reservations[requestId].status != ReservationStatus.None) {
@@ -72,7 +77,10 @@ contract BudgetLedger {
         emit BudgetReserved(assetId, requestId, amount);
     }
 
-    function consumeBudget(bytes32 assetId, bytes32 requestId, uint256 actualAmount) external {
+    function consumeBudget(bytes32 assetId, bytes32 requestId, uint256 actualAmount)
+        external
+        onlyCoordinator
+    {
         Budget storage budget = _budgetOf(assetId);
         Reservation storage reservation = reservations[requestId];
 
@@ -92,7 +100,10 @@ contract BudgetLedger {
         emit BudgetConsumed(assetId, requestId, actualAmount);
     }
 
-    function releaseBudget(bytes32 assetId, bytes32 requestId) external {
+    function releaseBudget(bytes32 assetId, bytes32 requestId)
+        external
+        onlyCoordinator
+    {
         Budget storage budget = _budgetOf(assetId);
         Reservation storage reservation = reservations[requestId];
 

@@ -6,11 +6,12 @@ describe("BudgetLedger", function () {
   const reserveAmount = 500_000n;
 
   async function deployLedger() {
+    const [, stranger] = await ethers.getSigners();
     const BudgetLedger = await ethers.getContractFactory("BudgetLedger");
     const ledger = await BudgetLedger.deploy();
     const assetId = ethers.id("asset:healthcare:001");
     const requestId = ethers.id("request:001");
-    return { ledger, assetId, requestId };
+    return { ledger, stranger, assetId, requestId };
   }
 
   it("registers and reserves budget", async function () {
@@ -33,6 +34,12 @@ describe("BudgetLedger", function () {
     await ledger.registerBudget(assetId, totalBudget);
     await expect(ledger.reserveBudget(assetId, requestId, totalBudget + 1n))
       .to.be.revertedWithCustomError(ledger, "InsufficientBudget");
+  });
+
+  it("rejects mutation by callers without the coordinator role", async function () {
+    const { ledger, stranger, assetId } = await deployLedger();
+    await expect(ledger.connect(stranger).registerBudget(assetId, totalBudget))
+      .to.be.revertedWithCustomError(ledger, "NotCoordinator");
   });
 
   it("consumes a reservation once", async function () {

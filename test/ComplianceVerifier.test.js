@@ -1,52 +1,53 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const {
-  artifactsExist,
-  loadPhase7Fixture,
-} = require("./helpers/phase7_fixture");
 
-const describePhase7 = artifactsExist() ? describe : describe.skip;
+describe("ComplianceVerifier VCP v2 adapter", function () {
+  const RESERVED = 500_000n;
+  const ACTUAL = 400_000n;
+  const NULLIFIER = 123456n;
 
-describePhase7("ComplianceVerifier Phase 7 adapter", function () {
-  let fixture;
-
-  before(async function () {
-    this.timeout(120_000);
-    fixture = await loadPhase7Fixture();
-  });
-
-  function bytes32(value) {
-    return ethers.zeroPadValue(ethers.toBeHex(value), 32);
+  function split(value) {
+    const integer = BigInt(value);
+    return [integer & ((1n << 128n) - 1n), integer >> 128n];
   }
 
-  function expected(overrides = {}) {
-    const value = fixture.values;
+  function proof() {
     return {
-      requestId: value.requestId,
-      assetId: value.assetId,
-      consumerId: value.consumerId,
-      policyHash: value.policyHash,
-      policyVersion: value.policyVersion,
-      functionId: value.functionId,
-      resultHash: value.resultHash,
-      maxEpsilon: value.epsilonCost,
-      transcriptHash: value.transcriptHash,
-      attestationDigest: value.attestationDigest,
-      attestationExpiresAtUnixMs: 4_102_444_800_000n,
-      ...overrides,
+      a: [0n, 0n],
+      b: [[0n, 0n], [0n, 0n]],
+      c: [0n, 0n],
     };
   }
 
-  async function deploy(overrides = {}) {
-    const Native = await ethers.getContractFactory("Phase7Groth16Verifier");
+  function signals(requestKey, overrides = {}) {
+    const values = Array(24).fill(0n);
+    [values[0], values[1]] = split(requestKey);
+    values[16] = RESERVED;
+    values[17] = ACTUAL;
+    values[18] = NULLIFIER;
+    values[22] = 456n;
+    values[23] = 789n;
+    for (const [index, value] of Object.entries(overrides)) {
+      values[Number(index)] = BigInt(value);
+    }
+    return values;
+  }
+
+  async function deploy() {
+    const [owner, stranger] = await ethers.getSigners();
+    const Native = await ethers.getContractFactory("MockVCPGroth16Verifier");
     const native = await Native.deploy();
-    await native.waitForDeployment();
     const Adapter = await ethers.getContractFactory("ComplianceVerifier");
     const adapter = await Adapter.deploy(await native.getAddress());
-    await adapter.waitForDeployment();
-    const requestKey = bytes32(fixture.values.requestId);
-    await adapter.registerExpectation(requestKey, expected(overrides));
-    return { adapter, requestKey };
+    await Promise.all([native.waitForDeployment(), adapter.waitForDeployment()]);
+    return {
+      owner,
+      stranger,
+      native,
+      adapter,
+      requestKey: ethers.id("vcp-v2-request"),
+      proof: proof(),
+    };
   }
 
   it("rejects a zero verifier address", async function () {
@@ -57,118 +58,102 @@ describePhase7("ComplianceVerifier Phase 7 adapter", function () {
     );
   });
 
-  it("accepts the real 11-signal proof and records all bindings", async function () {
-    const { adapter, requestKey } = await deploy();
+  it("accepts a 24-signal proof and consumes its nullifier", async function () {
+    const context = await deploy();
+    const publicSignals = signals(context.requestKey);
     await expect(
-      adapter.submitCompliance(
-        requestKey,
-        fixture.a,
-        fixture.b,
-        fixture.c,
-        fixture.signals
+      context.adapter.submitCompliance(
+        context.requestKey,
+        context.proof.a,
+        context.proof.b,
+        context.proof.c,
+        publicSignals
       )
     )
-      .to.emit(adapter, "ComplianceVerified")
+      .to.emit(context.adapter, "ComplianceVerified")
       .withArgs(
-        requestKey,
-        fixture.values.nullifier,
-        fixture.values.epsilonCost,
-        fixture.values.resultHash,
-        fixture.values.transcriptHash,
-        fixture.values.attestationDigest
+        context.requestKey,
+        NULLIFIER,
+        RESERVED,
+        ACTUAL,
+        456n,
+        789n
       );
-    const state = await adapter.getExpectation(requestKey);
-    expect(state.verified).to.equal(true);
-    expect(state.epsilonUsed).to.equal(fixture.values.epsilonCost);
-    expect(await adapter.nullifierUsed(fixture.values.nullifier)).to.equal(true);
+    expect(await context.adapter.nullifierUsed(NULLIFIER)).to.equal(true);
+    expect(await context.adapter.requestVerified(context.requestKey)).to.equal(true);
   });
 
-  for (const [name, field, index] of [
-    ["wrong asset", "assetId", 1],
-    ["wrong consumer", "consumerId", 2],
-    ["wrong policy", "policyHash", 3],
-    ["wrong result", "resultHash", 6],
-    ["altered transcript", "transcriptHash", 9],
-    ["altered attestation", "attestationDigest", 10],
-  ]) {
-    it(`rejects ${name}`, async function () {
-      const { adapter, requestKey } = await deploy({
-        [field]: fixture.values[field] + 1n,
-      });
-      await expect(
-        adapter.submitCompliance(
-          requestKey,
-          fixture.a,
-          fixture.b,
-          fixture.c,
-          fixture.signals
-        )
-      )
-        .to.be.revertedWithCustomError(adapter, "PublicInputMismatch")
-        .withArgs(index);
-    });
-  }
-
-  it("rejects over-budget settlement", async function () {
-    const { adapter, requestKey } = await deploy({
-      maxEpsilon: fixture.values.epsilonCost - 1n,
-    });
+  it("rejects a caller without the coordinator role", async function () {
+    const context = await deploy();
     await expect(
-      adapter.submitCompliance(
-        requestKey,
-        fixture.a,
-        fixture.b,
-        fixture.c,
-        fixture.signals
+      context.adapter.connect(context.stranger).submitCompliance(
+        context.requestKey,
+        context.proof.a,
+        context.proof.b,
+        context.proof.c,
+        signals(context.requestKey)
       )
-    ).to.be.revertedWithCustomError(adapter, "BudgetExceeded");
+    ).to.be.revertedWithCustomError(context.adapter, "NotCoordinator");
   });
 
-  it("rejects stale attestation", async function () {
-    const { adapter, requestKey } = await deploy({ attestationExpiresAtUnixMs: 1n });
+  it("rejects a non-injective request substitution", async function () {
+    const context = await deploy();
     await expect(
-      adapter.submitCompliance(
-        requestKey,
-        fixture.a,
-        fixture.b,
-        fixture.c,
-        fixture.signals
+      context.adapter.submitCompliance(
+        context.requestKey,
+        context.proof.a,
+        context.proof.b,
+        context.proof.c,
+        signals(context.requestKey, { 0: 1n })
       )
-    ).to.be.revertedWithCustomError(adapter, "StaleAttestation");
+    ).to.be.revertedWithCustomError(context.adapter, "RequestIdMismatch");
+  });
+
+  it("rejects invalid budget values", async function () {
+    const context = await deploy();
+    await expect(
+      context.adapter.submitCompliance(
+        context.requestKey,
+        context.proof.a,
+        context.proof.b,
+        context.proof.c,
+        signals(context.requestKey, { 17: RESERVED + 1n })
+      )
+    ).to.be.revertedWithCustomError(context.adapter, "InvalidPrivacyCost");
   });
 
   it("rejects a replay", async function () {
-    const { adapter, requestKey } = await deploy();
-    await adapter.submitCompliance(
-      requestKey,
-      fixture.a,
-      fixture.b,
-      fixture.c,
-      fixture.signals
+    const context = await deploy();
+    const publicSignals = signals(context.requestKey);
+    await context.adapter.submitCompliance(
+      context.requestKey,
+      context.proof.a,
+      context.proof.b,
+      context.proof.c,
+      publicSignals
     );
     await expect(
-      adapter.submitCompliance(
-        requestKey,
-        fixture.a,
-        fixture.b,
-        fixture.c,
-        fixture.signals
+      context.adapter.submitCompliance(
+        context.requestKey,
+        context.proof.a,
+        context.proof.b,
+        context.proof.c,
+        publicSignals
       )
-    ).to.be.revertedWithCustomError(adapter, "AlreadyVerified");
+    ).to.be.revertedWithCustomError(context.adapter, "RequestAlreadyVerified");
   });
 
-  it("rejects a tampered Groth16 proof", async function () {
-    const { adapter, requestKey } = await deploy();
-    const tamperedA = [...fixture.a];
-    tamperedA[0] = (BigInt(tamperedA[0]) ^ 1n).toString();
+  it("rejects a failed Groth16 verification", async function () {
+    const context = await deploy();
+    await context.native.setAccepted(false);
     await expect(
-      adapter.submitCompliance(
-        requestKey,
-        tamperedA,
-        fixture.b,
-        fixture.c,
-        fixture.signals
+      context.adapter.submitCompliance(
+        context.requestKey,
+        context.proof.a,
+        context.proof.b,
+        context.proof.c,
+        signals(context.requestKey)
       )
-    ).to.be.revertedWithCustomError(adapter, "InvalidProof");
+    ).to.be.revertedWithCustomError(context.adapter, "InvalidProof");
   });
 });

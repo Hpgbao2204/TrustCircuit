@@ -77,7 +77,10 @@ async function main() {
   ensureDir(BUILD); ensureDir(path.dirname(RAW)); ensureDir(path.dirname(SUMMARY));
 
   const libPath = path.join(ROOT, "zk", "circuits", "compliance_lib.circom");
-  fs.copyFileSync(path.join(ROOT, "zk", "circuits", "compliance_check.circom"), libPath);
+  fs.copyFileSync(
+    path.join(ROOT, "zk", "circuits", "phase7_11_input_legacy.circom"),
+    libPath
+  );
   fs.writeFileSync(libPath, fs.readFileSync(libPath, "utf8").replace(/component main[\s\S]*$/m, "\n"));
 
   const pot0 = path.join(BUILD, `pot${PTAU_POWER}_0.ptau`);

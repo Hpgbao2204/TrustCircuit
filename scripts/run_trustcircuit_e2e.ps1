@@ -26,7 +26,7 @@ Push-Location $repoRoot
 try {
     if (-not $SkipZkBuild) {
         & node .\zk\scripts\build_phase7.js
-        if ($LASTEXITCODE -ne 0) { throw "Phase 7 circuit build failed" }
+        if ($LASTEXITCODE -ne 0) { throw "VCP v2 circuit build failed" }
     }
 
     if (-not $SkipVbsBuild) {
@@ -61,7 +61,7 @@ try {
         $env:TRUSTCIRCUIT_PHASE7_BUNDLE = $bundlePath
         $env:TRUSTCIRCUIT_PHASE7_OUTPUT = $settlementPath
         & .\node_modules\.bin\hardhat.cmd run .\scripts\run_trustcircuit_e2e.js --network hardhat
-        if ($LASTEXITCODE -ne 0) { throw "Phase 7 on-chain settlement failed" }
+        if ($LASTEXITCODE -ne 0) { throw "VCP v2 on-chain settlement failed" }
     }
     finally {
         $env:TRUSTCIRCUIT_PHASE7_BUNDLE = $previousBundle
@@ -70,9 +70,9 @@ try {
 
     $result = Get-Content -Raw -LiteralPath $settlementPath | ConvertFrom-Json
     if ($result.ok -ne $true -or $result.settlement.audit_events -ne 1) {
-        throw "Phase 7 output invariant failed"
+        throw "VCP v2 output invariant failed"
     }
-    Write-Output "PASS: TrustCircuit Phase 7 E2E settled request $($result.request_key)"
+    Write-Output "PASS: TrustCircuit VCP v2 E2E settled request $($result.request_key)"
     Write-Output "Raw result: $settlementPath"
 }
 finally {

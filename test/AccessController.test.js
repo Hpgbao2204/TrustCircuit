@@ -3,13 +3,14 @@ const { ethers } = require("hardhat");
 
 describe("AccessController", function () {
   async function deployAccessController() {
-    const [provider, consumer] = await ethers.getSigners();
+    const [provider, consumer, stranger] = await ethers.getSigners();
     const AccessController = await ethers.getContractFactory("AccessController");
     const access = await AccessController.deploy();
     return {
       access,
       provider,
       consumer,
+      stranger,
       assetId: ethers.id("asset:healthcare:001"),
       requestId: ethers.id("request:001"),
       purposeHash: ethers.id("research:aggregate"),
@@ -41,7 +42,16 @@ describe("AccessController", function () {
       .to.be.revertedWithCustomError(access, "RequestAlreadyExists");
   });
 
-  it("completes only approved requests", async function () {
+  it("allows only the lifecycle coordinator to advance request state", async function () {
+    const { access, consumer, stranger, assetId, requestId, purposeHash, epsilon } =
+      await deployAccessController();
+
+    await access.connect(consumer).requestAccess(requestId, assetId, purposeHash, epsilon);
+    await expect(access.connect(stranger).approveRequest(requestId))
+      .to.be.revertedWithCustomError(access, "NotCoordinator");
+  });
+
+  it("completes only reserved requests", async function () {
     const { access, consumer, assetId, requestId, purposeHash, epsilon } = await deployAccessController();
 
     await access.connect(consumer).requestAccess(requestId, assetId, purposeHash, epsilon);
@@ -50,7 +60,12 @@ describe("AccessController", function () {
 
     await access.approveRequest(requestId);
     await expect(access.completeRequest(requestId))
+      .to.be.revertedWithCustomError(access, "InvalidRequestState");
+
+    await access.markReserved(requestId);
+    await expect(access.completeRequest(requestId))
       .to.emit(access, "AccessCompleted")
       .withArgs(requestId, assetId);
+    expect((await access.getRequest(requestId)).status).to.equal(5);
   });
 });

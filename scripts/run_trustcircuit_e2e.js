@@ -9,14 +9,13 @@ const { ethers } = require("hardhat");
 const {
   PUBLIC_SIGNAL_NAMES,
   buildProofInput,
-  contextFields,
 } = require("./lib/phase7_encoding");
 
 const ROOT = path.resolve(__dirname, "..");
 const BUILD = path.join(ROOT, "zk", "build");
-const WASM = path.join(BUILD, "phase7_js", "phase7.wasm");
-const ZKEY = path.join(BUILD, "phase7_final.zkey");
-const VKEY = path.join(BUILD, "phase7_vkey.json");
+const WASM = path.join(BUILD, "vcp_v2_js", "vcp_v2.wasm");
+const ZKEY = path.join(BUILD, "vcp_v2_final.zkey");
+const VKEY = path.join(BUILD, "vcp_v2_vkey.json");
 
 function nowMs() {
   return Number(process.hrtime.bigint()) / 1e6;
@@ -29,38 +28,34 @@ function requirePath(name, fallback) {
 }
 
 function hex(buffer) {
-  return `0x${buffer.toString("hex")}`;
+  return ethers.hexlify(buffer);
 }
 
-async function deploy(name, ...args) {
+async function deploy(name, stageMetrics, ...args) {
   const started = nowMs();
   const factory = await ethers.getContractFactory(name);
   const contract = await factory.deploy(...args);
   const receipt = await contract.deploymentTransaction().wait();
-  return {
-    contract,
-    metric: {
-      stage: `deploy_${name}`,
-      latency_ms: nowMs() - started,
-      gas_used: receipt.gasUsed.toString(),
-      success: true,
-    },
-  };
+  stageMetrics.push({
+    stage: `deploy_${name}`,
+    latency_ms: nowMs() - started,
+    gas_used: receipt.gasUsed.toString(),
+    success: true,
+  });
+  return contract;
 }
 
-async function transact(stage, transactionPromise) {
+async function transact(stageMetrics, stage, transactionPromise) {
   const started = nowMs();
   const transaction = await transactionPromise;
   const receipt = await transaction.wait();
-  return {
-    receipt,
-    metric: {
-      stage,
-      latency_ms: nowMs() - started,
-      gas_used: receipt.gasUsed.toString(),
-      success: receipt.status === 1,
-    },
-  };
+  stageMetrics.push({
+    stage,
+    latency_ms: nowMs() - started,
+    gas_used: receipt.gasUsed.toString(),
+    success: receipt.status === 1,
+  });
+  return receipt;
 }
 
 async function main() {
@@ -73,26 +68,89 @@ async function main() {
     if (!fs.existsSync(required)) throw new Error(`missing required artifact: ${required}`);
   }
   const bundle = JSON.parse(fs.readFileSync(bundlePath, "utf8"));
-  if (bundle.schema !== "TrustCircuit.Phase7Bundle.v1") {
-    throw new Error("unsupported Phase 7 bundle schema");
+  if (bundle.schema !== "TrustCircuit.VCPBundle.v2") {
+    throw new Error("unsupported VCP bundle schema");
   }
   if (bundle.execution?.attestation_evidence?.validated !== true) {
-    throw new Error("bundle does not contain validated VBS evidence");
+    throw new Error("bundle does not contain validated native evidence");
   }
 
   const totalStarted = nowMs();
   const stageMetrics = [];
+  const [provider, consumer, validator] = await ethers.getSigners();
+
+  const registry = await deploy("DataRegistry", stageMetrics);
+  const access = await deploy("AccessController", stageMetrics);
+  const budget = await deploy("BudgetLedger", stageMetrics);
+  const audit = await deploy("AuditLedger", stageMetrics);
+  const validatorRegistry = await deploy("ValidatorRegistry", stageMetrics);
+  const nativeVerifier = await deploy("VCPGroth16Verifier", stageMetrics);
+  const adapter = await deploy(
+    "ComplianceVerifier",
+    stageMetrics,
+    await nativeVerifier.getAddress()
+  );
+  const settlement = await deploy(
+    "TrustCircuitSettlement",
+    stageMetrics,
+    await registry.getAddress(),
+    await access.getAddress(),
+    await budget.getAddress(),
+    await adapter.getAddress(),
+    await audit.getAddress(),
+    await validatorRegistry.getAddress()
+  );
+
+  const settlementAddress = await settlement.getAddress();
+  for (const [stage, module] of [
+    ["grant_access_coordinator", access],
+    ["grant_budget_coordinator", budget],
+    ["grant_audit_coordinator", audit],
+    ["grant_verifier_coordinator", adapter],
+  ]) {
+    await transact(stageMetrics, stage, module.setCoordinator(settlementAddress, true));
+  }
+
   const poseidon = await buildPoseidon();
-  const secretNonce = 20260719001n;
-  const proofInput = buildProofInput(
+  const witness = {
+    policyMatrix: [[1n, 1n], [0n, 1n]],
+    resultOpening: 20260719001n,
+  };
+  const preliminary = buildProofInput(
     bundle.request,
     bundle.execution,
     poseidon,
-    secretNonce
+    witness
   );
-  for (const [name, encoded] of Object.entries(bundle.phase7.fields_without_nullifier)) {
-    if (proofInput.values[name] !== BigInt(encoded)) {
-      throw new Error(`Python/JavaScript Phase 7 encoding mismatch for ${name}`);
+  const nativeStatement = bundle.execution.attestation_evidence;
+  const validatorId = `0x${nativeStatement.validator_identity}`;
+  const unsignedStatement = {
+    validatorId,
+    nativeDigest: `0x${nativeStatement.evidence_sha256}`,
+    contextCommitment: preliminary.values.contextCommitment,
+    expiresAtUnixMs: BigInt(nativeStatement.expires_at_unix_ms),
+    signature: "0x",
+  };
+  await transact(
+    stageMetrics,
+    "activate_validator",
+    validatorRegistry.activateValidator(validatorId, validator.address)
+  );
+  const payload = await validatorRegistry.statementPayload(unsignedStatement);
+  const attestationStatement = {
+    ...unsignedStatement,
+    signature: await validator.signMessage(ethers.getBytes(payload)),
+  };
+  const proofInput = buildProofInput(bundle.request, bundle.execution, poseidon, {
+    ...witness,
+    attestationStatement,
+  });
+
+  for (const [name, encoded] of Object.entries(
+    bundle.phase7.fields_without_nullifier
+  )) {
+    if (proofInput.publicByName[name] !== BigInt(encoded)) {
+      throw new Error(`Python/JavaScript VCP encoding mismatch for ${name}`);
     }
   }
 
@@ -116,7 +174,7 @@ async function main() {
   }
   const verificationKey = JSON.parse(fs.readFileSync(VKEY, "utf8"));
   const verifyStarted = nowMs();
-  const offchainVerified = await snarkjs.groth16.verify(
+  const verifiedOffchain = await snarkjs.groth16.verify(
     verificationKey,
     publicSignals,
     proof
@@ -125,149 +183,90 @@ async function main() {
     stage: "groth16_verify_offchain",
     latency_ms: nowMs() - verifyStarted,
     gas_used: "0",
-    success: offchainVerified,
+    success: verifiedOffchain,
   });
-  if (!offchainVerified) throw new Error("off-chain Groth16 verification failed");
-  const calldata = JSON.parse(
+  if (!verifiedOffchain) throw new Error("off-chain Groth16 verification failed");
+  const [a, b, c, signals] = JSON.parse(
     `[${await snarkjs.groth16.exportSolidityCallData(proof, publicSignals)}]`
   );
-  const [a, b, c, signals] = calldata;
 
-  const [provider, consumer] = await ethers.getSigners();
-  const deployments = {};
-  for (const [key, name, args] of [
-    ["registry", "DataRegistry", []],
-    ["access", "AccessController", []],
-    ["budget", "BudgetLedger", []],
-    ["audit", "AuditLedger", []],
-    ["nativeVerifier", "Phase7Groth16Verifier", []],
-  ]) {
-    const result = await deploy(name, ...args);
-    deployments[key] = result.contract;
-    stageMetrics.push(result.metric);
-  }
-  const adapterDeployment = await deploy(
-    "ComplianceVerifier",
-    await deployments.nativeVerifier.getAddress()
-  );
-  deployments.adapter = adapterDeployment.contract;
-  stageMetrics.push(adapterDeployment.metric);
-  const settlementDeployment = await deploy(
-    "TrustCircuitSettlement",
-    await deployments.registry.getAddress(),
-    await deployments.access.getAddress(),
-    await deployments.budget.getAddress(),
-    await deployments.adapter.getAddress(),
-    await deployments.audit.getAddress()
-  );
-  deployments.settlement = settlementDeployment.contract;
-  stageMetrics.push(settlementDeployment.metric);
-
-  const values = contextFields(bundle.request, bundle.execution);
+  const values = proofInput.values;
   const requestKey = hex(values.requestKey);
   const assetKey = hex(values.assetKey);
-  const policyHash = hex(values.policyHash);
-  const dataHash = `0x${bundle.request.data_hash}`;
-  const evidence = {
-    dataHash,
-    resultHash: hex(values.resultHash),
-    transcriptHash: hex(values.transcriptHash),
-    attestationDigest: hex(values.attestationDigest),
-  };
-  const expected = {
-    requestId: values.request_id,
-    assetId: values.asset_id,
-    consumerId: values.consumer_id,
-    policyHash: values.policy_hash,
-    policyVersion: values.policy_version,
-    functionId: values.function_id,
-    resultHash: values.result_hash,
-    maxEpsilon: values.actual_privacy_cost_fixed,
-    transcriptHash: values.transcript_hash,
-    attestationDigest: values.attestation_digest,
-    attestationExpiresAtUnixMs:
-      bundle.execution.attestation_evidence.expires_at_unix_ms,
-  };
-  const metadataHash = ethers.sha256(ethers.toUtf8Bytes("TrustCircuit.Phase7.Metadata.v1"));
-  const purposeHash = ethers.sha256(ethers.toUtf8Bytes("research"));
-  const totalBudget = values.actual_privacy_cost_fixed * 10n;
+  const consumerKey = hex(values.consumerKey);
+  const dataHash = hex(values.dataHash);
+  const dpConfigHash = hex(values.dpConfigHash);
+  const freshnessNonce = hex(values.freshnessNonce);
+  const purposeHash = ethers.id("TrustCircuit.Purpose.Research.v2");
+  const deadline = BigInt(bundle.request.deadline_unix_ms);
 
-  stageMetrics.push(
-    (await transact(
-      "register_asset",
-      deployments.registry.registerAssetV2(
-        assetKey,
-        metadataHash,
-        dataHash,
-        policyHash,
-        values.policy_version
-      )
-    )).metric
-  );
-  stageMetrics.push(
-    (await transact("register_budget", deployments.budget.registerBudget(assetKey, totalBudget))).metric
-  );
-  stageMetrics.push(
-    (await transact(
-      "request_access",
-      deployments.access.connect(consumer).requestAccessV2(
-        requestKey,
-        assetKey,
-        values.consumer_id,
-        purposeHash,
-        policyHash,
-        values.policy_version,
-        values.function_id,
-        values.actual_privacy_cost_fixed
-      )
-    )).metric
-  );
-  stageMetrics.push(
-    (await transact("approve_request", deployments.access.connect(provider).approveRequest(requestKey))).metric
-  );
-  stageMetrics.push(
-    (await transact(
-      "reserve_budget",
-      deployments.settlement.connect(provider).reserveBudgetForRequest(requestKey)
-    )).metric
-  );
-  stageMetrics.push(
-    (await transact(
-      "register_expectation",
-      deployments.adapter.connect(provider).registerExpectation(requestKey, expected)
-    )).metric
-  );
-  const settlementResult = await transact(
-    "atomic_settlement",
-    deployments.settlement.connect(consumer).settle(
-      requestKey,
-      evidence,
-      a,
-      b,
-      c,
-      signals
+  await transact(
+    stageMetrics,
+    "register_asset",
+    registry.connect(provider).registerAssetVCP(
+      assetKey,
+      ethers.id("TrustCircuit.Metadata.v2"),
+      dataHash,
+      values.policyCommitment,
+      values.policyVersion
     )
   );
-  stageMetrics.push(settlementResult.metric);
+  await transact(
+    stageMetrics,
+    "register_budget",
+    budget.registerBudget(assetKey, values.reservedCost * 10n)
+  );
+  await transact(
+    stageMetrics,
+    "request_access",
+    access.connect(consumer).requestAccessVCP(
+      requestKey,
+      assetKey,
+      consumerKey,
+      purposeHash,
+      values.purposeId,
+      values.policyCommitment,
+      values.policyVersion,
+      values.functionId,
+      dpConfigHash,
+      freshnessNonce,
+      values.reservedCost,
+      deadline
+    )
+  );
+  await transact(stageMetrics, "approve_request", access.approveRequest(requestKey));
+  await transact(
+    stageMetrics,
+    "reserve_budget",
+    settlement.reserveBudgetForRequest(requestKey)
+  );
+  const evidence = {
+    resultCommitment: values.resultCommitment,
+    auditDigest: values.auditDigest,
+    attestation: attestationStatement,
+  };
+  const settlementReceipt = await transact(
+    stageMetrics,
+    "atomic_settlement",
+    settlement.connect(consumer).settle(requestKey, evidence, a, b, c, signals)
+  );
 
-  const budgetState = await deployments.budget.getBudget(assetKey);
-  const requestState = await deployments.access.getRequest(requestKey);
-  const expectationState = await deployments.adapter.getExpectation(requestKey);
-  const nullifierUsed = await deployments.adapter.nullifierUsed(values.nullifier || proofInput.nullifier);
-  const auditEvents = settlementResult.receipt.logs
+  const budgetState = await budget.getBudget(assetKey);
+  const requestState = await access.getRequest(requestKey);
+  const nullifierUsed = await adapter.nullifierUsed(values.nullifier);
+  const auditEvents = settlementReceipt.logs
     .map((log) => {
       try {
-        return deployments.audit.interface.parseLog(log);
+        return audit.interface.parseLog(log);
       } catch {
         return null;
       }
     })
-    .filter((event) => event?.name === "SettlementAuditRecorded");
+    .filter((event) => event?.name === "VCPSettlementAuditRecorded");
   if (
-    requestState.status !== 4n ||
-    expectationState.verified !== true ||
-    nullifierUsed !== true ||
-    budgetState.used !== values.actual_privacy_cost_fixed ||
+    requestState.status !== 5n ||
+    !nullifierUsed ||
+    budgetState.used !== values.actualCost ||
     budgetState.reserved !== 0n ||
     auditEvents.length !== 1
   ) {
@@ -275,8 +274,8 @@ async function main() {
   }
 
   const result = {
-    schema: "TrustCircuit.Phase7E2E.v1",
-    measurement_type: "measured",
+    schema: "TrustCircuit.VCPE2E.v2",
+    measurement_type: "functional_validation_not_paper_benchmark",
     ok: true,
     timestamp: new Date().toISOString(),
     request_key: requestKey,
@@ -286,16 +285,6 @@ async function main() {
     public_signals: Object.fromEntries(
       PUBLIC_SIGNAL_NAMES.map((name, index) => [name, publicSignals[index]])
     ),
-    vbs: {
-      request_id: bundle.request.request_id,
-      result: bundle.execution.result,
-      result_hash: bundle.execution.result_hash,
-      transcript_hash: bundle.execution.transcript_hash,
-      attestation_digest: values.attestationDigest.toString("hex"),
-      attestation_validated: true,
-      timings_us: bundle.execution.timings_us,
-      client_timings_us: bundle.client_timings_us,
-    },
     proof: {
       scheme: "groth16",
       curve: "bn254",
@@ -304,13 +293,10 @@ async function main() {
       proving_key_bytes: fs.statSync(ZKEY).size,
     },
     settlement: {
-      transaction_hash: settlementResult.receipt.hash,
-      block_number: settlementResult.receipt.blockNumber,
-      gas_used: settlementResult.receipt.gasUsed.toString(),
-      budget_total: budgetState.total.toString(),
-      budget_reserved: budgetState.reserved.toString(),
+      transaction_hash: settlementReceipt.hash,
+      block_number: settlementReceipt.blockNumber,
+      gas_used: settlementReceipt.gasUsed.toString(),
       budget_used: budgetState.used.toString(),
-      budget_remaining: budgetState.budgetRemaining.toString(),
       request_status: Number(requestState.status),
       nullifier_used: nullifierUsed,
       audit_events: auditEvents.length,
@@ -329,9 +315,7 @@ async function main() {
   console.log(JSON.stringify({ ok: true, output: outputPath, request_key: requestKey }));
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error.stack || error.message);
-    process.exit(1);
-  });
+main().catch((error) => {
+  console.error(error.stack || error.message);
+  process.exitCode = 1;
+});

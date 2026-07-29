@@ -6,6 +6,8 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
+// FROZEN LEGACY BENCHMARK ARTIFACT (11 public inputs), not VCP v2 settlement.
+
 contract FflonkVerifier {
     uint32 constant n     = 8192;
 

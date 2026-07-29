@@ -6,6 +6,9 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
+// FROZEN LEGACY ARTIFACT: generated from the historical 11-public-input
+// Phase-7 circuit. Canonical VCP v2 builds generate VCPGroth16Verifier.sol.
+
 contract Phase7Groth16Verifier {
     uint256 constant r    = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     uint256 constant q   = 21888242871839275222246405745257275088696311157297823662689037894645226208583;

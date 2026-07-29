@@ -9,21 +9,35 @@ from typing import Any, Mapping
 BN254_SCALAR_FIELD = (
     21888242871839275222246405745257275088548364400416034343698204186575808495617
 )
-IDENTIFIER_DOMAIN = b"TrustCircuit.SettlementIdentifier.v1\x00"
-ATTESTATION_DIGEST_DOMAIN = b"TrustCircuit.ValidatedAttestation.v1\x00"
+IDENTIFIER_DOMAIN = b"TrustCircuit.SettlementIdentifier.v2\x00"
+DP_CONFIG_DOMAIN = b"TrustCircuit.DpConfig.v2\x00"
+FRESHNESS_DOMAIN = b"TrustCircuit.Freshness.v2\x00"
 
 PUBLIC_SIGNAL_NAMES = (
-    "request_id",
-    "asset_id",
-    "consumer_id",
-    "policy_hash",
+    "request_id_lo",
+    "request_id_hi",
+    "asset_id_lo",
+    "asset_id_hi",
+    "consumer_id_lo",
+    "consumer_id_hi",
+    "policy_commitment",
     "policy_version",
+    "purpose_id",
     "function_id",
-    "result_hash",
-    "actual_privacy_cost_fixed",
+    "data_hash_lo",
+    "data_hash_hi",
+    "dp_config_hash_lo",
+    "dp_config_hash_hi",
+    "freshness_nonce_lo",
+    "freshness_nonce_hi",
+    "reserved_cost",
+    "actual_cost",
     "nullifier",
-    "transcript_hash",
-    "attestation_digest",
+    "context_commitment",
+    "attestation_hash_lo",
+    "attestation_hash_hi",
+    "result_commitment",
+    "audit_digest",
 )
 
 
@@ -60,10 +74,11 @@ def identifier_digest(field_name: str, value: object) -> bytes:
     ).digest()
 
 
-def bytes32_to_field(value: bytes) -> int:
+def split_bytes32(value: bytes) -> tuple[int, int]:
     if len(value) != 32:
-        raise Phase7EncodingError("field projection requires exactly 32 bytes")
-    return int.from_bytes(value, byteorder="big", signed=False) % BN254_SCALAR_FIELD
+        raise Phase7EncodingError("limb encoding requires exactly 32 bytes")
+    integer = int.from_bytes(value, byteorder="big", signed=False)
+    return integer & ((1 << 128) - 1), integer >> 128
 
 
 def canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
@@ -76,7 +91,7 @@ def canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
-def validated_attestation_digest(statement: Mapping[str, Any]) -> bytes:
+def validate_attestation_shape(statement: Mapping[str, Any]) -> None:
     required = {
         "format",
         "validated",
@@ -111,9 +126,42 @@ def validated_attestation_digest(statement: Mapping[str, Any]) -> bytes:
         bytes.fromhex(signature)
     except ValueError as error:
         raise Phase7EncodingError("invalid attestation signature") from error
+    # VCP v2 hashes the Solidity ABI encoding of the complete validator
+    # statement with Keccak-256. That final hash is produced by the JS/EVM
+    # adapter, not by this Python pre-encoder.
+
+
+def _derived_dp_config_hash(request: Mapping[str, Any]) -> bytes:
     return hashlib.sha256(
-        ATTESTATION_DIGEST_DOMAIN + canonical_json_bytes(statement)
+        DP_CONFIG_DOMAIN
+        + canonical_json_bytes(
+            {
+                "epsilon_requested": request.get("epsilon_requested"),
+                "delta_requested": request.get("delta_requested"),
+                "lower_bound_fixed": request.get("lower_bound_fixed"),
+                "upper_bound_fixed": request.get("upper_bound_fixed"),
+                "apply_dp": request.get("apply_dp"),
+            }
+        )
     ).digest()
+
+
+def _derived_freshness_nonce(request: Mapping[str, Any]) -> bytes:
+    explicit = request.get("freshness_nonce")
+    if explicit is not None:
+        return _require_sha256_hex(explicit, "freshness_nonce")
+    nonce = request.get("nonce")
+    if isinstance(nonce, str):
+        try:
+            source = bytes.fromhex(nonce.removeprefix("0x"))
+        except ValueError as error:
+            raise Phase7EncodingError("invalid nonce") from error
+    else:
+        request_id = request.get("request_id")
+        if not isinstance(request_id, str):
+            raise Phase7EncodingError("missing request_id")
+        source = _sized_utf8(request_id)
+    return hashlib.sha256(FRESHNESS_DOMAIN + source).digest()
 
 
 def encode_phase7_context(
@@ -135,52 +183,96 @@ def encode_phase7_context(
     request_key = identifier_digest("request_id", request.get("request_id"))
     asset_key = identifier_digest("asset_id", request.get("asset_id"))
     consumer_key = identifier_digest("consumer_id", request.get("consumer_id"))
-    policy_hash = _require_sha256_hex(request.get("policy_hash"), "policy_hash")
-    result_hash = _require_sha256_hex(execution.get("result_hash"), "result_hash")
-    transcript_hash = _require_sha256_hex(
-        execution.get("transcript_hash"), "transcript_hash"
+    validate_attestation_shape(statement)
+    data_hash = _require_sha256_hex(request.get("data_hash"), "data_hash")
+    dp_config_hash = (
+        _require_sha256_hex(request.get("dp_config_hash"), "dp_config_hash")
+        if request.get("dp_config_hash") is not None
+        else _derived_dp_config_hash(request)
     )
-    attestation_digest = validated_attestation_digest(statement)
+    freshness_nonce = _derived_freshness_nonce(request)
+    enclave_measurement = _require_sha256_hex(
+        execution.get("enclave_identity"), "enclave_identity"
+    )
 
     policy_version = int(request.get("policy_version", -1))
+    purpose_id = int(request.get("purpose_id", -1))
     function_id = int(request.get("function_id", -1))
+    reserved_cost = int(request.get("epsilon_requested_fixed", -1))
     privacy_cost = int(execution.get("actual_privacy_cost_fixed", -1))
     expires_at = int(statement.get("expires_at_unix_ms", -1))
     if not 0 < policy_version <= 0xFFFFFFFFFFFFFFFF:
         raise Phase7EncodingError("policy_version is outside uint64")
+    if purpose_id not in (1, 2):
+        raise Phase7EncodingError("purpose_id must be in the fixed policy family")
     if function_id not in (1, 2):
         raise Phase7EncodingError("function_id must be COUNT (1) or MEAN (2)")
+    if not 0 < reserved_cost <= 0xFFFFFFFFFFFFFFFF:
+        raise Phase7EncodingError("reserved cost is outside positive uint64")
     if not 0 < privacy_cost <= 0xFFFFFFFFFFFFFFFF:
         raise Phase7EncodingError("privacy cost is outside positive uint64")
+    if privacy_cost > reserved_cost:
+        raise Phase7EncodingError("actual privacy cost exceeds reservation")
     if expires_at <= 0:
         raise Phase7EncodingError("invalid attestation expiry")
 
+    request_lo, request_hi = split_bytes32(request_key)
+    asset_lo, asset_hi = split_bytes32(asset_key)
+    consumer_lo, consumer_hi = split_bytes32(consumer_key)
+    data_lo, data_hi = split_bytes32(data_hash)
+    dp_lo, dp_hi = split_bytes32(dp_config_hash)
+    freshness_lo, freshness_hi = split_bytes32(freshness_nonce)
+    measurement_lo, measurement_hi = split_bytes32(enclave_measurement)
+
     fields_without_nullifier = {
-        "request_id": bytes32_to_field(request_key),
-        "asset_id": bytes32_to_field(asset_key),
-        "consumer_id": bytes32_to_field(consumer_key),
-        "policy_hash": bytes32_to_field(policy_hash),
+        "request_id_lo": request_lo,
+        "request_id_hi": request_hi,
+        "asset_id_lo": asset_lo,
+        "asset_id_hi": asset_hi,
+        "consumer_id_lo": consumer_lo,
+        "consumer_id_hi": consumer_hi,
         "policy_version": policy_version,
+        "purpose_id": purpose_id,
         "function_id": function_id,
-        "result_hash": bytes32_to_field(result_hash),
-        "actual_privacy_cost_fixed": privacy_cost,
-        "transcript_hash": bytes32_to_field(transcript_hash),
-        "attestation_digest": bytes32_to_field(attestation_digest),
+        "data_hash_lo": data_lo,
+        "data_hash_hi": data_hi,
+        "dp_config_hash_lo": dp_lo,
+        "dp_config_hash_hi": dp_hi,
+        "freshness_nonce_lo": freshness_lo,
+        "freshness_nonce_hi": freshness_hi,
+        "reserved_cost": reserved_cost,
+        "actual_cost": privacy_cost,
     }
     return {
-        "encoding": "TrustCircuit.Phase7.bn254.v1",
+        "encoding": "TrustCircuit.VCP.bn254.v2",
         "scalar_field": str(BN254_SCALAR_FIELD),
+        "bytes32_encoding": "u = lo + 2^128 * hi; lo,hi are uint128",
         "public_signal_order": list(PUBLIC_SIGNAL_NAMES),
         "request_key": request_key.hex(),
         "asset_key": asset_key.hex(),
         "consumer_key": consumer_key.hex(),
-        "policy_hash": policy_hash.hex(),
-        "result_hash": result_hash.hex(),
-        "transcript_hash": transcript_hash.hex(),
-        "attestation_digest": attestation_digest.hex(),
+        "data_hash": data_hash.hex(),
+        "dp_config_hash": dp_config_hash.hex(),
+        "freshness_nonce": freshness_nonce.hex(),
+        "enclave_measurement": enclave_measurement.hex(),
+        "enclave_measurement_limbs": {
+            "lo": str(measurement_lo),
+            "hi": str(measurement_hi),
+        },
+        "validator_id": statement["validator_identity"],
+        "native_digest": statement["evidence_sha256"],
+        "validator_signature": statement["signature"],
         "attestation_expires_at_unix_ms": expires_at,
+        "derived_by_prover": [
+            "policy_commitment",
+            "nullifier",
+            "context_commitment",
+            "attestation_hash_lo",
+            "attestation_hash_hi",
+            "result_commitment",
+            "audit_digest",
+        ],
         "fields_without_nullifier": {
             key: str(value) for key, value in fields_without_nullifier.items()
         },
     }
-
