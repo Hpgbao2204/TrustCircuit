@@ -1,0 +1,141 @@
+{
+  "schema": "TrustCircuit.VCPv2Evidence.v1",
+  "scope": "Canonical local evidence for the 24-public-input VCP v2 implementation",
+  "hash_canonicalization": "SHA-256 after CRLF-to-LF normalization",
+  "claims": {
+    "circuit": {
+      "public_inputs": 24,
+      "constraints": 40161,
+      "private_inputs": 12,
+      "policy_family": "2x2 fixed dimension"
+    },
+    "groth16_30_run": {
+      "repetitions": 30,
+      "warmups": 2,
+      "prove_time_ms_mean": 1006.8584133332595,
+      "prove_time_ms_p50": 1006.3924000011757,
+      "prove_time_ms_p95": 1043.1508450003341,
+      "full_prove_time_ms_mean": 1080.0530733330795,
+      "verify_time_ms_mean": 8.431583333263795,
+      "verifier_gas_p50": 374753,
+      "verifier_gas_p95": 374765,
+      "proof_abi_bytes": 256,
+      "proof_json_bytes_min": 719,
+      "proof_json_bytes_mean": 722.7,
+      "proof_json_bytes_p50": 723,
+      "proof_json_bytes_p95": 725,
+      "proof_json_bytes_max": 725,
+      "proof_and_public_json_bytes_min": 1757,
+      "proof_and_public_json_bytes_mean": 1760.7,
+      "proof_and_public_json_bytes_p50": 1761,
+      "proof_and_public_json_bytes_p95": 1763,
+      "proof_and_public_json_bytes_max": 1763,
+      "proving_key_bytes": 18922429,
+      "verification_key_bytes": 7147
+    },
+    "real_proof_integration": {
+      "tampered_public_fields_rejected": 24,
+      "policy_matrices_verified_with_same_key": 2,
+      "atomic_settlements": 2,
+      "settlement_gas": [571640, 571560]
+    },
+    "base_sepolia_final_stack": {
+      "run_id": "full_20260802T142334646Z",
+      "chain_id": 84532,
+      "public_inputs": 24,
+      "contract_count": 8,
+      "transaction_count": 135,
+      "atomic_settlements": 30,
+      "final_budget_used": 12000000,
+      "deployment_total_gas": 6714037,
+      "deployment_total_calldata_bytes": 29517,
+      "settlement_gas_p50": 554496,
+      "settlement_gas_p95": 554543,
+      "settlement_fee_micro_eth_p50": 3.326976,
+      "settlement_fee_micro_eth_p95": 3.327258,
+      "settlement_inclusion_ms_p50": 2964.1953999996185,
+      "settlement_inclusion_ms_p95": 3195.6181750001383
+    }
+  },
+  "reproduce": [
+    "npm run vcp:build",
+    "npm run compile",
+    "npm run vcp:test:real",
+    "npm run vcp:benchmark",
+    "npm run vcp:verify",
+    "npm run testnet:base",
+    "python benchmarks/process_base_sepolia_vcp_v2.py"
+  ],
+  "files": [
+    {
+      "file": "results/raw/phase8/vcp_v2_runs.csv",
+      "sha256": "e38994fdcc92f2ad3e3ff446573cf84566a009cae5b24ac66388d0e3ac775811",
+      "rows": 32
+    },
+    {
+      "file": "results/summary/vcp_v2_summary.csv",
+      "sha256": "6968511f4db2fa91c62d305a906f535e52e5cc7bb42cc0227a467490d88c773d",
+      "rows": 1
+    },
+    {
+      "file": "results/summary/vcp_v2_config.json",
+      "sha256": "e74b5d6d2e806f54b343ff33aaff1eedd32e158a6c43488deb6b695521215edf"
+    },
+    {
+      "file": "results/raw/phase8/vcp_v2_integration.json",
+      "sha256": "0d30120279e060cdd20bd2e643cddaca31040e0aa0996380bff650b519f80d86"
+    },
+    {
+      "file": "zk/vcp_v2_metadata.json",
+      "sha256": "9cdc2b80c4913239037fe6293140ad9f7fd2d05a686dcd519a5fee847076efaf"
+    },
+    {
+      "file": "contracts/VCPGroth16Verifier.sol",
+      "sha256": "8afcf053c89e90fb63ac4165904ab02b169c21039d4ffc39babf7e33b1cabc8a"
+    },
+    {
+      "file": "zk/circuits/compliance_check.circom",
+      "sha256": "e24f8ca44f702f9323a7ac1c89164d51a9b16a1ee085b87dc93679646930b6c3"
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/transactions.csv",
+      "sha256": "95a0613fa85cd2e544fbdbe67717e70efc86a502ae61e0cb6ecff57831801e3a",
+      "rows": 135
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/proof_preparation.csv",
+      "sha256": "e2bc52a2b50ac86565eb2da4bcfa0a0beda6ad32b31a1d2dd54d0402badc0686",
+      "rows": 30
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/config.json",
+      "sha256": "98b03420956b1aa2579d6d0a7aa087eb0191de63c7132ccf741d5fe66d672861"
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/run_result.json",
+      "sha256": "18cf267301bf9fff38eec94d7f8886f786075b02c0cdc49cde6bca7caf3a963e"
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/deployments.json",
+      "sha256": "d0467208a04a0919a6726e2670861308780dfd8c2387f761d23df235dd451b22"
+    },
+    {
+      "file": "results/summary/base_sepolia_vcp_v2_summary.json",
+      "sha256": "41949113c259a2163803255e4d0c6c9aea1f569d9428c38b06485770e542b7c5"
+    },
+    {
+      "file": "results/summary/base_sepolia_vcp_v2_deployments.csv",
+      "sha256": "0ef71f30602b1573879cf770b5145d5ad3bc66c932557ec98c746b437e9d759f",
+      "rows": 8
+    }
+  ],
+  "limitations": [
+    "The Groth16 setup is a deterministic local-development ceremony and is not production trusted setup evidence.",
+    "Latency and local Hardhat gas measurements are machine- and toolchain-specific.",
+    "Proof ABI size counts only Groth16 A/B/C; the 24 public inputs are separate transaction calldata.",
+    "The two settlement-gas values are functional integration observations, not a settlement gas benchmark distribution.",
+    "Native platform attestation validity, arbitrary program correctness, DP sampling correctness, and legal compliance remain outside VCP.",
+    "The current VBS path does not yet integrate a cumulative per-order RDP accountant across accepted releases.",
+    "The final Base Sepolia campaign measures 30 valid settlements; adversarial reverts are covered by local real-proof and contract tests rather than this public-network run."
+  ]
+}

@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT))
 
 from benchmarks.make_paper_figures import (  # noqa: E402
     apply_style,
-    figure_cpabe_policy_comparison_v2,
+    figure_cpabe_policy_comparison_revised,
     read_csv,
 )
 
@@ -29,7 +29,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     apply_style()
-    output = figure_cpabe_policy_comparison_v2(read_csv(args.summary), args.out_dir)
+    output = figure_cpabe_policy_comparison_revised(read_csv(args.summary), args.out_dir)
     print(output)
     return 0
 

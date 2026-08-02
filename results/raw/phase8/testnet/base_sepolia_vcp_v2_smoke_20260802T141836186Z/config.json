@@ -1,0 +1,33 @@
+{
+  "schema": "TrustCircuit.BaseSepoliaVCPv2.v1",
+  "measurement_type": "measured_public_testnet",
+  "run_id": "smoke_20260802T141836186Z",
+  "mode": "smoke",
+  "chain_id": "84532",
+  "rpc_host": "base-sepolia-rpc.publicnode.com",
+  "repetitions": 1,
+  "public_inputs": 24,
+  "contract_count": 8,
+  "contracts": [
+    "DataRegistry",
+    "AccessController",
+    "BudgetLedger",
+    "AuditLedger",
+    "ValidatorRegistry",
+    "VCPGroth16Verifier",
+    "ComplianceVerifier",
+    "TrustCircuitSettlement"
+  ],
+  "r1cs_sha256": "5b17a1b1709895f025c4363907877b0dfff814ca27dd37f3314bf8e4a22a51f9",
+  "verification_key_sha256": "ab78aac95aed3e1a79d195344cfaa3e38e2970a210f8c7aa03f6b9070db87d82",
+  "artifact_sha256": {
+    "DataRegistry": "77aeee9e60683559d288e93a8102c52b9b6bed9dfc03be0d6e74ea00361927c4",
+    "AccessController": "64438f4dde45fa90572d6e53679971fd7a62a9675c331294fba2a8f1652cfb9f",
+    "BudgetLedger": "dc6fb0b985eeed3a379dcf403d64269586f9dc8b8aa225836194f9cb79ea82f4",
+    "AuditLedger": "622e46096674b86875970b3da954b5ec5314e9855b6b8906f14865d514c229fe",
+    "ValidatorRegistry": "da93035c0b798d399c8eb81ab9712933197e08ac65474547c9f7f900cc9d5cd6",
+    "VCPGroth16Verifier": "d7e38ff258b4815798349a9da21b6e10f77dc67ffc8002b27499ab66c148e177",
+    "ComplianceVerifier": "2f7fecfa23557c8a4bee0b06d2fe85175deee4318c3de9ae9a0da0658ad3cabd",
+    "TrustCircuitSettlement": "e905917607ef53f6bf6b3f46ac4be2cd43ee617a41c5881c42045e124f22d32b"
+  }
+}

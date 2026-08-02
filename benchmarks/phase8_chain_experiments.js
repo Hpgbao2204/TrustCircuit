@@ -1,5 +1,9 @@
 "use strict";
 
+// FROZEN LEGACY BENCHMARK: this runner uses the historical 11-public-input
+// Phase-7 circuit and verifier. It is retained only to audit historical rows.
+// Current VCP v2 settlement validation is scripts/test_vcp_real_proof.js.
+
 const fs = require("fs");
 const crypto = require("crypto");
 const os = require("os");

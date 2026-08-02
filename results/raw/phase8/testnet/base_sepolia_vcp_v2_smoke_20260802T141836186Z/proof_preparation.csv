@@ -1,0 +1,2 @@
+measurement_type,run_id,proof_index,public_inputs,prove_time_ms,verify_time_ms,proof_json_bytes,verified
+prepared_offchain_not_in_chain_latency,smoke_20260802T141836186Z,0,24,1709.366499999538,11.354100000113249,720,1

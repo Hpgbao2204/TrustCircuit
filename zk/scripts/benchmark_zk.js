@@ -1,4 +1,6 @@
 
+// FROZEN LEGACY BENCHMARK: these rule-scaling measurements use the historical
+// 11-public-input circuit. Use benchmark_vcp_v2.js for current VCP claims.
 const fs = require("fs");
 const crypto = require("crypto");
 const path = require("path");

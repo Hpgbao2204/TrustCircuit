@@ -32,6 +32,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Hardhat compilation failed" }
     & npm.cmd test
     if ($LASTEXITCODE -ne 0) { throw "Hardhat regression tests failed" }
+    & npm.cmd run vcp:test:real
+    if ($LASTEXITCODE -ne 0) { throw "VCP v2 real-proof integration failed" }
 
     & python .\scripts\run_phase8_vbs_experiments.py `
         --configuration $Configuration `
@@ -41,29 +43,13 @@ try {
         --concurrency-bundles 32
     if ($LASTEXITCODE -ne 0) { throw "VBS/DP experiments failed" }
 
-    & .\node_modules\.bin\hardhat.cmd run `
-        .\benchmarks\phase8_chain_experiments.js `
-        --network hardhat
-    if ($LASTEXITCODE -ne 0) { throw "Phase 7 chain experiments failed" }
-
     & python .\scripts\run_attack_layer_audit.py
     if ($LASTEXITCODE -ne 0) { throw "Attack-layer audit failed" }
 
-    & node .\zk\scripts\benchmark_zk.js
-    if ($LASTEXITCODE -ne 0) { throw "ZK scaling experiment failed" }
-    & node .\zk\scripts\benchmark_zk_schemes.js
-    if ($LASTEXITCODE -ne 0) { throw "ZK backend experiment failed" }
-    & .\node_modules\.bin\hardhat.cmd run `
-        .\scripts\zk_schemes_gas.js `
-        --network hardhat
-    if ($LASTEXITCODE -ne 0) { throw "ZK backend gas experiment failed" }
+    & npm.cmd run vcp:benchmark
+    if ($LASTEXITCODE -ne 0) { throw "VCP v2 benchmark failed" }
 
-    & python .\scripts\process_phase8_results.py
-    if ($LASTEXITCODE -ne 0) { throw "Result processing failed" }
-    & python .\scripts\plot_all_results.py
-    if ($LASTEXITCODE -ne 0) { throw "Panel generation failed" }
-
-    Write-Output "PASS: Phase 8 raw data, processed data, and all panels generated"
+    Write-Output "PASS: current VBS and VCP v2 raw evidence generated"
 }
 finally {
     Pop-Location
