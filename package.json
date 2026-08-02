@@ -34,7 +34,7 @@
     "testnet:base": "node benchmarks/base_sepolia_vcp_v2.js",
     "testnet:base:process": "python benchmarks/process_base_sepolia_vcp_v2.py",
     "paper:verify": "python scripts/verify_paper_evidence.py",
-    "lint": "echo \"TODO: add lint command\""
+    "lint": "node scripts/check_source_syntax.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
