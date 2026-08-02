@@ -1,0 +1,54 @@
+{
+  "schema": "TrustCircuit.BaseSepoliaVCPv2Summary.v1",
+  "measurement_type": "measured_public_testnet",
+  "run_id": "full_20260802T142334646Z",
+  "chain_id": 84532,
+  "public_inputs": 24,
+  "contract_count": 8,
+  "transaction_count": 135,
+  "atomic_settlements": 30,
+  "final_budget_used": 12000000,
+  "deployment_total_gas": 6714037,
+  "deployment_total_calldata_bytes": 29517,
+  "settlement_gas": {
+    "min": 554460.0,
+    "mean": 555068.9333333333,
+    "p50": 554496.0,
+    "p95": 554543.0,
+    "max": 571584.0
+  },
+  "settlement_fee_micro_eth": {
+    "min": 3.32676,
+    "mean": 3.3304136,
+    "p50": 3.326976,
+    "p95": 3.327258,
+    "max": 3.429504
+  },
+  "settlement_inclusion_ms": {
+    "min": 825.7517000008374,
+    "mean": 2839.5383233332386,
+    "p50": 2964.1953999996185,
+    "p95": 3195.6181750001383,
+    "max": 3270.0694000013173
+  },
+  "offchain_prove_ms": {
+    "min": 966.6019999999553,
+    "mean": 1055.940383333216,
+    "p50": 1002.0727500002831,
+    "p95": 1329.8920350001192,
+    "max": 1447.9857000000775
+  },
+  "offchain_verify_ms": {
+    "min": 6.815400000661612,
+    "mean": 8.955500000094373,
+    "p50": 8.782150000333786,
+    "p95": 10.982505000382663,
+    "max": 12.354100000113249
+  },
+  "raw_sha256": {
+    "transactions.csv": "95a0613fa85cd2e544fbdbe67717e70efc86a502ae61e0cb6ecff57831801e3a",
+    "proof_preparation.csv": "e2bc52a2b50ac86565eb2da4bcfa0a0beda6ad32b31a1d2dd54d0402badc0686",
+    "config.json": "98b03420956b1aa2579d6d0a7aa087eb0191de63c7132ccf741d5fe66d672861",
+    "run_result.json": "18cf267301bf9fff38eec94d7f8886f786075b02c0cdc49cde6bca7caf3a963e"
+  }
+}

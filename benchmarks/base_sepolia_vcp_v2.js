@@ -110,6 +110,10 @@ async function recordTransaction(rows, category, operation, transaction, contrac
     gas_used: receipt.gasUsed.toString(),
     gas_price_wei: (receipt.gasPrice || 0n).toString(),
     fee_wei: fee.toString(),
+    calldata_bytes:
+      typeof transaction.data === "string" && transaction.data.startsWith("0x")
+        ? (transaction.data.length - 2) / 2
+        : "",
     inclusion_latency_ms: inclusionMs,
   });
   if (receipt.status !== 1) throw new Error(`${operation} reverted: ${transaction.hash}`);
@@ -121,6 +125,7 @@ async function recordTransaction(rows, category, operation, transaction, contrac
 
 async function deploy(name, signer, rows, ...args) {
   const compiled = artifact(name);
+  process.stdout.write(`[base-sepolia-vcp-v2] preparing deployment ${name}\n`);
   const contract = await new ContractFactory(compiled.abi, compiled.bytecode, signer).deploy(...args);
   const transaction = contract.deploymentTransaction();
   await recordTransaction(rows, "deployment", `deploy_${name}`, transaction, await contract.getAddress());
@@ -141,7 +146,13 @@ async function main() {
   const metadata = JSON.parse(fs.readFileSync(METADATA, "utf8"));
   if (metadata.public_inputs !== 24) throw new Error("testnet runner requires VCP v2/24 inputs");
 
-  const provider = new JsonRpcProvider(env.BASE_SEPOLIA_RPC_URL || DEFAULT_RPC);
+  const rpcUrl = env.BASE_SEPOLIA_RPC_URL || DEFAULT_RPC;
+  process.stdout.write(
+    `[base-sepolia-vcp-v2] starting ${smoke ? "smoke" : "full"} run; repetitions=${repetitions}; rpc=${rpcUrl}\n`
+  );
+  const provider = new JsonRpcProvider(rpcUrl);
+  provider.pollingInterval = 2_000;
+  process.stdout.write("[base-sepolia-vcp-v2] checking Base Sepolia network\n");
   const network = await provider.getNetwork();
   if (network.chainId !== CHAIN_ID) {
     throw new Error(`wrong chain: expected ${CHAIN_ID}, received ${network.chainId}`);
@@ -150,8 +161,14 @@ async function main() {
     new Wallet(privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`, provider)
   );
   const signerAddress = await signer.getAddress();
+  process.stdout.write(
+    `[base-sepolia-vcp-v2] connected chain_id=${network.chainId}; signer=${signerAddress}; checking balance\n`
+  );
   const balance = await provider.getBalance(signerAddress);
   if (balance === 0n) throw new Error("testnet account has zero balance");
+  process.stdout.write(
+    `[base-sepolia-vcp-v2] preflight complete; balance_wei=${balance}; deployments=8\n`
+  );
 
   const runId = `${smoke ? "smoke" : "full"}_${new Date()
     .toISOString()

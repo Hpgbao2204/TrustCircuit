@@ -135,6 +135,8 @@ results/summary/*
 !results/summary/tee_attack_config.json
 !results/summary/vcp_v2_summary.csv
 !results/summary/vcp_v2_config.json
+!results/summary/base_sepolia_vcp_v2_summary.json
+!results/summary/base_sepolia_vcp_v2_deployments.csv
 
 !results/processed/
 results/processed/*
@@ -150,6 +152,16 @@ results/processed/sota_profiles/*
 Paper/
 .skills/
 PROJECT_STATE.json
+
+# Canonical manuscript source and VCP v2 Base Sepolia panels.
+!Paper/
+Paper/**
+!Paper/main-new.tex
+!Paper/refs.bib
+!Paper/Figure/
+!Paper/Figure/figures/
+!Paper/Figure/figures/base-sepolia/
+!Paper/Figure/figures/base-sepolia/*.pdf
 
 # Logs
 *.log

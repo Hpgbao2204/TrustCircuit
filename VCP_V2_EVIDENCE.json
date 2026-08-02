@@ -38,6 +38,23 @@
       "policy_matrices_verified_with_same_key": 2,
       "atomic_settlements": 2,
       "settlement_gas": [571640, 571560]
+    },
+    "base_sepolia_final_stack": {
+      "run_id": "full_20260802T142334646Z",
+      "chain_id": 84532,
+      "public_inputs": 24,
+      "contract_count": 8,
+      "transaction_count": 135,
+      "atomic_settlements": 30,
+      "final_budget_used": 12000000,
+      "deployment_total_gas": 6714037,
+      "deployment_total_calldata_bytes": 29517,
+      "settlement_gas_p50": 554496,
+      "settlement_gas_p95": 554543,
+      "settlement_fee_micro_eth_p50": 3.326976,
+      "settlement_fee_micro_eth_p95": 3.327258,
+      "settlement_inclusion_ms_p50": 2964.1953999996185,
+      "settlement_inclusion_ms_p95": 3195.6181750001383
     }
   },
   "reproduce": [
@@ -45,7 +62,9 @@
     "npm run compile",
     "npm run vcp:test:real",
     "npm run vcp:benchmark",
-    "npm run vcp:verify"
+    "npm run vcp:verify",
+    "npm run testnet:base",
+    "python benchmarks/process_base_sepolia_vcp_v2.py"
   ],
   "files": [
     {
@@ -77,6 +96,37 @@
     {
       "file": "zk/circuits/compliance_check.circom",
       "sha256": "e24f8ca44f702f9323a7ac1c89164d51a9b16a1ee085b87dc93679646930b6c3"
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/transactions.csv",
+      "sha256": "95a0613fa85cd2e544fbdbe67717e70efc86a502ae61e0cb6ecff57831801e3a",
+      "rows": 135
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/proof_preparation.csv",
+      "sha256": "e2bc52a2b50ac86565eb2da4bcfa0a0beda6ad32b31a1d2dd54d0402badc0686",
+      "rows": 30
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/config.json",
+      "sha256": "98b03420956b1aa2579d6d0a7aa087eb0191de63c7132ccf741d5fe66d672861"
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/run_result.json",
+      "sha256": "18cf267301bf9fff38eec94d7f8886f786075b02c0cdc49cde6bca7caf3a963e"
+    },
+    {
+      "file": "results/raw/phase8/testnet/base_sepolia_vcp_v2_full_20260802T142334646Z/deployments.json",
+      "sha256": "d0467208a04a0919a6726e2670861308780dfd8c2387f761d23df235dd451b22"
+    },
+    {
+      "file": "results/summary/base_sepolia_vcp_v2_summary.json",
+      "sha256": "41949113c259a2163803255e4d0c6c9aea1f569d9428c38b06485770e542b7c5"
+    },
+    {
+      "file": "results/summary/base_sepolia_vcp_v2_deployments.csv",
+      "sha256": "0ef71f30602b1573879cf770b5145d5ad3bc66c932557ec98c746b437e9d759f",
+      "rows": 8
     }
   ],
   "limitations": [
@@ -85,6 +135,7 @@
     "Proof ABI size counts only Groth16 A/B/C; the 24 public inputs are separate transaction calldata.",
     "The two settlement-gas values are functional integration observations, not a settlement gas benchmark distribution.",
     "Native platform attestation validity, arbitrary program correctness, DP sampling correctness, and legal compliance remain outside VCP.",
-    "The current VBS path does not yet integrate a cumulative per-order RDP accountant across accepted releases."
+    "The current VBS path does not yet integrate a cumulative per-order RDP accountant across accepted releases.",
+    "The final Base Sepolia campaign measures 30 valid settlements; adversarial reverts are covered by local real-proof and contract tests rather than this public-network run."
   ]
 }

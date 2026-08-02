@@ -107,10 +107,95 @@ def main() -> None:
     if integration["verification_key_sha256"] != metadata["verification_key_sha256"]:
         raise AssertionError("integration/verification-key hash binding")
 
+    testnet_claim = manifest["claims"]["base_sepolia_final_stack"]
+    testnet_summary = json.loads(
+        (ROOT / "results/summary/base_sepolia_vcp_v2_summary.json").read_text(encoding="utf-8")
+    )
+    for field in (
+        "run_id",
+        "chain_id",
+        "public_inputs",
+        "contract_count",
+        "transaction_count",
+        "atomic_settlements",
+        "final_budget_used",
+        "deployment_total_gas",
+        "deployment_total_calldata_bytes",
+    ):
+        if testnet_summary[field] != testnet_claim[field]:
+            raise AssertionError(f"Base Sepolia claim mismatch: {field}")
+    for summary_group, summary_field, claim_field in (
+        ("settlement_gas", "p50", "settlement_gas_p50"),
+        ("settlement_gas", "p95", "settlement_gas_p95"),
+        ("settlement_fee_micro_eth", "p50", "settlement_fee_micro_eth_p50"),
+        ("settlement_fee_micro_eth", "p95", "settlement_fee_micro_eth_p95"),
+        ("settlement_inclusion_ms", "p50", "settlement_inclusion_ms_p50"),
+        ("settlement_inclusion_ms", "p95", "settlement_inclusion_ms_p95"),
+    ):
+        close(
+            float(testnet_summary[summary_group][summary_field]),
+            float(testnet_claim[claim_field]),
+            f"Base Sepolia {claim_field}",
+        )
+    run_root = (
+        ROOT
+        / "results/raw/phase8/testnet"
+        / f"base_sepolia_vcp_v2_{testnet_claim['run_id']}"
+    )
+    testnet_config = json.loads((run_root / "config.json").read_text(encoding="utf-8"))
+    testnet_result = json.loads((run_root / "run_result.json").read_text(encoding="utf-8"))
+    transactions = list(csv.DictReader((run_root / "transactions.csv").open(newline="", encoding="utf-8")))
+    proofs = list(csv.DictReader((run_root / "proof_preparation.csv").open(newline="", encoding="utf-8")))
+    if testnet_config["r1cs_sha256"] != metadata["r1cs_sha256"]:
+        raise AssertionError("Base Sepolia/R1CS hash binding")
+    if testnet_config["verification_key_sha256"] != metadata["verification_key_sha256"]:
+        raise AssertionError("Base Sepolia/verification-key hash binding")
+    if any(row["status"] != "1" for row in transactions):
+        raise AssertionError("Base Sepolia transaction failure")
+    if any(row["verified"] != "1" for row in proofs):
+        raise AssertionError("Base Sepolia proof-preparation failure")
+    if len(testnet_result["addresses"]) != testnet_claim["contract_count"]:
+        raise AssertionError("Base Sepolia deployment address count")
+
+    manuscript = (ROOT / "Paper/main-new.tex").read_text(encoding="utf-8")
+    required_manuscript_claims = (
+        "$40{,}161$ constraints",
+        "$1.007$ s on average",
+        "$723$-byte median snarkjs JSON",
+        "$374{,}753$ gas at the median",
+        "$554{,}496$ gas at the median",
+        "$2.964$ s",
+        "$6{,}714{,}037$ gas",
+        "$29{,}517$ bytes of deployment calldata",
+    )
+    for text in required_manuscript_claims:
+        if text not in manuscript:
+            raise AssertionError(f"canonical manuscript claim missing: {text}")
+    forbidden_legacy_claims = (
+        "A two-rule VCP proof requires $176$",
+        "generates a $943$-byte VCP proof",
+        "requires $255{,}757$ gas for isolated verification",
+        "settlement consumes $471{,}163$ gas",
+        "$71.1\\%$--$90.3\\%$ lower prover latency",
+    )
+    for text in forbidden_legacy_claims:
+        if text in manuscript:
+            raise AssertionError(f"legacy claim remains in manuscript: {text}")
+    for figure in (
+        "figure_1a_deployment_resources.pdf",
+        "figure_1b_settlement_gas.pdf",
+        "figure_1c_settlement_fees.pdf",
+        "figure_2a_settlement_latency.pdf",
+    ):
+        figure_path = ROOT / "Paper/Figure/figures/base-sepolia" / figure
+        if not figure_path.exists() or figure_path.stat().st_size == 0:
+            raise AssertionError(f"missing Base Sepolia manuscript panel: {figure}")
+
     print(
         f"PASS: VCP v2 evidence verified ({len(retained)} measured runs, "
         f"{integration['tampered_public_fields_rejected']} tamper cases, "
-        f"{integration['atomic_settlements']} atomic settlements)"
+        f"{integration['atomic_settlements']} local atomic settlements, "
+        f"{testnet_claim['atomic_settlements']} Base Sepolia settlements)"
     )
 
 

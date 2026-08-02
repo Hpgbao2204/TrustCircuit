@@ -53,7 +53,7 @@ npm run phase7:e2e
 
 The VCP build retains the generated Solidity verifier at `contracts/VCPGroth16Verifier.sol` and a hash/dimension manifest at `zk/vcp_v2_metadata.json`. The local proving key, WASM, witness files, and development ceremony outputs remain ignored build artifacts. The metadata labels the deterministic local ceremony as development-only.
 
-The first Groth16 setup is intentionally long and can take roughly one to two hours on the verified Windows host. The build prints six pipeline checkpoints, streams verbose snarkjs output, reports numeric `x/y` substages as percentages, and emits a heartbeat every 30 seconds. Pipeline checkpoint percentages mean completed phases, not an ETA; substage percentages may restart when snarkjs moves to another internal operation. Completed setup and contribution phases have hash-checked local resume checkpoints, so a later interruption does not repeat a completed long phase.
+On the verified Windows host, a clean VCP build completed in about five minutes; allow roughly 5--15 minutes under normal load. A setup that remains at the same heartbeat for an hour should be investigated rather than treated as normal. The build prints six pipeline checkpoints, streams verbose snarkjs output, reports numeric `x/y` substages as percentages, and emits a heartbeat every 30 seconds. Pipeline checkpoint percentages mean completed phases, not an ETA; substage percentages may restart when snarkjs moves to another internal operation. Completed setup and contribution phases have hash-checked local resume checkpoints, so a later interruption does not repeat a completed long phase.
 
 Quickly validate the progress display and compile the 24-input R1CS without starting setup:
 
@@ -110,4 +110,7 @@ After a successful local VCP build and compile, smoke-test the final eight-contr
 ```powershell
 npm run testnet:base:smoke
 npm run testnet:base
+npm run testnet:base:process
 ```
+
+The retained final-stack campaign contains 135 successful transactions and 30 atomic settlements. It reports 554,496 gas at the settlement median (554,543 p95), 3.326976 micro-ETH median total fee, and 2.964 s median one-confirmation inclusion (3.196 s p95). Deploying the eight contracts consumed 6,714,037 gas and 29,517 bytes of calldata. The processor validates the campaign, writes canonical summaries, and regenerates the four Base Sepolia paper panels.
