@@ -1738,31 +1738,7 @@ We deployed the final eight-contract VCP suite once on Base Sepolia, chain ID 84
 \label{fig:base_sepolia_evaluation}
 \end{figure*}
 
-\begin{table}[!t]
-\centering
-\caption{Base Sepolia final-stack measurements.}
-\label{tab:base_sepolia_summary}
-\scriptsize
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrrr}
-\toprule
-Metric & Campaign total & p50 & p95 \\
-\midrule
-Contracts deployed & $8$ & -- & -- \\
-Successful transactions & $135/135$ & -- & -- \\
-Deployment gas & $6{,}714{,}037$ & -- & -- \\
-Deployment calldata (bytes) & $29{,}517$ & -- & -- \\
-Atomic-settlement gas & $n=30$ & $554{,}496$ & $554{,}543$ \\
-Settlement fee ($\mu\mathrm{ETH}$) & $n=30$ & $3.326976$ & $3.327258$ \\
-One-confirmation inclusion (s) & $n=30$ & $2.964$ & $3.196$ \\
-\bottomrule
-\end{tabular}%
-}
-\end{table}
-
 Figure~\ref{fig:testnet_deployment_resources} shows that deploying the eight-contract suite requires $6{,}714{,}037$ gas and $29{,}517$ bytes of deployment calldata. Individual costs range from $471{,}981$ gas for the audit ledger to $1{,}409{,}823$ gas for the settlement contract. The added validator registry and canonical VCP verifier are included in this total. These costs are incurred once and amortized across subsequent requests.
-
-Table~\ref{tab:base_sepolia_summary} summarizes the campaign without duplicating gas and fixed-price fee measurements as additional plots. All $135$ transactions succeeded, including $30$ atomic settlements containing real Groth16 proofs. Settlement consumes $554{,}496$ gas at the median and $554{,}543$ gas at the 95th percentile. Each accepted transaction checks request and validator context, verifies the proof, consumes the nullifier and reserved budget, completes the request, and records the audit transition atomically.
 
 The campaign used a fixed $6{,}000{,}000$-wei gas price. A valid settlement costs $3.326976~\mu\mathrm{ETH}$ at the median and $3.327258~\mu\mathrm{ETH}$ at the 95th percentile. Because testnet ETH has no market value, these values are reproducible fee observations rather than USD or mainnet cost forecasts.
 

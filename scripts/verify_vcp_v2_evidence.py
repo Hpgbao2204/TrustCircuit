@@ -167,7 +167,6 @@ def main() -> None:
         "$2.964$ s",
         "$6{,}714{,}037$ gas",
         "$29{,}517$ bytes of deployment calldata",
-        "\\label{tab:base_sepolia_summary}",
     )
     for text in required_manuscript_claims:
         if text not in manuscript:
