@@ -1729,18 +1729,18 @@ We deployed the final eight-contract VCP suite once on Base Sepolia, chain ID 84
 \hfill
 \begin{subfigure}[t]{0.48\columnwidth}
 \centering
-\includegraphics[width=\linewidth]{Figure/figures/base-sepolia/figure_1b_settlement_gas.pdf}
-\caption{Accepted-settlement gas by run.}
-\label{fig:testnet_settlement_gas}
+\includegraphics[width=\linewidth]{Figure/figures/base-sepolia/figure_1b_assurance_gas.pdf}
+\caption{Gas envelope by assurance boundary.}
+\label{fig:testnet_assurance_gas}
 \end{subfigure}
 
 \vspace{0.35em}
 
 \begin{subfigure}[t]{0.48\columnwidth}
 \centering
-\includegraphics[width=\linewidth]{Figure/figures/base-sepolia/figure_1c_lifecycle_gas.pdf}
-\caption{Gas composition of one request lifecycle.}
-\label{fig:testnet_lifecycle_gas}
+\includegraphics[width=\linewidth]{Figure/figures/base-sepolia/figure_1c_proof_settlement_latency.pdf}
+\caption{Proof and public-settlement latency.}
+\label{fig:testnet_proof_settlement_latency}
 \end{subfigure}
 \hfill
 \begin{subfigure}[t]{0.48\columnwidth}
@@ -1750,15 +1750,15 @@ We deployed the final eight-contract VCP suite once on Base Sepolia, chain ID 84
 \label{fig:testnet_settlement_latency}
 \end{subfigure}
 
-\caption{Final-stack TrustCircuit deployment and settlement on Base Sepolia. Panel (a) reports one-time deployment gas and calldata for all eight contracts. Panel (b) separates the first settlement from the recurring gas envelope. Panel (c) decomposes the median request lifecycle across its four state transitions. Panel (d) reports client-observed inclusion for $30$ accepted real-proof settlements.}
+\caption{Final-stack TrustCircuit deployment and settlement on Base Sepolia. Panel (a) reports one-time deployment gas and calldata for all eight contracts. Panel (b) shows the incremental gas envelope from isolated proof verification to atomic settlement and the full request lifecycle. Panel (c) compares off-chain proof work with public settlement inclusion. Panel (d) reports the per-request inclusion trace for $30$ accepted real-proof settlements.}
 \label{fig:base_sepolia_evaluation}
 \end{figure}
 
 Figure~\ref{fig:testnet_deployment_resources} shows that deploying the eight-contract suite requires $6{,}714{,}037$ gas and $29{,}517$ bytes of deployment calldata. Individual costs range from $471{,}981$ gas for the audit ledger to $1{,}409{,}823$ gas for the settlement contract. The added validator registry and canonical VCP verifier are included in this total. These costs are incurred once and amortized across subsequent requests.
 
-Figure~\ref{fig:testnet_settlement_gas} separates the first state-initializing settlement from recurring execution. The first accepted request uses $571{,}584$ gas, whereas the following $29$ executions have a $554{,}496$-gas median and remain within $554{,}460$--$554{,}552$ gas. The $3.1\%$ first-write overhead is therefore not presented as a temporal trend. Each accepted settlement verifies the real proof, checks request and validator context, consumes the nullifier and reserved budget, completes the request, and records the audit transition atomically.
+Figure~\ref{fig:testnet_assurance_gas} relates cost to the assurance boundary supplied by TrustCircuit. Isolated proof verification requires $374{,}753$ gas at the median. The atomic settlement envelope is $554{,}496$ gas, adding a $179{,}743$-gas residual for request and validator checks, nullifier and reserved-budget consumption, completion, and audit recording. Including access request, approval, and budget reservation produces a $1{,}036{,}608$-gas median lifecycle. The stacked decomposition combines the isolated-verifier benchmark with median Base Sepolia lifecycle operations; the settlement residual is a boundary-level difference rather than opcode-level profiling.
 
-Figure~\ref{fig:testnet_lifecycle_gas} instead shows where execution cost is incurred across an accepted request. At the median, access request, approval, reservation, and settlement use $279{,}532$, $33{,}318$, $169{,}262$, and $554{,}496$ gas, respectively, for a $1{,}036{,}608$-gas lifecycle total. Settlement accounts for $53.5\%$ of that total because it combines proof verification with the atomic state transitions. This composition excludes one-time deployment and coordinator setup.
+Figure~\ref{fig:testnet_proof_settlement_latency} compares the two recurring latency boundaries required for proof-backed public settlement. Groth16 full-proof generation takes $1.002$, $1.056$, and $1.330$ seconds at p50, mean, and p95, while off-chain verification remains below $11$ ms. Base Sepolia inclusion takes $2.964$, $2.840$, and $3.196$ seconds at the same summary points. Their component-wise sums are $3.975$, $3.904$, and $4.536$ seconds, respectively; these are composed measurement boundaries rather than percentiles of a single continuously timed trace.
 
 The campaign used a fixed $6{,}000{,}000$-wei gas price, so transaction fee is directly proportional to gas and is not plotted as a redundant panel. A valid settlement costs $3.326976~\mu\mathrm{ETH}$ at the median and $3.327258~\mu\mathrm{ETH}$ at the 95th percentile. Because testnet ETH has no market value, this is reported as a reproducible fee observation rather than a USD or mainnet cost forecast.
 

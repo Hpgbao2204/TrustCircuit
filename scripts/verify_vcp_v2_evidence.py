@@ -157,6 +157,52 @@ def main() -> None:
     if len(testnet_result["addresses"]) != testnet_claim["contract_count"]:
         raise AssertionError("Base Sepolia deployment address count")
 
+    def operation_values(suffix: str, field: str) -> list[float]:
+        return [float(row[field]) for row in transactions if row["operation"].endswith(suffix)]
+
+    access_gas = operation_values("_access", "gas_used")
+    approve_gas = operation_values("_approve", "gas_used")
+    reserve_gas = operation_values("_reserve", "gas_used")
+    settlement_rows = [row for row in transactions if row["operation"].endswith("_settle_vcp_v2")]
+    settlement_gas = [float(row["gas_used"]) for row in settlement_rows]
+    settlement_inclusion = [float(row["inclusion_latency_ms"]) for row in settlement_rows]
+    proof_generation = [float(row["prove_time_ms"]) for row in proofs]
+    proof_verification = [float(row["verify_time_ms"]) for row in proofs]
+    isolated_verifier_gas = percentile(gas, 0.50)
+    authorization_gas = percentile(access_gas, 0.50) + percentile(approve_gas, 0.50)
+    reservation_gas = percentile(reserve_gas, 0.50)
+    atomic_settlement_gas = percentile(settlement_gas, 0.50)
+    assurance = testnet_summary["assurance_gas_envelopes"]
+    close(
+        assurance["isolated_proof_verification"]["total"],
+        isolated_verifier_gas,
+        "isolated assurance envelope",
+    )
+    close(assurance["atomic_settlement"]["total"], atomic_settlement_gas, "atomic assurance envelope")
+    close(
+        assurance["full_request_lifecycle"]["total"],
+        authorization_gas + reservation_gas + atomic_settlement_gas,
+        "full lifecycle assurance envelope",
+    )
+    close(
+        assurance["atomic_settlement"]["atomic_state_updates_residual"],
+        atomic_settlement_gas - isolated_verifier_gas,
+        "atomic settlement residual",
+    )
+    latency = testnet_summary["proof_settlement_latency_composition_ms"]
+    for label, probability in (("p50", 0.50), ("p95", 0.95)):
+        expected_prove = percentile(proof_generation, probability)
+        expected_verify = percentile(proof_verification, probability)
+        expected_inclusion = percentile(settlement_inclusion, probability)
+        close(latency[label]["proof_generation_ms"], expected_prove, f"{label} proof generation")
+        close(latency[label]["offchain_verification_ms"], expected_verify, f"{label} off-chain verification")
+        close(latency[label]["settlement_inclusion_ms"], expected_inclusion, f"{label} settlement inclusion")
+        close(
+            latency[label]["component_sum_ms"],
+            expected_prove + expected_verify + expected_inclusion,
+            f"{label} composed latency",
+        )
+
     manuscript = (ROOT / "Paper/main-new.tex").read_text(encoding="utf-8")
     required_manuscript_claims = (
         "$40{,}161$ constraints",
@@ -167,6 +213,9 @@ def main() -> None:
         "$2.964$ s",
         "$6{,}714{,}037$ gas",
         "$29{,}517$ bytes of deployment calldata",
+        "$179{,}743$-gas residual",
+        "$1{,}036{,}608$-gas median lifecycle",
+        "$4.536$ seconds",
     )
     for text in required_manuscript_claims:
         if text not in manuscript:
@@ -183,8 +232,8 @@ def main() -> None:
             raise AssertionError(f"legacy claim remains in manuscript: {text}")
     for figure in (
         "figure_1a_deployment_resources.pdf",
-        "figure_1b_settlement_gas.pdf",
-        "figure_1c_lifecycle_gas.pdf",
+        "figure_1b_assurance_gas.pdf",
+        "figure_1c_proof_settlement_latency.pdf",
         "figure_2a_settlement_latency.pdf",
     ):
         figure_path = ROOT / "Paper/Figure/figures/base-sepolia" / figure

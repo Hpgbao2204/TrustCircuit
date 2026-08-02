@@ -121,7 +121,7 @@
     },
     {
       "file": "results/summary/base_sepolia_vcp_v2_summary.json",
-      "sha256": "a3be2c9afcbc809dfe5fb7ff3da2185086ad4ada106e6b20d4561c1e4fccd83f"
+      "sha256": "efbcf65ce09186e5092676c5c38e87d3937fd788870396b3c52183366a06a8e0"
     },
     {
       "file": "results/summary/base_sepolia_vcp_v2_deployments.csv",
