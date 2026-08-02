@@ -66,7 +66,7 @@
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Organizations increasingly reuse sensitive data across administrative boundaries, but granting access is not enough: each subsequent computation must remain tied to the approved policy, privacy budget, execution context, and audit record. Existing systems typically secure these decisions separately, allowing evidence from different stages to be valid in isolation without proving that it belongs to the same data-use request. We present TrustCircuit, a blockchain-orchestrated protocol that turns each data use into a request-indexed state transition. Its central contribution is the Verifiable Compliance Protocol (VCP), which binds the active policy, reserved and consumed privacy budget, validated execution context, released-result commitment, replay-prevention nullifier, and audit transition into one settlement statement. Building this lifecycle requires reconciling three mismatches: real-valued privacy accounting with deterministic ledger state, platform-specific attestation with compact proof inputs, and policy evolution with circuit-specific setup. TrustCircuit addresses them through conservative budget translation, a canonical attestation statement, and a policy-parameterized proof relation reusable within a fixed policy family. VCP targets the encoded lifecycle relation; native attestation validation and arbitrary program semantics remain outside the proof. The canonical two-rule VCP v2 relation has $40{,}161$ constraints and $24$ public inputs. Across $30$ retained runs after two warm-ups, Groth16 proving requires $1.007$ s on average, produces a $256$-byte A/B/C ABI object ($723$-byte median snarkjs JSON), and consumes $374{,}753$ gas at the median for isolated verification. On Base Sepolia, $30$ real-proof settlements through the final eight-contract stack consume $554{,}496$ gas at the median and reach inclusion in $2.964$ s.
+Organizations increasingly reuse sensitive data across administrative boundaries, but granting access is not enough: each subsequent computation must remain tied to the approved policy, privacy budget, execution context, and audit record. Existing systems typically secure these decisions separately, allowing evidence from different stages to be valid in isolation without proving that it belongs to the same data-use request. We present TrustCircuit, a blockchain-orchestrated protocol that turns each data use into a request-indexed state transition. Its central contribution is the Verifiable Compliance Protocol (VCP), which binds the active policy, reserved and consumed privacy budget, validated execution context, released-result commitment, replay-prevention nullifier, and audit transition into one settlement statement. Building this lifecycle requires reconciling three mismatches: real-valued privacy accounting with deterministic ledger state, platform-specific attestation with compact proof inputs, and policy evolution with circuit-specific setup. TrustCircuit addresses them through conservative budget translation, a canonical attestation statement, and a policy-parameterized proof relation reusable within a fixed policy family. VCP targets the encoded lifecycle relation; native attestation validation and arbitrary program semantics remain outside the proof. The canonical two-rule VCP relation has $40{,}161$ constraints and $24$ public inputs. Across $30$ retained runs after two warm-ups, Groth16 proving requires $1.007$ s on average, produces a $256$-byte A/B/C ABI object ($723$-byte median snarkjs JSON), and consumes $374{,}753$ gas at the median for isolated verification. On Base Sepolia, $30$ real-proof settlements through the final eight-contract stack consume $554{,}496$ gas at the median and reach inclusion in $2.964$ s.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -106,7 +106,7 @@ The main contributions are as follows:
 
     \item We develop a conservative fixed-point interface for off-chain R\'enyi accounting and a policy-parameterized circuit that reuses one Groth16 setup across fixed-dimension policy updates.
 
-    \item We implement and evaluate TrustCircuit using AC17/FAME, AWS Nitro Enclaves, Circom, Solidity, and Base Sepolia. The canonical VCP v2 proves in $1.007$~s on average and uses a $256$-byte A/B/C ABI object; all $24$ public-field mutations are rejected, and two distinct policy matrices verify with one key. Thirty final-stack Base Sepolia settlements consume $554{,}496$ gas at the median and reach inclusion in $2.964$~s.
+    \item We implement and evaluate TrustCircuit using AC17/FAME, AWS Nitro Enclaves, Circom, Solidity, and Base Sepolia. The canonical VCP proves in $1.007$~s on average and uses a $256$-byte A/B/C ABI object; all $24$ public-field mutations are rejected, and two distinct policy matrices verify with one key. Thirty final-stack Base Sepolia settlements consume $554{,}496$ gas at the median and reach inclusion in $2.964$~s.
 \end{itemize}
 
 The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews recent work on blockchain-based data sharing, confidential computation, attestation, and verifiable privacy. Section~\ref{sec:preliminaries} introduces the design foundations and cross-domain representations used by TrustCircuit. Section~\ref{sec:method} presents the request lifecycle, attestation bridge, VCP relation, and privacy-budget mechanism. Section~\ref{sec:security} analyzes the protocol guarantees and trust assumptions. Section~\ref{sec:evaluation} reports the controlled, Nitro-backed, comparative, and public-testnet evaluations. Section~\ref{sec:discussion} discusses limitations, and Section~\ref{sec:conclusion} concludes the paper.
@@ -1417,13 +1417,13 @@ Deployment profiles & TC-Lite, TC-Protected, and TC-Full under a common request 
 \subsection{Deployment Profiles and End-to-End Performance}
 \label{subsec:e2e_performance}
 
-To determine whether every deployment requires the complete privacy stack, we retain a component-level ablation over three profiles under a common request workload. \textsf{TC-Lite} exercises authorization, lifecycle state, and audit recording; although CP-ABE and AES-GCM are implemented and benchmarked separately, their payload work is outside the $6.3$-ms profile. \textsf{TC-Protected} adds prepared trusted-processor timings, reference privacy accounting, and on-chain privacy-budget settlement. \textsf{TC-Full} adds the legacy proof-stage measurement, nullifier binding, and on-chain proof verification. These profiles represent increasing assurance levels, but they predate the canonical $24$-input VCP v2 benchmark and are not used as its end-to-end latency claim.
+To determine whether every deployment requires the complete privacy stack, we retain a component-level ablation over three profiles under a common request workload. \textsf{TC-Lite} exercises authorization, lifecycle state, and audit recording; although CP-ABE and AES-GCM are implemented and benchmarked separately, their payload work is outside the $6.3$-ms profile. \textsf{TC-Protected} adds prepared trusted-processor timings, reference privacy accounting, and on-chain privacy-budget settlement. \textsf{TC-Full} adds the legacy proof-stage measurement, nullifier binding, and on-chain proof verification. These profiles represent increasing assurance levels, but they predate the canonical $24$-input VCP benchmark and are not used as its end-to-end latency claim.
 
 Figure~\ref{fig:deployment_profiles} reports this retained measured/composed cost study. Serialized latency increases from $6.3$~ms for \textsf{TC-Lite} to $148.0$~ms for \textsf{TC-Protected} and $378.6$~ms for the legacy \textsf{TC-Full} profile. The profile combines a prepared trusted-processor bundle, proof generation, and local transactions; it is not one continuously live orchestration trace. Its additional latency is concentrated in proof generation rather than registry, budget, settlement, or audit processing.
 
 Figure~\ref{fig:deployment_profile_throughput_gas} reports serialized request capacity and the integrated gas envelope exercised by each profile. Serialized capacity is derived from the measured critical path and does not represent aggregate concurrent throughput. It reaches $159.84$~req/s for \textsf{TC-Lite}, $6.84$~req/s for \textsf{TC-Protected}, and $2.65$~req/s for \textsf{TC-Full}. The corresponding profile gas envelopes are approximately $0.43$, $0.69$, and $1.37$ million gas.
 
-For the retained \textsf{TC-Full} profile, the $1.37$-million-gas value is the mean aggregate gas over $30$ non-warm-up runs. Each run comprises seven top-level transactions: \texttt{registerAssetV2}, \texttt{registerBudget}, \texttt{requestAccessV2}, \texttt{approveRequest}, \texttt{reserveBudgetForRequest}, \texttt{registerExpectation}, and \texttt{settle}. The final \texttt{settle} call performs context validation, proof verification, nullifier consumption, budget consumption, request completion, and audit recording. Contract deployment and off-chain TEE and proving work are excluded from this gas envelope; Section~\ref{subsec:public_testnet} separately measures the final VCP v2 stack.
+For the retained \textsf{TC-Full} profile, the $1.37$-million-gas value is the mean aggregate gas over $30$ non-warm-up runs. Each run comprises seven top-level transactions for asset registration, budget registration, access request, approval, budget reservation, expectation registration, and settlement. The final settlement call performs context validation, proof verification, nullifier consumption, budget consumption, request completion, and audit recording. Contract deployment and off-chain TEE and proving work are excluded from this gas envelope; Section~\ref{subsec:public_testnet} separately measures the final VCP stack.
 
 Figure~\ref{fig:deployment_profile_resources} shows that stronger profiles increase CPU demand without increasing the measured peak resident set. Mean CPU utilization ranges from $26.1\%$ to $39.8\%$, while peak RSS remains $1.17$~GiB across the three profiles. The stable peak reflects the shared runtime and trusted-processing allocation, whereas the additional assurance mechanisms primarily affect CPU demand and latency.
 
@@ -1454,14 +1454,14 @@ Figure~\ref{fig:deployment_profile_resources} shows that stronger profiles incre
 \label{fig:deployment_profile_resources}
 \end{subfigure}
 
-\caption{Retained component-profile cost and assurance trade-offs. TC-Lite excludes CP-ABE/AES payload work; TC-Protected adds prepared trusted-processing and privacy-accounting components; TC-Full adds the legacy proof stage. These profiles predate the canonical VCP v2 measurement.}
+\caption{Retained component-profile cost and assurance trade-offs. TC-Lite excludes CP-ABE/AES payload work; TC-Protected adds prepared trusted-processing and privacy-accounting components; TC-Full adds the legacy proof stage. These profiles predate the canonical VCP measurement.}
 \label{fig:deployment_profiles}
 \end{figure*}
 
 \subsection{Component Costs and Cryptographic Scaling}
 \label{subsec:cost_breakdown}
 
-We separate three measurement boundaries: component-level EVM state transitions, compliance-proof generation and verification, and off-chain privacy and encryption costs. Figure~\ref{fig:deployment_profiles} reports retained component profiles, Table~\ref{tab:onchain_lifecycle_cost} reports individual lifecycle operations without the exported verifier, and Table~\ref{tab:zk_compliance_cost} reports the canonical Groth16 VCP v2 boundary. These workloads should not be added or interpreted as interchangeable end-to-end totals.
+We separate three measurement boundaries: component-level EVM state transitions, compliance-proof generation and verification, and off-chain privacy and encryption costs. Figure~\ref{fig:deployment_profiles} reports retained component profiles, Table~\ref{tab:onchain_lifecycle_cost} reports individual lifecycle operations without the exported verifier, and Table~\ref{tab:zk_compliance_cost} reports the canonical Groth16 VCP boundary. These workloads should not be added or interpreted as interchangeable end-to-end totals.
 
 \subsubsection{Lifecycle EVM State Costs}
 
@@ -1493,15 +1493,15 @@ The largest component costs arise from \texttt{registerAsset}, \texttt{requestAc
 \end{tabular}
 \end{table}
 
-The verifier is excluded because its cost is evaluated independently below. Table~\ref{tab:onchain_lifecycle_cost} is a component benchmark and should not be used to reconstruct the integrated profile in Fig.~\ref{fig:deployment_profiles}: it uses the simpler \texttt{registerAsset} and \texttt{requestAccess} entry points, standalone budget operations, and a mock proof-metadata call. In contrast, the integrated profile uses context-rich V2 calls, persists the full expectation state, and performs proof verification, nullifier consumption, budget transition, request completion, and audit recording inside the final settlement path. The Base Sepolia experiment in Section~\ref{subsec:public_testnet} measures yet another boundary: one atomic settlement transaction.
+The verifier is excluded because its cost is evaluated independently below. Table~\ref{tab:onchain_lifecycle_cost} is a component benchmark and should not be used to reconstruct the integrated profile in Fig.~\ref{fig:deployment_profiles}: it uses simpler registration and access-request entry points, standalone budget operations, and a mock proof-metadata call. In contrast, the integrated profile uses context-rich registration and request calls, persists the full expectation state, and performs proof verification, nullifier consumption, budget transition, request completion, and audit recording inside the final settlement path. The Base Sepolia experiment in Section~\ref{subsec:public_testnet} measures yet another boundary: one atomic settlement transaction.
 
-\subsubsection{Canonical VCP v2 Cost}
+\subsubsection{Canonical VCP Cost}
 
 Table~\ref{tab:zk_compliance_cost} reports the canonical $2\times2$ policy-family circuit used by settlement. The benchmark uses two warm-ups followed by $30$ retained proofs. Prove-only time excludes witness generation; the full proving boundary includes both. The $256$-byte ABI value counts only Groth16 $A/B/C$, while the $24$ public signals remain separate verifier arguments.
 
 \begin{table}[!t]
 \centering
-\caption{Canonical VCP v2 proof costs. Gas denotes the isolated exported-verifier transaction and excludes lifecycle state transitions.}
+\caption{Canonical VCP proof costs. Gas denotes the isolated exported-verifier transaction and excludes lifecycle state transitions.}
 \label{tab:zk_compliance_cost}
 \scriptsize
 \resizebox{\columnwidth}{!}{%
@@ -1525,7 +1525,7 @@ Isolated verifier gas, p50 / p95 & $374{,}753/374{,}765$ \\
 }
 \end{table}
 
-The generated R1CS, verification key, verifier, and benchmark rows are hash-bound in the VCP v2 evidence manifest. A real-proof integration test verifies two distinct policy matrices with the same key, settles both requests atomically, and rejects a mutation of each of the $24$ public fields. This demonstrates setup reuse within the fixed $2\times2$ policy family and request-wide public-input binding; it does not claim reuse across changed circuit dimensions.
+The generated R1CS, verification key, verifier, and benchmark rows are hash-bound in the VCP evidence manifest. A real-proof integration test verifies two distinct policy matrices with the same key, settles both requests atomically, and rejects a mutation of each of the $24$ public fields. This demonstrates setup reuse within the fixed $2\times2$ policy family and request-wide public-input binding; it does not claim reuse across changed circuit dimensions.
 
 The measured path evaluates Poseidon commitments inside $\mathcal{R}_{\mathrm{VCP}}$ and uses Keccak-256 for EVM-native bookkeeping; independent Solidity-level Poseidon recomputation is outside this measurement boundary.
 
@@ -1550,7 +1550,7 @@ Because CP-ABE encapsulates only the AES payload key, its cost depends on policy
 \begin{subfigure}[t]{0.48\columnwidth}
 \centering
 \includegraphics[width=\linewidth]
-{Figure/figures/abe/ab1_policy_time_revised_v2.pdf}
+{Figure/figures/abe/ab1_policy_time_revised.pdf}
 \caption{Full CP-ABE and KEM--DEM scaling.}
 \label{fig:abe_policy_scaling}
 \end{subfigure}
@@ -1715,7 +1715,7 @@ These results characterize the sensitivity of secondary protocol-level checks ar
 \subsection{Public Testnet Deployment and Settlement}
 \label{subsec:public_testnet}
 
-We deployed the final eight-contract VCP v2 suite once on Base Sepolia, chain ID 84532, and submitted $30$ valid request lifecycles containing real $24$-input Groth16 proofs. The campaign comprises $135$ successful transactions and ends with exactly $12{,}000{,}000$ fixed-point budget units consumed ($30\times400{,}000$). Public-testnet measurements cover deployment, valid settlement, total transaction fee, and one-confirmation inclusion. Context substitution, tampered inputs, invalid proofs, and replay rejection are evaluated separately by the local real-proof and contract test suites rather than attributed to this public campaign.
+We deployed the final eight-contract VCP suite once on Base Sepolia, chain ID 84532, and submitted $30$ valid request lifecycles containing real $24$-input Groth16 proofs. The campaign comprises $135$ successful transactions and ends with exactly $12{,}000{,}000$ fixed-point budget units consumed ($30\times400{,}000$). Public-testnet measurements cover deployment, valid settlement, total transaction fee, and one-confirmation inclusion. Context substitution, tampered inputs, invalid proofs, and replay rejection are evaluated separately by the local real-proof and contract test suites rather than attributed to this public campaign.
 
 \begin{figure}[!t]
 \centering
@@ -1738,9 +1738,9 @@ We deployed the final eight-contract VCP v2 suite once on Base Sepolia, chain ID
 
 \begin{subfigure}[t]{0.48\columnwidth}
 \centering
-\includegraphics[width=\linewidth]{Figure/figures/base-sepolia/figure_1c_settlement_fees.pdf}
-\caption{Accepted-settlement total fee.}
-\label{fig:testnet_settlement_fees}
+\includegraphics[width=\linewidth]{Figure/figures/base-sepolia/figure_1c_lifecycle_gas.pdf}
+\caption{Gas composition of one request lifecycle.}
+\label{fig:testnet_lifecycle_gas}
 \end{subfigure}
 \hfill
 \begin{subfigure}[t]{0.48\columnwidth}
@@ -1750,15 +1750,17 @@ We deployed the final eight-contract VCP v2 suite once on Base Sepolia, chain ID
 \label{fig:testnet_settlement_latency}
 \end{subfigure}
 
-\caption{Final-stack TrustCircuit deployment and settlement on Base Sepolia. Panel (a) reports one-time deployment gas and calldata for all eight contracts. Panels (b)--(d) report gas, total fee, and client-observed inclusion for $30$ accepted real-proof settlements; horizontal guides mark p50 and p95.}
+\caption{Final-stack TrustCircuit deployment and settlement on Base Sepolia. Panel (a) reports one-time deployment gas and calldata for all eight contracts. Panel (b) separates the first settlement from the recurring gas envelope. Panel (c) decomposes the median request lifecycle across its four state transitions. Panel (d) reports client-observed inclusion for $30$ accepted real-proof settlements.}
 \label{fig:base_sepolia_evaluation}
 \end{figure}
 
 Figure~\ref{fig:testnet_deployment_resources} shows that deploying the eight-contract suite requires $6{,}714{,}037$ gas and $29{,}517$ bytes of deployment calldata. Individual costs range from $471{,}981$ gas for the audit ledger to $1{,}409{,}823$ gas for the settlement contract. The added validator registry and canonical VCP verifier are included in this total. These costs are incurred once and amortized across subsequent requests.
 
-Figure~\ref{fig:testnet_settlement_gas} shows that atomic request-bound settlement consumes $554{,}496$ gas at the median and $554{,}543$ gas at the 95th percentile. The first accepted request uses $571{,}584$ gas; the following $29$ executions remain tightly grouped around $554.5$K gas. Each accepted transaction verifies the real proof, checks request and validator context, consumes the nullifier and reserved budget, completes the request, and records the audit transition atomically.
+Figure~\ref{fig:testnet_settlement_gas} separates the first state-initializing settlement from recurring execution. The first accepted request uses $571{,}584$ gas, whereas the following $29$ executions have a $554{,}496$-gas median and remain within $554{,}460$--$554{,}552$ gas. The $3.1\%$ first-write overhead is therefore not presented as a temporal trend. Each accepted settlement verifies the real proof, checks request and validator context, consumes the nullifier and reserved budget, completes the request, and records the audit transition atomically.
 
-Because testnet ETH has no market value, Figure~\ref{fig:testnet_settlement_fees} reports measured fee units without assigning a USD price. A valid settlement costs $3.326976~\mu\mathrm{ETH}$ at the median and $3.327258~\mu\mathrm{ETH}$ at the 95th percentile under the observed $6{,}000{,}000$-wei gas price. Thus, $1{,}000$ executions at the same testnet fee regime would consume approximately $0.003327$ test ETH. This is a reproducible public-testnet fee observation, not a mainnet cost forecast.
+Figure~\ref{fig:testnet_lifecycle_gas} instead shows where execution cost is incurred across an accepted request. At the median, access request, approval, reservation, and settlement use $279{,}532$, $33{,}318$, $169{,}262$, and $554{,}496$ gas, respectively, for a $1{,}036{,}608$-gas lifecycle total. Settlement accounts for $53.5\%$ of that total because it combines proof verification with the atomic state transitions. This composition excludes one-time deployment and coordinator setup.
+
+The campaign used a fixed $6{,}000{,}000$-wei gas price, so transaction fee is directly proportional to gas and is not plotted as a redundant panel. A valid settlement costs $3.326976~\mu\mathrm{ETH}$ at the median and $3.327258~\mu\mathrm{ETH}$ at the 95th percentile. Because testnet ETH has no market value, this is reported as a reproducible fee observation rather than a USD or mainnet cost forecast.
 
 Figure~\ref{fig:testnet_settlement_latency} shows that valid settlement reaches one-confirmation inclusion in $2.964$ seconds at the median and $3.196$ seconds at the 95th percentile. Proofs are prepared and verified off-chain before transaction submission, so these values measure broadcast-to-inclusion rather than proof generation. The campaign demonstrates that request validation, Groth16 verification, nullifier consumption, budget consumption, completion, and audit recording execute successfully within one public-testnet transaction.
 
@@ -1767,15 +1769,15 @@ Figure~\ref{fig:testnet_settlement_latency} shows that valid settlement reaches 
 
 We compare TrustCircuit with representative systems only at the closest recurring operation reported in each original evaluation: proof generation, trusted execution, or ledger-backed verification. These boundaries differ in statement scope, hardware, serialization, and deployment environment; the comparisons provide scale, not interchangeable end-to-end rankings.
 
-\textit{Comparison with VLDP:} VLDP attaches a non-interactive proof to each locally randomized report~\cite{bontekoe2024efficient}. Its Base, Expand, and Shuffle configurations require $55{,}884$--$174{,}095$ constraints and $0.610$--$1.821$~s for the proof-bearing client step. VCP v2 uses $40{,}161$ constraints, $28.1\%$--$76.9\%$ fewer than that reported range, while its $1.007$-s mean prove-only time lies within VLDP's published latency range. The systems prove different relations, so this is not a universal prover-speed claim.
+\textit{Comparison with VLDP:} VLDP attaches a non-interactive proof to each locally randomized report~\cite{bontekoe2024efficient}. Its Base, Expand, and Shuffle configurations require $55{,}884$--$174{,}095$ constraints and $0.610$--$1.821$~s for the proof-bearing client step. VCP uses $40{,}161$ constraints, $28.1\%$--$76.9\%$ fewer than that reported range, while its $1.007$-s mean prove-only time lies within VLDP's published latency range. The systems prove different relations, so this is not a universal prover-speed claim.
 
-\textit{Comparison with VerifBFL:} VerifBFL reports $2.189$~s and a $35.4$~KB proof for aggregation of five local models~\cite{bellachia2025verifbfl}. Against those published values, VCP v2's $1.007$-s prove-only mean is approximately $2.17\times$ faster, and its $723$-byte median snarkjs proof JSON is approximately $49\times$ smaller. VCP instead proves a request-lifecycle relation and binds the accepted proof to the current request, reserved budget, execution context, nullifier, and audit transition; the ratios therefore compare serialization and proving boundaries, not identical statements.
+\textit{Comparison with VerifBFL:} VerifBFL reports $2.189$~s and a $35.4$~KB proof for aggregation of five local models~\cite{bellachia2025verifbfl}. Against those published values, VCP's $1.007$-s prove-only mean is approximately $2.17\times$ faster, and its $723$-byte median snarkjs proof JSON is approximately $49\times$ smaller. VCP instead proves a request-lifecycle relation and binds the accepted proof to the current request, reserved budget, execution context, nullifier, and audit transition; the ratios therefore compare serialization and proving boundaries, not identical statements.
 
-\textit{Comparison with Veracruz:} Veracruz reports approximately $2.7$~s of fixed Nitro initialization~\cite{brossard2023private}. TrustCircuit likewise separates provisioning from recurring work. The retained measured/composed legacy \textsf{TC-Full} profile is $378.6$~ms, while the canonical VCP v2 prove-only boundary is $1.007$~s. Native attestation generation contributes a median $1.88$~ms in the retained Nitro experiment. These are component boundaries rather than one continuous final-stack trace.
+\textit{Comparison with Veracruz:} Veracruz reports approximately $2.7$~s of fixed Nitro initialization~\cite{brossard2023private}. TrustCircuit likewise separates provisioning from recurring work. The retained measured/composed legacy \textsf{TC-Full} profile is $378.6$~ms, while the canonical VCP prove-only boundary is $1.007$~s. Native attestation generation contributes a median $1.88$~ms in the retained Nitro experiment. These are component boundaries rather than one continuous final-stack trace.
 
 \textit{Comparison with ProMark and VPrivKV:} ProMark generates campaign tokens in $0.01$--$0.05$~s but defers campaign-wide verification, which requires $66.39$--$501.96$~min in its largest reported workloads~\cite{hoang2024promark}. TrustCircuit instead settles every accepted data-use request individually. On Base Sepolia, one final-stack atomic settlement performs context checking, proof verification, nullifier consumption, budget consumption, completion, and audit recording for $554{,}496$ gas at the median, with $2.964$~s median inclusion. VPrivKV verifies sampling and perturbation for individual key--value reports~\cite{zhou2025vprivkv}; TrustCircuit's implemented boundary instead focuses on request-bound ledger state and replay-safe settlement across repeated requests.
 
-The comparison places VCP v2 within VLDP's reported prover-time range and below the cited VerifBFL aggregation boundary, while adding request-level settlement that neither isolated proof generation nor deferred campaign verification captures.
+The comparison places VCP within VLDP's reported prover-time range and below the cited VerifBFL aggregation boundary, while adding request-level settlement that neither isolated proof generation nor deferred campaign verification captures.
 \section{Limitations}
 \label{sec:discussion}
 
@@ -1790,7 +1792,7 @@ Finally, the privacy and compliance guarantees apply only to the mechanisms and 
 \section{Conclusion}
 \label{sec:conclusion}
 
-TrustCircuit introduces a request-specific lifecycle for accountable privacy-preserving data circulation, binding authorization, privacy-budget reservation and consumption, validated execution context, result commitment, replay-prevention nullifier, proof verification, and audit settlement to the same asset, consumer, request, and policy version. The protocol contributes a conservative fixed-point interface for off-chain R\'enyi accounting, a canonical attestation bridge, and a policy-parameterized VCP relation reusable across a bounded policy family. For the canonical two-rule VCP v2, Groth16 proves in $1.007$~s on average, emits a $256$-byte A/B/C ABI object ($723$-byte median snarkjs JSON), and requires $374{,}753$ gas at the median for isolated verification. On Base Sepolia, $30$ atomic request-bound settlements through the final eight-contract stack consume $554{,}496$ gas at the median and reach inclusion in $2.964$~s. These results show that request-level policy, privacy, execution, replay, and audit constraints can be coordinated within a practical public Layer-2 settlement path. VCP proves consistency of the encoded request lifecycle; it does not prove arbitrary off-chain computation correctness, internal differential-privacy sampling correctness, native attestation validity, or legal compliance.
+TrustCircuit introduces a request-specific lifecycle for accountable privacy-preserving data circulation, binding authorization, privacy-budget reservation and consumption, validated execution context, result commitment, replay-prevention nullifier, proof verification, and audit settlement to the same asset, consumer, request, and policy version. The protocol contributes a conservative fixed-point interface for off-chain R\'enyi accounting, a canonical attestation bridge, and a policy-parameterized VCP relation reusable across a bounded policy family. For the canonical two-rule VCP, Groth16 proves in $1.007$~s on average, emits a $256$-byte A/B/C ABI object ($723$-byte median snarkjs JSON), and requires $374{,}753$ gas at the median for isolated verification. On Base Sepolia, $30$ atomic request-bound settlements through the final eight-contract stack consume $554{,}496$ gas at the median and reach inclusion in $2.964$~s. These results show that request-level policy, privacy, execution, replay, and audit constraints can be coordinated within a practical public Layer-2 settlement path. VCP proves consistency of the encoded request lifecycle; it does not prove arbitrary off-chain computation correctness, internal differential-privacy sampling correctness, native attestation validity, or legal compliance.
 
 Future work will extend TrustCircuit toward production-oriented and more heterogeneous deployments. We plan to evaluate the protocol across additional deployment models, privacy workloads, proof configurations, policy structures, and trusted-execution platforms, including directly measured multi-host processor pools and at least one non-Nitro TEE. Further work will investigate threshold attestation validators, auditable native-evidence retention, validator key rotation and compromise recovery, CP-ABE revocation and ciphertext re-wrapping, explicit batch-attestation protocols, invalid-proof mitigation, and longer-running Layer-2 experiments under varied fee and congestion conditions. These extensions will test the portability, scalability, and operational resilience of the request-indexed lifecycle beyond the current prototype.
 

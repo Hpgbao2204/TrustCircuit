@@ -180,6 +180,82 @@ def plot_series(
     save(fig, name)
 
 
+def plot_settlement_gas(values: list[float]) -> None:
+    """Contrast the one-time first write with the recurring settlement envelope."""
+    first = values[0]
+    recurring = values[1:]
+    recurring_median = percentile(recurring, 0.50)
+    recurring_min = min(recurring)
+    recurring_max = max(recurring)
+    plotted = np.array([first, recurring_median]) / 1000
+    labels = ["First settlement", "Recurring median\n(29 settlements)"]
+
+    fig, axis = plt.subplots(figsize=(4.6, 3.5))
+    bars = axis.barh(labels, plotted, height=0.52, color=[PALETTE[1], PALETTE[0]], alpha=0.9)
+    axis.errorbar(
+        recurring_median / 1000,
+        1,
+        xerr=np.array([[(recurring_median - recurring_min) / 1000], [(recurring_max - recurring_median) / 1000]]),
+        fmt="none",
+        ecolor="#263238",
+        elinewidth=1.5,
+        capsize=4,
+        label="Recurring min--max",
+    )
+    axis.set_xlabel("Gas used (thousands)")
+    axis.set_xlim(0, 620)
+    axis.grid(axis="y", visible=False)
+    axis.bar_label(bars, labels=[f"{value:,.3f}K" for value in plotted], padding=-58, color="white", fontweight="bold")
+    overhead = (first / recurring_median - 1) * 100
+    axis.text(
+        0.98,
+        0.50,
+        f"First-write overhead: {overhead:.1f}%  |  Recurring range: {recurring_min / 1000:,.3f}--{recurring_max / 1000:,.3f}K",
+        transform=axis.transAxes,
+        ha="right",
+        va="center",
+        fontsize=7.8,
+        color="#37474F",
+    )
+    save(fig, "figure_1b_settlement_gas")
+
+
+def plot_lifecycle_gas(stage_values: dict[str, list[float]]) -> None:
+    """Show where gas is spent across a complete accepted request lifecycle."""
+    stage_order = ["Access", "Approve", "Reserve", "Settle"]
+    medians = np.array([percentile(stage_values[stage], 0.50) for stage in stage_order])
+    total = float(sum(medians))
+    shares = medians / total * 100
+    y = np.arange(len(stage_order))
+
+    fig, axis = plt.subplots(figsize=(4.6, 3.5))
+    bars = axis.barh(y, medians / 1000, height=0.58, color=PALETTE[:4], alpha=0.9)
+    axis.set_yticks(y, stage_order)
+    axis.invert_yaxis()
+    axis.set_xlabel("Median gas used (thousands)")
+    axis.grid(axis="y", visible=False)
+    axis.set_xlim(0, max(medians / 1000) * 1.32)
+    for bar, value, share in zip(bars, medians, shares):
+        axis.text(
+            bar.get_width() + 7,
+            bar.get_y() + bar.get_height() / 2,
+            f"{value / 1000:,.1f}K  ({share:.1f}%)",
+            va="center",
+            fontsize=8.3,
+        )
+    axis.text(
+        0.98,
+        0.97,
+        f"Median lifecycle total: {total / 1e6:.3f}M gas",
+        transform=axis.transAxes,
+        ha="right",
+        va="top",
+        fontsize=8.2,
+        color="#37474F",
+    )
+    save(fig, "figure_1c_lifecycle_gas")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-dir", type=Path, default=None)
@@ -236,6 +312,20 @@ def main() -> None:
     inclusion_ms = [float(row["inclusion_latency_ms"]) for row in settlement_rows]
     prove_ms = [float(row["prove_time_ms"]) for row in proof_rows]
     verify_ms = [float(row["verify_time_ms"]) for row in proof_rows]
+    lifecycle_patterns = {
+        "Access": r"request_\d+_access",
+        "Approve": r"request_\d+_approve",
+        "Reserve": r"request_\d+_reserve",
+        "Settle": r"request_\d+_settle_vcp_v2",
+    }
+    lifecycle_values = {
+        stage: [float(row["gas_used"]) for row in rows if re.fullmatch(pattern, row["operation"])]
+        for stage, pattern in lifecycle_patterns.items()
+    }
+    if any(len(values) != 30 for values in lifecycle_values.values()):
+        raise AssertionError("expected 30 measurements for every request-lifecycle stage")
+    lifecycle_stats = {stage: stats(values) for stage, values in lifecycle_values.items()}
+    lifecycle_stats["median_total"] = sum(stage["p50"] for stage in lifecycle_stats.values())
     summary = {
         "schema": "TrustCircuit.BaseSepoliaVCPv2Summary.v1",
         "measurement_type": "measured_public_testnet",
@@ -251,6 +341,7 @@ def main() -> None:
         "settlement_gas": stats(gas),
         "settlement_fee_micro_eth": stats(fee_micro_eth),
         "settlement_inclusion_ms": stats(inclusion_ms),
+        "request_lifecycle_gas": lifecycle_stats,
         "offchain_prove_ms": stats(prove_ms),
         "offchain_verify_ms": stats(verify_ms),
         "raw_sha256": {
@@ -272,13 +363,8 @@ def main() -> None:
 
     apply_style()
     plot_deployments(deployments)
-    plot_series(gas, summary["settlement_gas"], "Gas used (thousands)", "figure_1b_settlement_gas", 1000)
-    plot_series(
-        fee_micro_eth,
-        summary["settlement_fee_micro_eth"],
-        "Total fee (micro-ETH)",
-        "figure_1c_settlement_fees",
-    )
+    plot_settlement_gas(gas)
+    plot_lifecycle_gas(lifecycle_values)
     plot_series(
         inclusion_ms,
         summary["settlement_inclusion_ms"],

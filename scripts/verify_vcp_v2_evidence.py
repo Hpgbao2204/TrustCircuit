@@ -184,7 +184,7 @@ def main() -> None:
     for figure in (
         "figure_1a_deployment_resources.pdf",
         "figure_1b_settlement_gas.pdf",
-        "figure_1c_settlement_fees.pdf",
+        "figure_1c_lifecycle_gas.pdf",
         "figure_2a_settlement_latency.pdf",
     ):
         figure_path = ROOT / "Paper/Figure/figures/base-sepolia" / figure
