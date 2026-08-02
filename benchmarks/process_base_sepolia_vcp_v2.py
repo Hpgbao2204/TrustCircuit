@@ -180,89 +180,6 @@ def plot_series(
     save(fig, name)
 
 
-def plot_assurance_gas(stage_values: dict[str, list[float]], isolated_verifier_gas: float) -> None:
-    """Show the incremental gas envelope as lifecycle guarantees are integrated."""
-    authorization = percentile(stage_values["Access"], 0.50) + percentile(stage_values["Approve"], 0.50)
-    reservation = percentile(stage_values["Reserve"], 0.50)
-    settlement = percentile(stage_values["Settle"], 0.50)
-    atomic_state = settlement - isolated_verifier_gas
-    if atomic_state <= 0:
-        raise AssertionError("atomic settlement must cost more than isolated proof verification")
-
-    labels = ["Proof only", "Atomic\nsettlement", "Full request\nlifecycle"]
-    x = np.arange(len(labels))
-    components = [
-        ("Proof verification", np.array([isolated_verifier_gas] * 3), PALETTE[0], ""),
-        ("Atomic state updates", np.array([0, atomic_state, atomic_state]), PALETTE[1], "//"),
-        ("Authorization", np.array([0, 0, authorization]), PALETTE[2], ""),
-        ("Budget reservation", np.array([0, 0, reservation]), PALETTE[4], "\\\\"),
-    ]
-
-    fig, axis = plt.subplots(figsize=(4.6, 3.5))
-    bottom = np.zeros(len(labels))
-    for name, values, color, hatch in components:
-        scaled = values / 1e6
-        axis.bar(
-            x,
-            scaled,
-            width=0.62,
-            bottom=bottom,
-            color=color,
-            alpha=0.92,
-            edgecolor="white",
-            linewidth=0.7,
-            hatch=hatch,
-            label=name,
-        )
-        bottom += scaled
-    axis.set_xticks(x, labels)
-    axis.set_ylabel("Gas used (millions)")
-    axis.set_ylim(0, 1.18)
-    axis.grid(axis="x", visible=False)
-    axis.legend(frameon=False, ncol=2, loc="upper left", columnspacing=0.9, handlelength=1.5)
-    save(fig, "figure_1b_assurance_gas")
-
-
-def plot_proof_settlement_latency(
-    prove_values: list[float],
-    inclusion_values: list[float],
-) -> None:
-    """Compare off-chain proof work with public-testnet settlement inclusion."""
-    labels = ["Proof generation", "Settlement inclusion"]
-    p50 = np.array([percentile(prove_values, 0.50), percentile(inclusion_values, 0.50)]) / 1000
-    mean = np.array([statistics.fmean(prove_values), statistics.fmean(inclusion_values)]) / 1000
-    p95 = np.array([percentile(prove_values, 0.95), percentile(inclusion_values, 0.95)]) / 1000
-    x = np.arange(len(labels))
-    width = 0.28
-
-    fig, axis = plt.subplots(figsize=(4.6, 3.5))
-    axis.bar(x - width / 2, p50, width=width, color=PALETTE[0], alpha=0.92, label="p50")
-    axis.bar(x + width / 2, p95, width=width, color=PALETTE[2], alpha=0.92, label="p95")
-    axis.plot(
-        x,
-        mean,
-        color=PALETTE[1],
-        marker="D",
-        markersize=5.0,
-        linewidth=2.0,
-        label="Mean",
-    )
-    axis.set_xticks(x, labels)
-    axis.set_ylabel("Latency (s)")
-    axis.set_ylim(0, 3.65)
-    axis.grid(axis="x", visible=False)
-    handles, legend_labels = axis.get_legend_handles_labels()
-    legend_map = dict(zip(legend_labels, handles))
-    axis.legend(
-        [legend_map[name] for name in ("p50", "p95", "Mean")],
-        ["p50", "p95", "Mean"],
-        frameon=False,
-        loc="upper left",
-        ncol=3,
-    )
-    save(fig, "figure_1c_proof_settlement_latency")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-dir", type=Path, default=None)
@@ -278,13 +195,6 @@ def main() -> None:
 
     rows = read_csv(transactions_path)
     proof_rows = read_csv(proofs_path)
-    local_summary_path = SUMMARY_ROOT / "vcp_v2_summary.csv"
-    if not local_summary_path.exists():
-        raise FileNotFoundError(local_summary_path)
-    local_summary_rows = read_csv(local_summary_path)
-    if len(local_summary_rows) != 1:
-        raise AssertionError("expected one retained local VCP benchmark summary row")
-    isolated_verifier_gas = float(local_summary_rows[0]["verifier_gas_p50"])
     config = json.loads(config_path.read_text(encoding="utf-8"))
     result = json.loads(result_path.read_text(encoding="utf-8"))
     if int(config["chain_id"]) != EXPECTED_CHAIN_ID or int(config["public_inputs"]) != 24:
@@ -326,38 +236,6 @@ def main() -> None:
     inclusion_ms = [float(row["inclusion_latency_ms"]) for row in settlement_rows]
     prove_ms = [float(row["prove_time_ms"]) for row in proof_rows]
     verify_ms = [float(row["verify_time_ms"]) for row in proof_rows]
-    lifecycle_patterns = {
-        "Access": r"request_\d+_access",
-        "Approve": r"request_\d+_approve",
-        "Reserve": r"request_\d+_reserve",
-        "Settle": r"request_\d+_settle_vcp_v2",
-    }
-    lifecycle_values = {
-        stage: [float(row["gas_used"]) for row in rows if re.fullmatch(pattern, row["operation"])]
-        for stage, pattern in lifecycle_patterns.items()
-    }
-    if any(len(values) != 30 for values in lifecycle_values.values()):
-        raise AssertionError("expected 30 measurements for every request-lifecycle stage")
-    lifecycle_stats = {stage: stats(values) for stage, values in lifecycle_values.items()}
-    lifecycle_stats["median_total"] = sum(stage["p50"] for stage in lifecycle_stats.values())
-    authorization_gas = lifecycle_stats["Access"]["p50"] + lifecycle_stats["Approve"]["p50"]
-    reservation_gas = lifecycle_stats["Reserve"]["p50"]
-    settlement_gas = lifecycle_stats["Settle"]["p50"]
-    atomic_state_gas = settlement_gas - isolated_verifier_gas
-    latency_composition = {
-        label: {
-            "proof_generation_ms": value_prove,
-            "offchain_verification_ms": value_verify,
-            "settlement_inclusion_ms": value_inclusion,
-            "component_sum_ms": value_prove + value_verify + value_inclusion,
-        }
-        for label, value_prove, value_verify, value_inclusion in zip(
-            ("p50", "mean", "p95"),
-            (percentile(prove_ms, 0.50), statistics.fmean(prove_ms), percentile(prove_ms, 0.95)),
-            (percentile(verify_ms, 0.50), statistics.fmean(verify_ms), percentile(verify_ms, 0.95)),
-            (percentile(inclusion_ms, 0.50), statistics.fmean(inclusion_ms), percentile(inclusion_ms, 0.95)),
-        )
-    }
     summary = {
         "schema": "TrustCircuit.BaseSepoliaVCPv2Summary.v1",
         "measurement_type": "measured_public_testnet",
@@ -373,26 +251,6 @@ def main() -> None:
         "settlement_gas": stats(gas),
         "settlement_fee_micro_eth": stats(fee_micro_eth),
         "settlement_inclusion_ms": stats(inclusion_ms),
-        "request_lifecycle_gas": lifecycle_stats,
-        "assurance_gas_envelopes": {
-            "isolated_proof_verification": {
-                "proof_verification": isolated_verifier_gas,
-                "total": isolated_verifier_gas,
-            },
-            "atomic_settlement": {
-                "proof_verification": isolated_verifier_gas,
-                "atomic_state_updates_residual": atomic_state_gas,
-                "total": settlement_gas,
-            },
-            "full_request_lifecycle": {
-                "authorization": authorization_gas,
-                "budget_reservation": reservation_gas,
-                "proof_verification": isolated_verifier_gas,
-                "atomic_state_updates_residual": atomic_state_gas,
-                "total": authorization_gas + reservation_gas + settlement_gas,
-            },
-        },
-        "proof_settlement_latency_composition_ms": latency_composition,
         "offchain_prove_ms": stats(prove_ms),
         "offchain_verify_ms": stats(verify_ms),
         "raw_sha256": {
@@ -414,8 +272,6 @@ def main() -> None:
 
     apply_style()
     plot_deployments(deployments)
-    plot_assurance_gas(lifecycle_values, isolated_verifier_gas)
-    plot_proof_settlement_latency(prove_ms, inclusion_ms)
     plot_series(
         inclusion_ms,
         summary["settlement_inclusion_ms"],
