@@ -1,5 +1,8 @@
 "use strict";
 
+// FROZEN LEGACY TESTNET CAMPAIGN: seven contracts and the 11-input Phase-7
+// verifier. Use base_sepolia_vcp_v2.js for the final eight-contract VCP stack.
+
 const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");

@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "schema": "TrustCircuit.VCPRealProofIntegration.v2",
+  "measurement_type": "functional_validation_local",
+  "timestamp_utc": "2026-08-02T14:12:33.047Z",
+  "public_inputs": 24,
+  "tampered_public_fields_rejected": 24,
+  "policy_matrices_verified_with_same_key": 2,
+  "atomic_settlements": 2,
+  "settlement_gas": [
+    "571640",
+    "571560"
+  ],
+  "r1cs_sha256": "5b17a1b1709895f025c4363907877b0dfff814ca27dd37f3314bf8e4a22a51f9",
+  "verification_key_sha256": "ab78aac95aed3e1a79d195344cfaa3e38e2970a210f8c7aa03f6b9070db87d82",
+  "verifier_solidity_sha256": "8afcf053c89e90fb63ac4165904ab02b169c21039d4ffc39babf7e33b1cabc8a"
+}

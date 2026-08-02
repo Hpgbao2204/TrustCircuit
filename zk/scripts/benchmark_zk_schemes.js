@@ -1,4 +1,6 @@
 
+// FROZEN LEGACY BENCHMARK: backend comparisons use the historical 11-input
+// circuit. They are not measurements of the 24-input canonical VCP v2.
 const fs = require("fs");
 const crypto = require("crypto");
 const path = require("path");

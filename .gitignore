@@ -83,6 +83,8 @@ results/**
 !results/raw/phase8/zk_scaling.csv
 !results/raw/phase8/zk_scaling_config.json
 !results/raw/phase8/zk_scaling_runs.csv
+!results/raw/phase8/vcp_v2_runs.csv
+!results/raw/phase8/vcp_v2_integration.json
 !results/raw/phase8/testnet/
 !results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/
 !results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/config.json
@@ -90,6 +92,8 @@ results/**
 !results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/proof_preparation.csv
 !results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/run_result.json
 !results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/transactions.csv
+!results/raw/phase8/testnet/base_sepolia_vcp_v2_*/
+!results/raw/phase8/testnet/base_sepolia_vcp_v2_*/*
 
 # Canonical evidence used by the Nitro paper evaluation.
 !results/raw/contract_gas_benchmark.csv
@@ -129,6 +133,8 @@ results/summary/*
 !results/summary/nitro_pool_projection_summary.csv
 !results/summary/tee_attack_summary.csv
 !results/summary/tee_attack_config.json
+!results/summary/vcp_v2_summary.csv
+!results/summary/vcp_v2_config.json
 
 !results/processed/
 results/processed/*

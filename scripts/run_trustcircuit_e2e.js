@@ -315,7 +315,9 @@ async function main() {
   console.log(JSON.stringify({ ok: true, output: outputPath, request_key: requestKey }));
 }
 
-main().catch((error) => {
-  console.error(error.stack || error.message);
-  process.exitCode = 1;
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error.stack || error.message);
+    process.exit(1);
+  });
