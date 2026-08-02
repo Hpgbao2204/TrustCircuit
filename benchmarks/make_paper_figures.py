@@ -923,7 +923,7 @@ def figure_cpabe_policy_comparison(rows, out_dir: Path) -> Path:
 
 
 def figure_cpabe_policy_comparison_revised(rows, out_dir: Path) -> Path:
-    """Render the reviewer-facing CP-ABE policy benchmark with explicit semantics."""
+    """Render the paper-facing CP-ABE policy benchmark without inline notes."""
     pr = sorted(rows, key=lambda row: int(row["policy_attributes"]))
     attributes = np.array([int(row["policy_attributes"]) for row in pr])
     repetitions = np.array([int(row["repetitions"]) for row in pr])
@@ -933,28 +933,28 @@ def figure_cpabe_policy_comparison_revised(rows, out_dir: Path) -> Path:
     series = [
         (
             "kem_dem_baseline_encrypt_ms",
-            "encrypt (TrustCircuit KEM-DEM)",
+            "KEM-DEM enc.",
             "o",
             "-",
             PALETTE[0],
         ),
         (
             "kem_dem_baseline_decrypt_ms",
-            "decrypt (TrustCircuit KEM-DEM)",
+            "KEM-DEM dec.",
             "s",
             "-",
             PALETTE[1],
         ),
         (
             "full_cpabe_encrypt_ms",
-            "encrypt (AC17/FAME, rabe 0.4.2)",
+            "CP-ABE enc.",
             "^",
             "--",
             PALETTE[2],
         ),
         (
             "full_cpabe_decrypt_ms",
-            "decrypt (AC17/FAME, rabe 0.4.2)",
+            "CP-ABE dec.",
             "D",
             "--",
             PALETTE[4],
@@ -978,22 +978,12 @@ def figure_cpabe_policy_comparison_revised(rows, out_dir: Path) -> Path:
             label=label,
         )
 
-    ax.set_xlabel("Total policy leaves (all-of-N; all N leaves used for decryption)")
-    ax.set_ylabel("Mean key-encapsulation latency (ms)")
+    ax.set_xlabel("Policy leaves")
+    ax.set_ylabel("Latency (ms)")
     ax.set_xticks(attributes)
     ax.set_ylim(bottom=0)
-    ax.set_title("Same host and policy topology; same 32-byte (256-bit) payload key")
     ax.legend(ncol=2, fontsize=12)
-    fig.text(
-        0.5,
-        0.005,
-        "Mean of 30 independent runs; error bars show 95% confidence intervals. "
-        "Setup/key generation excluded; AES-GCM bulk payload is measured separately in Fig. 5(c).",
-        ha="center",
-        va="bottom",
-        fontsize=11,
-    )
-    fig.subplots_adjust(bottom=0.22)
+    fig.tight_layout()
     return save(fig, out_dir, "ab1_policy_time_revised")
 
 

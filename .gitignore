@@ -153,7 +153,7 @@ Paper/
 .skills/
 PROJECT_STATE.json
 
-# Canonical manuscript source and VCP v2 Base Sepolia panels.
+# Canonical manuscript source and retained paper panels.
 !Paper/
 Paper/**
 !Paper/main-new.tex
@@ -162,6 +162,8 @@ Paper/**
 !Paper/Figure/figures/
 !Paper/Figure/figures/base-sepolia/
 !Paper/Figure/figures/base-sepolia/*.pdf
+!Paper/Figure/figures/abe/
+!Paper/Figure/figures/abe/ab1_policy_time_revised.pdf
 
 # Logs
 *.log
