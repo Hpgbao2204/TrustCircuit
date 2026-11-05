@@ -1,0 +1,240 @@
+{
+  "schema": "TrustCircuit.VCPv3.Benchmark.v1",
+  "timestamp_utc": "2026-11-05T03:27:07.394Z",
+  "host": {
+    "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
+    "logical_cpus": 16,
+    "memory_gb": 31,
+    "platform": "win32 10.0.26200",
+    "node": "v22.13.0"
+  },
+  "circuit": "zk/circuits/vcp_v3.circom",
+  "circuit_sha256": "0ffa2603c4ce6d24e97d070af24eef1a48b04a5bf47155c7479a77061a275b53",
+  "final_zkey_sha256": "adaf53350d0a666fc6167c1c22f43345904f23746a84c2b3da356f8d1be14399",
+  "setup_note": "DEVELOPMENT setup: fewer than three independent phase-2 contributors",
+  "constraints": 41195,
+  "public_inputs": 24,
+  "private_inputs": 14,
+  "warmups": 2,
+  "repetitions": 30,
+  "witness_time_ms": {
+    "mean": 128.15583333333333,
+    "std": 14.585380458157248,
+    "p50": 128.5725,
+    "p95": 150.7835,
+    "min": 107.39,
+    "max": 157.717
+  },
+  "prove_time_ms": {
+    "mean": 2004.1682333333335,
+    "std": 103.2490964755268,
+    "p50": 1967.3519999999999,
+    "p95": 2162.05935,
+    "min": 1810.371,
+    "max": 2220.368
+  },
+  "full_prove_time_ms": {
+    "mean": 2132.3241333333335,
+    "std": 113.03473961688715,
+    "p50": 2102.88,
+    "p95": 2285.3202,
+    "min": 1921.26,
+    "max": 2371.282
+  },
+  "verify_time_ms": {
+    "mean": 16.043600000000005,
+    "std": 4.623813365759837,
+    "p50": 15.7005,
+    "p95": 22.740349999999992,
+    "min": 9.722,
+    "max": 31.895
+  },
+  "verifier_gas": {
+    "mean": 374761.4,
+    "std": 18.94747731366168,
+    "p50": 374765,
+    "p95": 374777,
+    "min": 374681,
+    "max": 374777
+  },
+  "proof_abi_bytes": 256,
+  "proof_json_bytes": {
+    "mean": 723,
+    "std": 1.4383899044561526,
+    "p50": 723,
+    "p95": 725,
+    "min": 720,
+    "max": 726
+  },
+  "proof_and_public_json_bytes": {
+    "mean": 1763,
+    "std": 1.4383899044561526,
+    "p50": 1763,
+    "p95": 1765,
+    "min": 1760,
+    "max": 1766
+  },
+  "proving_key_bytes": 19297163,
+  "verification_key_bytes": 7134,
+  "mutation_test": {
+    "fields": 24,
+    "rejected": 24,
+    "detail": [
+      {
+        "index": 0,
+        "name": "request_id_lo",
+        "accepted": false
+      },
+      {
+        "index": 1,
+        "name": "request_id_hi",
+        "accepted": false
+      },
+      {
+        "index": 2,
+        "name": "asset_id_lo",
+        "accepted": false
+      },
+      {
+        "index": 3,
+        "name": "asset_id_hi",
+        "accepted": false
+      },
+      {
+        "index": 4,
+        "name": "consumer_id_lo",
+        "accepted": false
+      },
+      {
+        "index": 5,
+        "name": "consumer_id_hi",
+        "accepted": false
+      },
+      {
+        "index": 6,
+        "name": "policy_commitment",
+        "accepted": false
+      },
+      {
+        "index": 7,
+        "name": "policy_version",
+        "accepted": false
+      },
+      {
+        "index": 8,
+        "name": "purpose_id",
+        "accepted": false
+      },
+      {
+        "index": 9,
+        "name": "function_id",
+        "accepted": false
+      },
+      {
+        "index": 10,
+        "name": "data_hash_lo",
+        "accepted": false
+      },
+      {
+        "index": 11,
+        "name": "data_hash_hi",
+        "accepted": false
+      },
+      {
+        "index": 12,
+        "name": "dp_config_hash_lo",
+        "accepted": false
+      },
+      {
+        "index": 13,
+        "name": "dp_config_hash_hi",
+        "accepted": false
+      },
+      {
+        "index": 14,
+        "name": "freshness_nonce_lo",
+        "accepted": false
+      },
+      {
+        "index": 15,
+        "name": "freshness_nonce_hi",
+        "accepted": false
+      },
+      {
+        "index": 16,
+        "name": "reserved_cost",
+        "accepted": false
+      },
+      {
+        "index": 17,
+        "name": "actual_cost",
+        "accepted": false
+      },
+      {
+        "index": 18,
+        "name": "nullifier",
+        "accepted": false
+      },
+      {
+        "index": 19,
+        "name": "context_commitment",
+        "accepted": false
+      },
+      {
+        "index": 20,
+        "name": "attestation_hash_lo",
+        "accepted": false
+      },
+      {
+        "index": 21,
+        "name": "attestation_hash_hi",
+        "accepted": false
+      },
+      {
+        "index": 22,
+        "name": "result_commitment",
+        "accepted": false
+      },
+      {
+        "index": 23,
+        "name": "audit_digest",
+        "accepted": false
+      }
+    ]
+  },
+  "policy_family_test": [
+    {
+      "tag": "policyA",
+      "matrix": [
+        [
+          "1",
+          "1"
+        ],
+        [
+          "0",
+          "1"
+        ]
+      ],
+      "policy_commitment": "18498373644647310917868283525992975268940752200851935998614957545476217363833",
+      "accepted_offchain": true,
+      "accepted_onchain": true
+    },
+    {
+      "tag": "policyB",
+      "matrix": [
+        [
+          "0",
+          "1"
+        ],
+        [
+          "1",
+          "0"
+        ]
+      ],
+      "policy_commitment": "2231204316138690434894851029905630802244264485829985648847275187270912846294",
+      "accepted_offchain": true,
+      "accepted_onchain": true
+    }
+  ],
+  "salted_policy_commitments_differ": true
+}

@@ -31,7 +31,34 @@ contract AccessController is LifecycleRoles {
         uint64 deadlineUnixMs;
         RequestStatus status;
         bool vcpV2;
+        // TNSE revision: public Gaussian-mechanism parameters charged on-chain.
+        uint64 sigmaFixed;
+        uint64 sensitivityFixed;
+        bool rdp;
     }
+
+    /// @notice Request with ledger-enforced RDP accounting (VCP v3). The DP
+    /// configuration commitment theta_h is derived here from the public
+    /// mechanism parameters, so the attested context binds the charged noise.
+    struct RdpRequest {
+        bytes32 requestId;
+        bytes32 assetId;
+        bytes32 consumerId;
+        bytes32 purposeHash;
+        uint32 purposeId;
+        uint256 policyCommitment;
+        uint64 policyVersion;
+        uint32 functionId;
+        uint64 sigmaFixed;
+        uint64 sensitivityFixed;
+        bytes32 mechanismHash;
+        bytes32 freshnessNonce;
+        uint64 deadlineUnixMs;
+    }
+
+    bytes32 public constant DP_CONFIG_TYPEHASH = keccak256(
+        "TrustCircuitRdpConfig(uint64 sigmaFixed,uint64 sensitivityFixed,bytes32 mechanismHash)"
+    );
 
     mapping(bytes32 => AccessRequest) private requests;
 
@@ -93,7 +120,10 @@ contract AccessController is LifecycleRoles {
             epsilonRequested: epsilonRequested,
             deadlineUnixMs: type(uint64).max,
             status: RequestStatus.Requested,
-            vcpV2: false
+            vcpV2: false,
+            sigmaFixed: 0,
+            sensitivityFixed: 0,
+            rdp: false
         });
         emit AccessRequested(requestId, assetId, msg.sender, purposeHash, epsilonRequested);
     }
@@ -128,7 +158,10 @@ contract AccessController is LifecycleRoles {
             epsilonRequested: epsilonRequested,
             deadlineUnixMs: type(uint64).max,
             status: RequestStatus.Requested,
-            vcpV2: false
+            vcpV2: false,
+            sigmaFixed: 0,
+            sensitivityFixed: 0,
+            rdp: false
         });
         emit AccessRequested(requestId, assetId, msg.sender, purposeHash, epsilonRequested);
     }
@@ -170,7 +203,10 @@ contract AccessController is LifecycleRoles {
             epsilonRequested: epsilonRequested,
             deadlineUnixMs: deadlineUnixMs,
             status: RequestStatus.Requested,
-            vcpV2: true
+            vcpV2: true,
+            sigmaFixed: 0,
+            sensitivityFixed: 0,
+            rdp: false
         });
         emit AccessRequested(requestId, assetId, msg.sender, purposeHash, epsilonRequested);
         emit AccessContextBound(
@@ -184,6 +220,59 @@ contract AccessController is LifecycleRoles {
             freshnessNonce,
             deadlineUnixMs
         );
+    }
+
+    function requestAccessRDP(RdpRequest calldata r) external {
+        if (r.requestId == bytes32(0)) revert RequestNotFound(r.requestId);
+        if (requests[r.requestId].status != RequestStatus.None) {
+            revert RequestAlreadyExists(r.requestId);
+        }
+        if (r.consumerId == bytes32(0)) revert InvalidConsumerId();
+        if (r.policyCommitment == 0) revert InvalidPolicyCommitment();
+        if (r.policyVersion == 0) revert InvalidPolicyVersion();
+        if (r.purposeId == 0) revert InvalidPurposeId();
+        if (r.functionId == 0) revert InvalidFunctionId();
+        if (r.sigmaFixed == 0 || r.sensitivityFixed == 0) revert InvalidAmount();
+        if (r.deadlineUnixMs <= block.timestamp * 1000) revert InvalidDeadline();
+
+        bytes32 dpConfigHash = rdpConfigHash(r.sigmaFixed, r.sensitivityFixed, r.mechanismHash);
+        AccessRequest storage stored = requests[r.requestId];
+        stored.assetId = r.assetId;
+        stored.consumer = msg.sender;
+        stored.consumerId = r.consumerId;
+        stored.purposeHash = r.purposeHash;
+        stored.purposeId = r.purposeId;
+        stored.policyCommitment = r.policyCommitment;
+        stored.policyVersion = r.policyVersion;
+        stored.functionId = r.functionId;
+        stored.dpConfigHash = dpConfigHash;
+        stored.freshnessNonce = r.freshnessNonce;
+        stored.deadlineUnixMs = r.deadlineUnixMs;
+        stored.status = RequestStatus.Requested;
+        stored.vcpV2 = true;
+        stored.sigmaFixed = r.sigmaFixed;
+        stored.sensitivityFixed = r.sensitivityFixed;
+        stored.rdp = true;
+        emit AccessRequested(r.requestId, r.assetId, msg.sender, r.purposeHash, 0);
+        emit AccessContextBound(
+            r.requestId,
+            r.consumerId,
+            r.policyCommitment,
+            r.policyVersion,
+            r.purposeId,
+            r.functionId,
+            dpConfigHash,
+            r.freshnessNonce,
+            r.deadlineUnixMs
+        );
+    }
+
+    function rdpConfigHash(uint64 sigmaFixed, uint64 sensitivityFixed, bytes32 mechanismHash)
+        public
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(DP_CONFIG_TYPEHASH, sigmaFixed, sensitivityFixed, mechanismHash));
     }
 
     function approveRequest(bytes32 requestId) external onlyCoordinator {

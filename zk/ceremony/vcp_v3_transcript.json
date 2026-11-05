@@ -1,0 +1,62 @@
+{
+  "schema": "TrustCircuit.VCPv3.Ceremony.v1",
+  "circuit": "zk/circuits/vcp_v3.circom",
+  "circuit_sha256": "0ffa2603c4ce6d24e97d070af24eef1a48b04a5bf47155c7479a77061a275b53",
+  "r1cs_sha256": "24daf0a52c04b5c0e71440a6e9099b1b7ad48a906d7f68bb793432d18c30200b",
+  "r1cs_info": [
+    "Curve: bn-128",
+    "# of Wires: 41193",
+    "# of Constraints: 41195",
+    "# of Private Inputs: 14",
+    "# of Public Inputs: 24",
+    "# of Labels: 60163",
+    "# of Outputs: 0"
+  ],
+  "phase1": {
+    "source": "Perpetual Powers of Tau, Ethereum Foundation PSE, round 80 (prepared, 2^16)",
+    "url": "https://pse-trusted-setup-ppot.s3.eu-central-1.amazonaws.com/pot28_0080/ppot_0080_16.ptau",
+    "sha256": "ed3622a7c79b0b49aadd134ebbc5b77df8c8c59bccebdfd0d9bf2c1a51561cf9"
+  },
+  "phase2": [
+    {
+      "index": 0,
+      "kind": "initial",
+      "output": "vcp_v3_0000.zkey",
+      "output_sha256": "5a0c2e9b7912be187d9bc22c74a884d54517dedb8662674431caa552242c028f",
+      "seconds": 13.155
+    },
+    {
+      "index": 1,
+      "kind": "contribution",
+      "name": "Bao Huynh (development run)",
+      "input_sha256": "5a0c2e9b7912be187d9bc22c74a884d54517dedb8662674431caa552242c028f",
+      "output": "vcp_v3_0001.zkey",
+      "output_sha256": "52ebda206ccc97438b2177ec819086bfa2fb2b90a00c47bdf70a3dc24ed9094f",
+      "contribution_hash": "b29dd156cb8f2fe047819c16dc6503865574518b1d5ebdea6893d5ef57edead09dc2adb5b7602f53290af6dbfb2b2edea5e177a3c09194c62925bc0483a896b9",
+      "entropy": "64 bytes from the OS CSPRNG, not stored",
+      "timestamp": "2026-11-05T03:09:40.908Z",
+      "seconds": 4.455
+    }
+  ],
+  "beacon": {
+    "input_sha256": "52ebda206ccc97438b2177ec819086bfa2fb2b90a00c47bdf70a3dc24ed9094f",
+    "hash": "aa4815c2de16760dfaaeeab743b01fc413abdaf551f17baeb457a6fc0958a20c",
+    "iterations_exp": 10,
+    "source": "Base Sepolia block 54631526 hash (development run)",
+    "output": "vcp_v3_final.zkey",
+    "output_sha256": "adaf53350d0a666fc6167c1c22f43345904f23746a84c2b3da356f8d1be14399",
+    "contribution_hash": "b96e5ba66491f6518a1fa36df8b8f074047648c0a80825c17463645e79e66fe7fe801f5a32898864b5838ee47a7b5a1f205b470854028591d06b780bb7048e78",
+    "seconds": 5.054
+  },
+  "final": {
+    "zkey_verified": true,
+    "verify_seconds": 15.115,
+    "final_zkey_sha256": "adaf53350d0a666fc6167c1c22f43345904f23746a84c2b3da356f8d1be14399",
+    "vkey_sha256": "b1179e5229cf4bda9e39ff3c32be33f722778de645ade8e54f5bb7f91f218f1c",
+    "verifier_sol_sha256": "b9c27b3fef6ebe8aaca19bcc4b3fb432f5417be2753c39b5f9187006f60b2a67",
+    "contributors": [
+      "Bao Huynh (development run)"
+    ],
+    "transcript_note": "DEVELOPMENT setup: fewer than three independent phase-2 contributors"
+  }
+}

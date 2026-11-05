@@ -1,0 +1,296 @@
+{
+  "schema": "TrustCircuit.Revision.GasBenchmarks.v1",
+  "timestamp_utc": "2026-11-05T03:33:05.338Z",
+  "network": "hardhat (chain 31337), Solidity 0.8.24, optimizer 200 runs",
+  "ablation": {
+    "quorum": "2-of-3",
+    "settlements_per_design": 30,
+    "stage": {
+      "settle_gas": {
+        "n": 30,
+        "p50": 72425,
+        "p95": 72457,
+        "min": 72389,
+        "max": 89545,
+        "mean": 72994.06666666667
+      },
+      "settle_gas_first": 89545,
+      "settle_gas_after_first": {
+        "n": 29,
+        "p50": 72425,
+        "p95": 72457,
+        "min": 72389,
+        "max": 72457,
+        "mean": 72423.3448275862
+      },
+      "reserve_gas": {
+        "n": 30,
+        "p50": 129199,
+        "p95": 129199,
+        "min": 129187,
+        "max": 129199,
+        "mean": 129197
+      },
+      "client_prove_ms": null
+    },
+    "shs": {
+      "settle_gas": {
+        "n": 30,
+        "p50": 276910,
+        "p95": 277332.2,
+        "min": 276702,
+        "max": 365920,
+        "mean": 279924.06666666665
+      },
+      "settle_gas_first": 365920,
+      "settle_gas_after_first": {
+        "n": 29,
+        "p50": 276910,
+        "p95": 277314,
+        "min": 276702,
+        "max": 277334,
+        "mean": 276958.6896551724
+      },
+      "reserve_gas": {
+        "n": 30,
+        "p50": 199854,
+        "p95": 199854,
+        "min": 199842,
+        "max": 212084,
+        "mean": 200260.86666666667
+      },
+      "client_prove_ms": null
+    },
+    "trustcircuit": {
+      "settle_gas": {
+        "n": 30,
+        "p50": 641592,
+        "p95": 642080.6,
+        "min": 641414,
+        "max": 730572,
+        "mean": 644625.2666666667
+      },
+      "settle_gas_first": 730572,
+      "settle_gas_after_first": {
+        "n": 29,
+        "p50": 641590,
+        "p95": 642046.8,
+        "min": 641414,
+        "max": 642086,
+        "mean": 641661.5862068966
+      },
+      "reserve_gas": {
+        "n": 30,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199841,
+        "max": 212083,
+        "mean": 200270.66666666666
+      },
+      "client_prove_ms": {
+        "n": 30,
+        "p50": 2090,
+        "p95": 2609.6,
+        "min": 1968,
+        "max": 8497,
+        "mean": 2381.5
+      }
+    }
+  },
+  "quorum_sweep": {
+    "k1": {
+      "threshold": 1,
+      "validators": 3,
+      "settle_gas": {
+        "n": 9,
+        "p50": 628652,
+        "p95": 628818.4,
+        "min": 628484,
+        "max": 628836,
+        "mean": 628659.1111111111
+      }
+    },
+    "k2": {
+      "threshold": 2,
+      "validators": 3,
+      "settle_gas": {
+        "n": 9,
+        "p50": 641894,
+        "p95": 642057.2,
+        "min": 641730,
+        "max": 642070,
+        "mean": 641896.6666666666
+      }
+    },
+    "k3": {
+      "threshold": 3,
+      "validators": 3,
+      "settle_gas": {
+        "n": 9,
+        "p50": 655160,
+        "p95": 655312,
+        "min": 655012,
+        "max": 655320,
+        "mean": 655159.5555555555
+      }
+    },
+    "extra_gas_per_signature": {
+      "k1_to_k2": 13242,
+      "k2_to_k3": 13266
+    }
+  },
+  "rdp_order_sweep": {
+    "orders_4": {
+      "order_count": 4,
+      "orders": [
+        2,
+        4,
+        16,
+        64
+      ],
+      "reserve_gas": {
+        "n": 9,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199853,
+        "max": 199865,
+        "mean": 199862.33333333334
+      },
+      "settle_gas": {
+        "n": 9,
+        "p50": 607452,
+        "p95": 607498.4,
+        "min": 607264,
+        "max": 607500,
+        "mean": 607424
+      },
+      "settle_gas_first": 661846
+    },
+    "orders_8": {
+      "order_count": 8,
+      "orders": [
+        2,
+        3,
+        4,
+        8,
+        12,
+        16,
+        32,
+        64
+      ],
+      "reserve_gas": {
+        "n": 9,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199853,
+        "max": 199865,
+        "mean": 199863.66666666666
+      },
+      "settle_gas": {
+        "n": 9,
+        "p50": 625928,
+        "p95": 626086.4,
+        "min": 625832,
+        "max": 626088,
+        "mean": 625951.5555555555
+      },
+      "settle_gas_first": 697538
+    },
+    "orders_11": {
+      "order_count": 11,
+      "orders": [
+        2,
+        3,
+        4,
+        6,
+        8,
+        12,
+        16,
+        24,
+        32,
+        48,
+        64
+      ],
+      "reserve_gas": {
+        "n": 9,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199865,
+        "max": 199865,
+        "mean": 199865
+      },
+      "settle_gas": {
+        "n": 9,
+        "p50": 641914,
+        "p95": 642096.4,
+        "min": 641706,
+        "max": 642098,
+        "mean": 641915.3333333334
+      },
+      "settle_gas_first": 730644
+    },
+    "orders_16": {
+      "order_count": 16,
+      "orders": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        10,
+        12,
+        16,
+        20,
+        24,
+        32,
+        40,
+        48,
+        56,
+        64
+      ],
+      "reserve_gas": {
+        "n": 9,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199865,
+        "max": 199865,
+        "mean": 199865
+      },
+      "settle_gas": {
+        "n": 9,
+        "p50": 662832,
+        "p95": 663272.8,
+        "min": 662640,
+        "max": 663276,
+        "mean": 662911.5555555555
+      },
+      "settle_gas_first": 768994
+    }
+  },
+  "rdp_trace": {
+    "requests": 24,
+    "orders": [
+      2,
+      3,
+      4,
+      6,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48,
+      64
+    ],
+    "delta": 0.00001,
+    "kappa": 1000000,
+    "final_onchain_epsilon": 1.386153,
+    "final_exact_epsilon_same_orders": 1.386134,
+    "final_exact_epsilon_orders_2_64": 1.373162,
+    "max_gap_fixed_units": 18.92170703341253,
+    "max_gap_epsilon": 0.00001892170703341253,
+    "lemma_bound_holds": true
+  },
+  "seconds": 231.986
+}

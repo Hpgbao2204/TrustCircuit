@@ -92,6 +92,35 @@ contract DataRegistry {
         emit VCPPolicyBound(assetId, policyCommitment, policyVersion);
     }
 
+    /// @notice Replaces the committed policy of a VCP asset and increments its
+    /// version. Requests admitted under the previous version can no longer
+    /// settle, because settlement re-checks the current version (F2 guard).
+    function updatePolicyVCP(bytes32 assetId, uint256 newPolicyCommitment)
+        external
+        returns (uint64 newVersion)
+    {
+        Asset storage asset = assets[assetId];
+        if (asset.owner == address(0)) revert AssetNotFound(assetId);
+        if (asset.owner != msg.sender) revert NotAssetOwner(assetId, msg.sender);
+        if (!asset.vcpV2) revert InvalidPolicyCommitment();
+        if (newPolicyCommitment == 0 || newPolicyCommitment >= SCALAR_FIELD) {
+            revert InvalidPolicyCommitment();
+        }
+        newVersion = asset.policyVersion + 1;
+        asset.policyCommitment = newPolicyCommitment;
+        asset.policyHash = bytes32(newPolicyCommitment);
+        asset.policyVersion = newVersion;
+        emit VCPPolicyBound(assetId, newPolicyCommitment, newVersion);
+    }
+
+    /// @notice Withdraws (or re-activates) an asset; inactive assets cannot settle.
+    function setAssetActive(bytes32 assetId, bool active) external {
+        Asset storage asset = assets[assetId];
+        if (asset.owner == address(0)) revert AssetNotFound(assetId);
+        if (asset.owner != msg.sender) revert NotAssetOwner(assetId, msg.sender);
+        asset.active = active;
+    }
+
     function _registerAsset(
         bytes32 assetId,
         bytes32 metadataHash,

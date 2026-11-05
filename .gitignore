@@ -138,6 +138,22 @@ results/summary/*
 !results/summary/base_sepolia_vcp_v2_summary.json
 !results/summary/base_sepolia_vcp_v2_deployments.csv
 
+# TNSE revision evidence (VCP v3, ablation, RDP ledger, network model, testnet).
+!results/raw/revision/
+!results/raw/revision/*.csv
+!results/raw/revision/*.json
+!results/raw/revision/testnet/
+!results/raw/revision/testnet/base_sepolia_v3_*/
+!results/raw/revision/testnet/base_sepolia_v3_*/*
+results/raw/revision/testnet/base_sepolia_v3_local_*/
+!results/summary/revision/
+!results/summary/revision/*.json
+!results/figures/
+results/figures/*
+!results/figures/revision/
+!results/figures/revision/*.pdf
+!results/figures/revision/*.png
+
 !results/processed/
 results/processed/*
 !results/processed/sota_profiles/

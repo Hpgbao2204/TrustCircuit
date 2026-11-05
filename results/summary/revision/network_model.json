@@ -1,0 +1,223 @@
+{
+  "schema": "TrustCircuit.Revision.NetworkModel.v1",
+  "parameters": {
+    "T_prove_s": 2.1323241333333334,
+    "inclusion_s": 2.9641953999996185,
+    "settle_gas": 641592,
+    "tee_s": 0.06,
+    "worker_rate_rps": 15.87,
+    "block_time_s": 2.0,
+    "gas_share": 10000000,
+    "inclusion_source": "first-round Base Sepolia campaign (v2); settle gas from Hardhat v3",
+    "pipeline_latency_s": 5.156519533332952,
+    "lambda_rps": 2.0,
+    "eps_total": 4.0,
+    "delta": 1e-05,
+    "orders": [
+      2,
+      3,
+      4,
+      6,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48,
+      64
+    ],
+    "calibration_mix": [
+      0.05,
+      0.1,
+      0.2,
+      0.5
+    ],
+    "E_b_req_eps": 0.1031015,
+    "seeds_contention": 30,
+    "seeds_locked": 10
+  },
+  "pipeline_capacity": {
+    "worker_rate_rps": 15.87,
+    "prover_rate_pps": 0.4689718529972085,
+    "ledger_rate_per_10M_gas_sps": 7.5,
+    "provers_to_match_one_worker": 34,
+    "provers_to_match_64_workers": 2002,
+    "provers_absorbed_by_10M_gas": 15.992431,
+    "bottleneck": "prover"
+  },
+  "budget_contention": {
+    "pab0.05_t10": {
+      "p_ab": 0.05,
+      "t_dead_s": 10,
+      "premature_share": 0.031770663638522136,
+      "ci95": 0.005147233723753949
+    },
+    "pab0.05_t30": {
+      "p_ab": 0.05,
+      "t_dead_s": 30,
+      "premature_share": 0.08494175905027618,
+      "ci95": 0.012990118131205493
+    },
+    "pab0.05_t100": {
+      "p_ab": 0.05,
+      "t_dead_s": 100,
+      "premature_share": 0.21636403446372127,
+      "ci95": 0.023984855931314004
+    },
+    "pab0.05_t300": {
+      "p_ab": 0.05,
+      "t_dead_s": 300,
+      "premature_share": 0.4624470834535285,
+      "ci95": 0.017796118071900336
+    },
+    "pab0.2_t10": {
+      "p_ab": 0.2,
+      "t_dead_s": 10,
+      "premature_share": 0.08915809224023133,
+      "ci95": 0.008910105539827828
+    },
+    "pab0.2_t30": {
+      "p_ab": 0.2,
+      "t_dead_s": 30,
+      "premature_share": 0.19543754609274577,
+      "ci95": 0.010728791348299082
+    },
+    "pab0.2_t100": {
+      "p_ab": 0.2,
+      "t_dead_s": 100,
+      "premature_share": 0.38918077692604935,
+      "ci95": 0.010470231412643229
+    },
+    "pab0.2_t300": {
+      "p_ab": 0.2,
+      "t_dead_s": 300,
+      "premature_share": 0.6763686467785932,
+      "ci95": 0.012775509973161212
+    },
+    "pab0.5_t10": {
+      "p_ab": 0.5,
+      "t_dead_s": 10,
+      "premature_share": 0.1550306366765333,
+      "ci95": 0.008121715977672193
+    },
+    "pab0.5_t30": {
+      "p_ab": 0.5,
+      "t_dead_s": 30,
+      "premature_share": 0.30185222268940926,
+      "ci95": 0.0074855397872728
+    },
+    "pab0.5_t100": {
+      "p_ab": 0.5,
+      "t_dead_s": 100,
+      "premature_share": 0.5286288843515119,
+      "ci95": 0.005570273763184219
+    },
+    "pab0.5_t300": {
+      "p_ab": 0.5,
+      "t_dead_s": 300,
+      "premature_share": 0.8245819404985004,
+      "ci95": 0.003268398798977812
+    }
+  },
+  "abandoned_lock": {
+    "pab0.05_t10": {
+      "p_ab": 0.05,
+      "t_dead_s": 10,
+      "simulated_eps": 0.09429388780044536,
+      "ci95": 0.02530535079246822,
+      "littles_law_eps": 0.10138314166666666
+    },
+    "pab0.05_t30": {
+      "p_ab": 0.05,
+      "t_dead_s": 30,
+      "simulated_eps": 0.2939055448898933,
+      "ci95": 0.053939968674777655,
+      "littles_law_eps": 0.300025365
+    },
+    "pab0.05_t100": {
+      "p_ab": 0.05,
+      "t_dead_s": 100,
+      "simulated_eps": 0.9608236766216288,
+      "ci95": 0.08989863277675916,
+      "littles_law_eps": 0.9880560416666667
+    },
+    "pab0.05_t300": {
+      "p_ab": 0.05,
+      "t_dead_s": 300,
+      "simulated_eps": 2.9552420868738576,
+      "ci95": 0.1043839018015618,
+      "littles_law_eps": 2.948058515625
+    },
+    "pab0.2_t10": {
+      "p_ab": 0.2,
+      "t_dead_s": 10,
+      "simulated_eps": 0.40457239781923554,
+      "ci95": 0.03610626662142137,
+      "littles_law_eps": 0.40553256666666665
+    },
+    "pab0.2_t30": {
+      "p_ab": 0.2,
+      "t_dead_s": 30,
+      "simulated_eps": 1.1981709391283615,
+      "ci95": 0.07424213731083656,
+      "littles_law_eps": 1.20010146
+    },
+    "pab0.2_t100": {
+      "p_ab": 0.2,
+      "t_dead_s": 100,
+      "simulated_eps": 3.894973969560185,
+      "ci95": 0.1309581090558257,
+      "littles_law_eps": 3.952224166666667
+    },
+    "pab0.2_t300": {
+      "p_ab": 0.2,
+      "t_dead_s": 300,
+      "simulated_eps": 11.716672429083463,
+      "ci95": 0.27484325170719326,
+      "littles_law_eps": 11.7922340625
+    },
+    "pab0.5_t10": {
+      "p_ab": 0.5,
+      "t_dead_s": 10,
+      "simulated_eps": 1.0485801661328105,
+      "ci95": 0.0652238714268717,
+      "littles_law_eps": 1.0138314166666667
+    },
+    "pab0.5_t30": {
+      "p_ab": 0.5,
+      "t_dead_s": 30,
+      "simulated_eps": 3.064385062888336,
+      "ci95": 0.08607855823845334,
+      "littles_law_eps": 3.00025365
+    },
+    "pab0.5_t100": {
+      "p_ab": 0.5,
+      "t_dead_s": 100,
+      "simulated_eps": 9.786899721598049,
+      "ci95": 0.3136209047382002,
+      "littles_law_eps": 9.880560416666667
+    },
+    "pab0.5_t300": {
+      "p_ab": 0.5,
+      "t_dead_s": 300,
+      "simulated_eps": 29.514292816184202,
+      "ci95": 0.5103603234953993,
+      "littles_law_eps": 29.48058515625
+    }
+  },
+  "admissible_abandon_rate_at_60s": 0.06466119956224368,
+  "validator_quorum": {
+    "1-of-1": {
+      "liveness": 0.99,
+      "compromise": 0.05
+    },
+    "2-of-3": {
+      "liveness": 0.9997020000000001,
+      "compromise": 0.007250000000000001
+    },
+    "3-of-5": {
+      "liveness": 0.9999901494,
+      "compromise": 0.0011581250000000003
+    }
+  }
+}

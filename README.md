@@ -25,6 +25,31 @@ The paper's seven-public-input circuit is preserved at `zk/circuits/paper_legacy
 
 VCP v2 binds request, asset, consumer, policy and version, purpose/function, dataset, DP configuration, freshness, reserved and actual cost, nullifier, validated execution context, attestation statement, result, and audit digest. Native certificate-chain or platform-root validation, arbitrary program correctness, DP random-sampling correctness, and legal compliance remain outside the circuit.
 
+## TNSE revision stack (VCP v3)
+
+The revised protocol (major revision, 2026-11) changes the circuit and the contracts. The code behind the first-round evidence is tagged `tnse-r1-evidence`; its VCP v2 circuit, verifier, and evidence files are left untouched here, but the v2 runners `scripts/test_vcp_real_proof.js`, `scripts/run_trustcircuit_e2e.js`, `benchmarks/base_sepolia_vcp_v2.js`, `benchmarks/base_sepolia_settlement.js`, and `benchmarks/phase8_chain_experiments.js` target the old settlement API and must be run from that tag.
+
+What changed:
+
+- `zk/circuits/vcp_v3.circom`: same 24 public signals; the policy commitment and the execution-context commitment are salted with private field elements (`policySalt`, `contextSalt`). The dataset commitment is salted off-circuit (`saltedDataCommitment` in `scripts/lib/vcp_v3_encoding.js`).
+- `BudgetLedger.registerRdpBudget/reserveRdp/consumeRdp`: the contract keeps a fixed-point RDP vector per asset over at most 16 orders and computes every reservation and charge itself; `AccessController.requestAccessRDP` derives the DP-configuration commitment from the public mechanism parameters.
+- `ValidatorRegistry.requireQuorum`: k-of-n validator statements; `TimelockMultisig` holds registry governance; `DataRegistry.updatePolicyVCP` versions policies; `releaseExpiredReservation` frees abandoned reservations after the deadline.
+- `SettlementCore` holds every guard shared by `TrustCircuitSettlement` and the comparison design `SignAndHashSettlement`; `StageWiseSettlement` is the stage-wise composition harness.
+
+Commands (Windows, from the repository root):
+
+```powershell
+node zk/scripts/ceremony_v3.js build|init|contribute --name "..."|beacon --hash <hex> --source "..."|finalize|status
+npx.cmd hardhat test                                          # includes RevisionV3 and settlement tests
+npx.cmd hardhat run zk/scripts/benchmark_vcp_v3.js            # proof costs, 24 mutations, policy family
+npx.cmd hardhat run scripts/revision/run_attack_matrix.js     # F1-F4, replay, noise vs 3 designs
+npx.cmd hardhat run scripts/revision/run_gas_benchmarks.js    # ablation, quorum, |O'| sweep, RDP trace
+node benchmarks/base_sepolia_v3.js --smoke | (full) | --local
+.\.venv\Scripts\python.exe analysis\network_model.py          # multi-party model + figure
+```
+
+Phase 1 of the setup is the Ethereum Foundation PSE Perpetual Powers of Tau (round 80, 2^16), downloaded to `zk/ptau/ppot_0080_16.ptau`; the phase-2 transcript is `zk/ceremony/vcp_v3_transcript.json`.
+
 ## Rerun paper experiments
 
 Local benchmark entry points are:
