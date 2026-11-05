@@ -1,10 +1,10 @@
 {
   "schema": "TrustCircuit.Revision.AttackMatrix.v1",
-  "timestamp_utc": "2026-11-05T03:15:29.435Z",
+  "timestamp_utc": "2026-11-05T03:41:54.016Z",
   "network": "hardhat",
   "validator_quorum": "2-of-3; F4/N use the two compromised keys",
   "trustcircuit_proofs": "real Groth16 VCP v3 proofs",
-  "seconds": 12.814,
+  "seconds": 23.719,
   "rows": [
     {
       "attack": "F1",

@@ -209,9 +209,11 @@ function finalize() {
     verifier_sol_sha256: sha256File(VERIFIER),
     contributors: contributors.map((entry) => entry.name),
     transcript_note:
-      contributors.length >= 3
-        ? "multi-party phase-2 ceremony"
-        : "DEVELOPMENT setup: fewer than three independent phase-2 contributors",
+      contributors.length >= 2
+        ? `phase 2: ${contributors.length} contributions followed by a public beacon`
+        : "phase 2: a single contribution followed by a public beacon; sound only if that " +
+          "contributor erased its randomness. Further contributions can be appended with " +
+          "`contribute` before a deployment re-applies the beacon.",
   };
   saveTranscript(transcript);
   fs.writeFileSync(

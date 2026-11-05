@@ -25,6 +25,7 @@ import csv
 import heapq
 import json
 import math
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -65,8 +66,14 @@ def measured_parameters() -> dict:
         settle_gas = gas["ablation"]["trustcircuit"]["settle_gas"]["p50"]
         inclusion_source = "first-round Base Sepolia campaign (v2); settle gas from Hardhat v3"
     nitro = _nitro_worker_rate()
+    t_prove = vcp["full_prove_time_ms"]["mean"] / 1000.0
+    t_prove_source = "VCP v3 benchmark (full_prove_time_ms mean)"
+    if os.environ.get("TC_TPROVE_S"):
+        t_prove = float(os.environ["TC_TPROVE_S"])
+        t_prove_source = os.environ.get("TC_TPROVE_SOURCE", "override via TC_TPROVE_S")
     return {
-        "T_prove_s": vcp["full_prove_time_ms"]["mean"] / 1000.0,
+        "T_prove_s": t_prove,
+        "T_prove_source": t_prove_source,
         "inclusion_s": inclusion_s,
         "settle_gas": settle_gas,
         "tee_s": 0.06,

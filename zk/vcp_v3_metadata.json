@@ -13,14 +13,14 @@
     "# of Outputs: 0"
   ],
   "ptau_sha256": "ed3622a7c79b0b49aadd134ebbc5b77df8c8c59bccebdfd0d9bf2c1a51561cf9",
-  "final_zkey_sha256": "adaf53350d0a666fc6167c1c22f43345904f23746a84c2b3da356f8d1be14399",
-  "final_zkey_bytes": 19297163,
-  "vkey_sha256": "b1179e5229cf4bda9e39ff3c32be33f722778de645ade8e54f5bb7f91f218f1c",
-  "vkey_bytes": 7134,
-  "verifier_solidity_sha256": "b9c27b3fef6ebe8aaca19bcc4b3fb432f5417be2753c39b5f9187006f60b2a67",
-  "ceremony_transcript_sha256": "6fe2c43788b6ffb81a2c0f229a8516d088d79f223f88551f88fe60eea24c31aa",
+  "final_zkey_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+  "final_zkey_bytes": 19297145,
+  "vkey_sha256": "c0bdf03cd403064d1387e0c41da267136ec8ee58596e38ebf879e1038fd9e3b6",
+  "vkey_bytes": 7137,
+  "verifier_solidity_sha256": "83cf4084bdc5d7bceb03ea3afeffd73c29490edc1d0d883c6f9849218b6b1b84",
+  "ceremony_transcript_sha256": "39514e597daab5acfaaf96f0664d31d3f1557b3e9a097d067a0b4a4e14e540e3",
   "contributors": [
-    "Bao Huynh (development run)"
+    "Bao Huynh"
   ],
-  "note": "DEVELOPMENT setup: fewer than three independent phase-2 contributors"
+  "note": "phase 2: a single contribution followed by a public beacon; sound only if that contributor erased its randomness. Further contributions can be appended with `contribute` before a deployment re-applies the beacon."
 }

@@ -23,40 +23,40 @@
       "kind": "initial",
       "output": "vcp_v3_0000.zkey",
       "output_sha256": "5a0c2e9b7912be187d9bc22c74a884d54517dedb8662674431caa552242c028f",
-      "seconds": 13.155
+      "seconds": 17.095
     },
     {
       "index": 1,
       "kind": "contribution",
-      "name": "Bao Huynh (development run)",
+      "name": "Bao Huynh",
       "input_sha256": "5a0c2e9b7912be187d9bc22c74a884d54517dedb8662674431caa552242c028f",
       "output": "vcp_v3_0001.zkey",
-      "output_sha256": "52ebda206ccc97438b2177ec819086bfa2fb2b90a00c47bdf70a3dc24ed9094f",
-      "contribution_hash": "b29dd156cb8f2fe047819c16dc6503865574518b1d5ebdea6893d5ef57edead09dc2adb5b7602f53290af6dbfb2b2edea5e177a3c09194c62925bc0483a896b9",
+      "output_sha256": "cfb59da1554641f88855aca8a1c41855c2f5694bde4f51d63d5980ea3a1e3e93",
+      "contribution_hash": "4ba7e69f3c9c24d1caa2370dde530f2941c4fe021ea534dc35105229537e087b6cb5d1d97e499a8f30ca1aca151c45ec88c19ce7cbfed0298659a8e8b1a6d887",
       "entropy": "64 bytes from the OS CSPRNG, not stored",
-      "timestamp": "2026-11-05T03:09:40.908Z",
-      "seconds": 4.455
+      "timestamp": "2026-11-05T03:40:01.123Z",
+      "seconds": 7.608
     }
   ],
   "beacon": {
-    "input_sha256": "52ebda206ccc97438b2177ec819086bfa2fb2b90a00c47bdf70a3dc24ed9094f",
-    "hash": "aa4815c2de16760dfaaeeab743b01fc413abdaf551f17baeb457a6fc0958a20c",
+    "input_sha256": "cfb59da1554641f88855aca8a1c41855c2f5694bde4f51d63d5980ea3a1e3e93",
+    "hash": "bc8a7b3a255cf2be08469d19f9eaa8a8871e65ee6929fcce0abad2c39fc353e6",
     "iterations_exp": 10,
-    "source": "Base Sepolia block 54631526 hash (development run)",
+    "source": "Base Sepolia (chain 84532) block 54640634 hash; fixed as block 54640604 + 30 after the last phase-2 contribution",
     "output": "vcp_v3_final.zkey",
-    "output_sha256": "adaf53350d0a666fc6167c1c22f43345904f23746a84c2b3da356f8d1be14399",
-    "contribution_hash": "b96e5ba66491f6518a1fa36df8b8f074047648c0a80825c17463645e79e66fe7fe801f5a32898864b5838ee47a7b5a1f205b470854028591d06b780bb7048e78",
-    "seconds": 5.054
+    "output_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+    "contribution_hash": "5e9c5ce2550a095ce8c778697b218cc35e1da37dec0e91b56537074a739c41841bac423e9c41e283655ab170dc679a79da82fc48c2940ece2e679aa3b39ad3ab",
+    "seconds": 6.935
   },
   "final": {
     "zkey_verified": true,
-    "verify_seconds": 15.115,
-    "final_zkey_sha256": "adaf53350d0a666fc6167c1c22f43345904f23746a84c2b3da356f8d1be14399",
-    "vkey_sha256": "b1179e5229cf4bda9e39ff3c32be33f722778de645ade8e54f5bb7f91f218f1c",
-    "verifier_sol_sha256": "b9c27b3fef6ebe8aaca19bcc4b3fb432f5417be2753c39b5f9187006f60b2a67",
+    "verify_seconds": 19.373,
+    "final_zkey_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+    "vkey_sha256": "c0bdf03cd403064d1387e0c41da267136ec8ee58596e38ebf879e1038fd9e3b6",
+    "verifier_sol_sha256": "83cf4084bdc5d7bceb03ea3afeffd73c29490edc1d0d883c6f9849218b6b1b84",
     "contributors": [
-      "Bao Huynh (development run)"
+      "Bao Huynh"
     ],
-    "transcript_note": "DEVELOPMENT setup: fewer than three independent phase-2 contributors"
+    "transcript_note": "phase 2: a single contribution followed by a public beacon; sound only if that contributor erased its randomness. Further contributions can be appended with `contribute` before a deployment re-applies the beacon."
   }
 }

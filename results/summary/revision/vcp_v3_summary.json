@@ -1,6 +1,6 @@
 {
   "schema": "TrustCircuit.VCPv3.Benchmark.v1",
-  "timestamp_utc": "2026-11-05T03:27:07.394Z",
+  "timestamp_utc": "2026-11-05T03:47:36.906Z",
   "host": {
     "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
     "logical_cpus": 16,
@@ -10,72 +10,72 @@
   },
   "circuit": "zk/circuits/vcp_v3.circom",
   "circuit_sha256": "0ffa2603c4ce6d24e97d070af24eef1a48b04a5bf47155c7479a77061a275b53",
-  "final_zkey_sha256": "adaf53350d0a666fc6167c1c22f43345904f23746a84c2b3da356f8d1be14399",
-  "setup_note": "DEVELOPMENT setup: fewer than three independent phase-2 contributors",
+  "final_zkey_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+  "setup_note": "phase 2: a single contribution followed by a public beacon; sound only if that contributor erased its randomness. Further contributions can be appended with `contribute` before a deployment re-applies the beacon.",
   "constraints": 41195,
   "public_inputs": 24,
   "private_inputs": 14,
   "warmups": 2,
   "repetitions": 30,
   "witness_time_ms": {
-    "mean": 128.15583333333333,
-    "std": 14.585380458157248,
-    "p50": 128.5725,
-    "p95": 150.7835,
-    "min": 107.39,
-    "max": 157.717
+    "mean": 127.9421333333333,
+    "std": 8.948230091739518,
+    "p50": 126.799,
+    "p95": 142.63725,
+    "min": 115.25,
+    "max": 147.736
   },
   "prove_time_ms": {
-    "mean": 2004.1682333333335,
-    "std": 103.2490964755268,
-    "p50": 1967.3519999999999,
-    "p95": 2162.05935,
-    "min": 1810.371,
-    "max": 2220.368
+    "mean": 2022.6093,
+    "std": 83.13177049477869,
+    "p50": 2021.287,
+    "p95": 2156.21615,
+    "min": 1878.329,
+    "max": 2211.074
   },
   "full_prove_time_ms": {
-    "mean": 2132.3241333333335,
-    "std": 113.03473961688715,
-    "p50": 2102.88,
-    "p95": 2285.3202,
-    "min": 1921.26,
-    "max": 2371.282
+    "mean": 2150.5514333333335,
+    "std": 86.40024911549469,
+    "p50": 2148.558,
+    "p95": 2280.8109,
+    "min": 1996.673,
+    "max": 2338.794
   },
   "verify_time_ms": {
-    "mean": 16.043600000000005,
-    "std": 4.623813365759837,
-    "p50": 15.7005,
-    "p95": 22.740349999999992,
-    "min": 9.722,
-    "max": 31.895
+    "mean": 16.0132,
+    "std": 2.5154585569482433,
+    "p50": 15.782499999999999,
+    "p95": 19.757299999999997,
+    "min": 11.992,
+    "max": 22.508
   },
   "verifier_gas": {
-    "mean": 374761.4,
-    "std": 18.94747731366168,
-    "p50": 374765,
-    "p95": 374777,
-    "min": 374681,
-    "max": 374777
+    "mean": 374773,
+    "std": 11.50711923564922,
+    "p50": 374777,
+    "p95": 374789,
+    "min": 374753,
+    "max": 374789
   },
   "proof_abi_bytes": 256,
   "proof_json_bytes": {
-    "mean": 723,
-    "std": 1.4383899044561526,
+    "mean": 722.6333333333333,
+    "std": 1.847334208572158,
     "p50": 723,
     "p95": 725,
-    "min": 720,
+    "min": 718,
     "max": 726
   },
   "proof_and_public_json_bytes": {
-    "mean": 1763,
-    "std": 1.4383899044561526,
-    "p50": 1763,
-    "p95": 1765,
-    "min": 1760,
-    "max": 1766
+    "mean": 1765.6333333333334,
+    "std": 1.8473342085721578,
+    "p50": 1766,
+    "p95": 1768,
+    "min": 1761,
+    "max": 1769
   },
-  "proving_key_bytes": 19297163,
-  "verification_key_bytes": 7134,
+  "proving_key_bytes": 19297145,
+  "verification_key_bytes": 7137,
   "mutation_test": {
     "fields": 24,
     "rejected": 24,
@@ -215,7 +215,7 @@
           "1"
         ]
       ],
-      "policy_commitment": "18498373644647310917868283525992975268940752200851935998614957545476217363833",
+      "policy_commitment": "11533876512133760906646729280398127708867872435740862147228873215038740420431",
       "accepted_offchain": true,
       "accepted_onchain": true
     },
@@ -231,7 +231,7 @@
           "0"
         ]
       ],
-      "policy_commitment": "2231204316138690434894851029905630802244264485829985648847275187270912846294",
+      "policy_commitment": "17127830726872716778892432340341285110627877150240175260266913963600815936346",
       "accepted_offchain": true,
       "accepted_onchain": true
     }
