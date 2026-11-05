@@ -55,11 +55,15 @@ def measured_parameters() -> dict:
     vcp = json.loads((SUMMARY / "vcp_v3_summary.json").read_text())
     gas = json.loads((SUMMARY / "gas_benchmarks.json").read_text())
     base_path = SUMMARY / "base_sepolia_v3_summary.json"
+    block_time_s, block_gas_limit = 2.0, None
     if base_path.exists():
         base = json.loads(base_path.read_text())
         inclusion_s = base["inclusion_latency_s"]["p50"]
         settle_gas = base["settle_gas"]["p50"]
         inclusion_source = "Base Sepolia v3 campaign"
+        chain = base.get("chain_parameters", {})
+        block_time_s = chain.get("mean_block_interval_s", block_time_s)
+        block_gas_limit = chain.get("block_gas_limit")
     else:
         legacy = json.loads((ROOT / "results" / "summary" / "base_sepolia_vcp_v2_summary.json").read_text())
         inclusion_s = legacy["settlement_inclusion_ms"]["p50"] / 1000.0
@@ -78,8 +82,10 @@ def measured_parameters() -> dict:
         "settle_gas": settle_gas,
         "tee_s": 0.06,
         "worker_rate_rps": nitro,
-        "block_time_s": 2.0,
-        "gas_share": 10_000_000,
+        "block_time_s": block_time_s,
+        "block_gas_limit": block_gas_limit,
+        # Share of ledger gas throughput granted to TrustCircuit, in gas per second.
+        "gas_share_per_s": 10_000_000,
         "inclusion_source": inclusion_source,
     }
 
@@ -148,7 +154,8 @@ class RunResult:
     locked_time_avg_units: float
 
 
-def simulate(seed: int, t_dead: float, p_ab: float, service_s: float, binding: bool, horizon: float) -> RunResult:
+def simulate(seed: int, t_dead: float, p_ab: float, service_s: float, binding: bool, horizon: float,
+             snapshots: list | None = None) -> RunResult:
     rng = np.random.default_rng(seed)
     total = int(math.floor(KAPPA * EPS_TOTAL)) if binding else 10**18
     used = 0
@@ -185,6 +192,8 @@ def simulate(seed: int, t_dead: float, p_ab: float, service_s: float, binding: b
             break
         locked_area += abandoned_reserved * (t - last_t)
         last_t = t
+        if snapshots is not None and t >= t_dead:
+            snapshots.append(abandoned_reserved)
         arrivals += 1
         eps = CAL_MIX[rng.integers(len(CAL_MIX))]
         amount = reservation(eps, any(consumed))
@@ -217,20 +226,106 @@ def binom_tail(n: int, k: int, p: float) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Analytical results checked against the measurements and the simulation
+# ---------------------------------------------------------------------------
+def order_grid_check() -> dict:
+    """Proposition (order-grid loss): for Gaussian composition rho(alpha) = alpha R,
+    eps*(R) = R + 2 sqrt(R L) and, if x_1 <= sqrt(L/R) <= x_m,
+    eps_O'(R) <= R + sqrt(R L) (sqrt(g) + 1/sqrt(g)), g = max x_{j+1}/x_j, x = alpha - 1."""
+    L = math.log(1 / DELTA)
+    xs = [a - 1 for a in ORDERS]
+    gamma = max(b / a for a, b in zip(xs, xs[1:]))
+    factor = (math.sqrt(gamma) + 1 / math.sqrt(gamma)) / 2
+    rows = []
+    with (RAW / "rdp_trace.csv").open() as handle:
+        trace = list(csv.DictReader(handle))
+    R = 0.0
+    worst = 0.0
+    for row in trace:
+        z = int(row["sigma_fixed"]) / 1e6
+        R += 1 / (2 * z * z)
+        x_star = math.sqrt(L / R)
+        eps_cont = R + 2 * math.sqrt(R * L)
+        eps_grid = min(a * R + L / (a - 1) for a in ORDERS)
+        in_range = xs[0] <= x_star <= xs[-1]
+        bound = R + math.sqrt(R * L) * 2 * factor
+        if in_range:
+            assert eps_grid <= bound + 1e-12
+            worst = max(worst, (eps_grid - R) / (eps_cont - R) - 1)
+        rows.append({"q": int(row["q"]), "R": R, "alpha_star_cont": 1 + x_star, "eps_cont": eps_cont,
+                     "eps_grid": eps_grid, "in_range": in_range, "grid_bound": bound})
+    return {"gamma": gamma, "relative_excess_bound": factor - 1, "worst_observed_in_range": worst,
+            "final": rows[-1], "first_in_range_q": next((r["q"] for r in rows if r["in_range"]), None)}
+
+
+B_VALUES = [INCREMENTS[e][-1] / KAPPA for e in CAL_MIX]
+E_B = sum(B_VALUES) / len(B_VALUES)
+E_B2 = sum(b * b for b in B_VALUES) / len(B_VALUES)
+B_MAX = max(B_VALUES)
+
+
+def bennett_tail(nu: float, y: float) -> float:
+    """Pr[L >= E L + y] for compound Poisson L with rate nu and jumps in [0, B_MAX]."""
+    v = nu * E_B2
+    u = y * B_MAX / v
+    h = (1 + u) * math.log(1 + u) - u
+    return math.exp(-(v / B_MAX ** 2) * h)
+
+
+def erlang_c(c: int, a: float) -> float:
+    """Probability that an arrival waits in an M/M/c queue with offered load a < c."""
+    top = a ** c / math.factorial(c) * c / (c - a)
+    return top / (sum(a ** k / math.factorial(k) for k in range(c)) + top)
+
+
+def simulate_mdc(lam: float, service: float, c: int, n: int, seed: int) -> np.ndarray:
+    """Waiting times of n Poisson arrivals at c deterministic servers (M/D/c, FCFS)."""
+    rng = np.random.default_rng(seed)
+    arrivals = np.cumsum(rng.exponential(1 / lam, n))
+    free = [0.0] * c
+    waits = np.empty(n)
+    for i, t in enumerate(arrivals):
+        k = min(range(c), key=free.__getitem__)
+        start = max(t, free[k])
+        waits[i] = start - t
+        free[k] = start + service
+    return waits[n // 10:]
+
+
+def prover_pool(params: dict, lam: float = LAMBDA, zeta: float = 0.01) -> dict:
+    T = params["T_prove_s"]
+    a = lam * T
+    s0 = params["tee_s"] + T + params["inclusion_s"]
+    out = {"offered_load": a, "lambda": lam, "zeta": zeta, "pools": []}
+    for c in range(math.floor(a) + 1, math.floor(a) + 5):
+        C = erlang_c(c, a)
+        wq = C * T / (c - a)
+        tail_t = max(0.0, T * math.log(C / zeta) / (c - a))
+        sims = simulate_mdc(lam, T, c, 200_000, seed=7)
+        out["pools"].append({
+            "c": c, "utilization": a / c, "erlang_c_wait_prob": C, "mmc_mean_wait_s": wq,
+            "mmc_wait_quantile_s": tail_t, "deadline_floor_s": s0 + tail_t,
+            "mdc_sim_wait_prob": float((sims > 1e-9).mean()), "mdc_sim_mean_wait_s": float(sims.mean()),
+            "mdc_sim_wait_quantile_s": float(np.quantile(sims, 1 - zeta)),
+        })
+    return out
+
+
+# ---------------------------------------------------------------------------
 def main() -> None:
     params = measured_parameters()
     service = params["tee_s"] + params["T_prove_s"] + params["inclusion_s"]
 
     # 1. Pipeline capacity
     prover_rate = 1.0 / params["T_prove_s"]
-    ledger_rate = math.floor(params["gas_share"] / params["settle_gas"]) / params["block_time_s"]
+    ledger_rate = params["gas_share_per_s"] / params["settle_gas"]
     capacity = {
         "worker_rate_rps": params["worker_rate_rps"],
         "prover_rate_pps": prover_rate,
-        "ledger_rate_per_10M_gas_sps": ledger_rate,
+        "ledger_rate_sps_per_10Mgas_per_s": ledger_rate,
         "provers_to_match_one_worker": math.ceil(params["worker_rate_rps"] / prover_rate),
         "provers_to_match_64_workers": math.ceil(64 * 14.67 / prover_rate),
-        "provers_absorbed_by_10M_gas": ledger_rate / prover_rate,
+        "provers_absorbed_by_10Mgas_per_s": ledger_rate / prover_rate,
         "bottleneck": "prover",
     }
 
@@ -256,14 +351,23 @@ def main() -> None:
         for t_dead in DEADLINES:
             horizon = 10 * t_dead + 200
             values = []
+            snaps: list = []
             for seed in range(1, SEEDS_B + 1):
-                r = simulate(1000 + seed, t_dead, p_ab, service, binding=False, horizon=horizon)
+                r = simulate(1000 + seed, t_dead, p_ab, service, binding=False, horizon=horizon, snapshots=snaps)
                 values.append(r.locked_time_avg_units / KAPPA)
                 locked_rows.append({"p_ab": p_ab, "t_dead_s": t_dead, "seed": seed, "locked_eps": r.locked_time_avg_units / KAPPA})
             m, ci = mean_ci(values)
             predicted = LAMBDA * p_ab * t_dead * E_BREQ_UNITS / KAPPA * (1 - t_dead / (2 * horizon))
+            nu = LAMBDA * p_ab * t_dead
+            arr = np.asarray(snaps, dtype=float) / KAPPA
+            sd = math.sqrt(nu * E_B2)
+            y = 2 * sd
             locked[f"pab{p_ab}_t{t_dead}"] = {"p_ab": p_ab, "t_dead_s": t_dead, "simulated_eps": m, "ci95": ci,
-                                               "littles_law_eps": predicted}
+                                               "littles_law_eps": predicted,
+                                               "cp_mean_eps": nu * E_B, "cp_var": nu * E_B2,
+                                               "snap_mean_eps": float(arr.mean()), "snap_var": float(arr.var()),
+                                               "tail_y_eps": y, "snap_tail_freq": float((arr >= nu * E_B + y).mean()),
+                                               "bennett_bound": bennett_tail(nu, y)}
 
     # Admissible abandonment rate for L_ab <= 10% of eps_tot at t_dead = 60 s
     admissible = 0.10 * EPS_TOTAL / (60 * E_BREQ_UNITS / KAPPA)
@@ -283,6 +387,9 @@ def main() -> None:
         "abandoned_lock": locked,
         "admissible_abandon_rate_at_60s": admissible,
         "validator_quorum": quorum,
+        "order_grid": order_grid_check(),
+        "locked_budget_moments": {"E_b": E_B, "E_b2": E_B2, "b_max": B_MAX},
+        "prover_pool": prover_pool(params),
     }
     SUMMARY.mkdir(parents=True, exist_ok=True)
     RAW.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,102 @@
+{
+  "schema": "TrustCircuit.Revision.BaseSepoliaV3.v1",
+  "run_id": "smoke_20261105T051007841Z",
+  "mode": "smoke",
+  "chain_id": "84532",
+  "rpc_host": "base-sepolia-rpc.publicnode.com",
+  "block_range": [
+    54667649,
+    54668660
+  ],
+  "lifecycles": 1,
+  "successful_transactions": 45,
+  "contracts": [
+    "DataRegistry",
+    "AccessController",
+    "BudgetLedger",
+    "AuditLedger",
+    "ValidatorRegistry",
+    "VCPv3Groth16Verifier",
+    "ComplianceVerifier",
+    "TrustCircuitSettlement",
+    "TimelockMultisig"
+  ],
+  "deployment_gas_total": 10250909,
+  "deployment_calldata_bytes_total": 45785,
+  "deployment_gas_by_contract": {
+    "DataRegistry": 791231,
+    "AccessController": 1779995,
+    "BudgetLedger": 1789265,
+    "AuditLedger": 471981,
+    "ValidatorRegistry": 1291778,
+    "VCPv3Groth16Verifier": 818889,
+    "ComplianceVerifier": 540788,
+    "TrustCircuitSettlement": 1794082,
+    "TimelockMultisig": 972900
+  },
+  "settle_gas": {
+    "p50": 730588,
+    "p95": 730588,
+    "min": 730588,
+    "max": 730588
+  },
+  "settle_fee_wei_p50": 4383528000000,
+  "gas_price_wei_p50": 6000000,
+  "inclusion_latency_s": {
+    "p50": 0.2989,
+    "p95": 0.2989,
+    "max": 0.2989
+  },
+  "validator_quorum": "2-of-3",
+  "governance": {
+    "contract": "TimelockMultisig",
+    "threshold": 2,
+    "owners": 3,
+    "delay_s": 60
+  },
+  "deployer_retired": true,
+  "rdp": {
+    "total_budget": "50000000",
+    "used": "186154",
+    "orders": [
+      2,
+      3,
+      4,
+      6,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48,
+      64
+    ]
+  },
+  "vcp": {
+    "circuit_sha256": "0ffa2603c4ce6d24e97d070af24eef1a48b04a5bf47155c7479a77061a275b53",
+    "final_zkey_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+    "setup_note": "phase 2: a single contribution followed by a public beacon; sound only if that contributor erased its randomness. Further contributions can be appended with `contribute` before a deployment re-applies the beacon."
+  },
+  "addresses": {
+    "DataRegistry": "0x87B4B55e5C5bE7BEfA32943dA2Ec073e36738688",
+    "AccessController": "0x2Cdd0A3968f9c1842f58b9E9e9E05C7FDf21697a",
+    "BudgetLedger": "0x97B92Ab3a507F26f3Ae85826DC83aD9c64d307dB",
+    "AuditLedger": "0xbD938b8a51c1B36FF7Da76c6Fd3F7386B5dc616c",
+    "ValidatorRegistry": "0xeBdF2b0C1E7b32C70319EA886949d7F9cacEa0ec",
+    "VCPv3Groth16Verifier": "0x1eBA480d329AEb81efB1360E9de0290ac2D3FC60",
+    "ComplianceVerifier": "0xDf27366Dafe10804019792eBF393ac54c371692F",
+    "TrustCircuitSettlement": "0xeC11106C0fE533BE2E8e2137bBc4e3b2A38589C7",
+    "TimelockMultisig": "0x9CBca55611782310f7fF3921985ECeF3BC8334B7"
+  },
+  "roles": {
+    "operator": "0xA8f5a2F57b849953603A2A6077e8085C9bB565bD",
+    "provider": "0xB15561732700B6103A69cbd40Dc2B77f777157af",
+    "consumer": "0x5464848740E98Be80b624AAA9E526304Bd7c636c",
+    "validator1": "0x4c4Cf7a16F686B11622fd0102Afd30992F0fa073",
+    "validator2": "0x629B34332923c9bC6F968d8Fe953221e631Be12B",
+    "validator3": "0x02817De7854be28E89a808FB31c7921BAecFaBCe",
+    "owner1": "0xbd7dAD489438280C3818424F3a5dd3505BFFF82C",
+    "owner2": "0xdCE59b6a372E5b5954C198426231a9F4b21A284F",
+    "owner3": "0x1F960D70fB0873d0774FeB150Cc877A994315a87"
+  }
+}

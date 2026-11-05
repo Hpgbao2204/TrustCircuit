@@ -1,0 +1,109 @@
+{
+  "schema": "TrustCircuit.Revision.BaseSepoliaV3.v1",
+  "run_id": "full_20261105T051446969Z",
+  "mode": "full",
+  "chain_id": "84532",
+  "rpc_host": "base-sepolia-rpc.publicnode.com",
+  "block_range": [
+    54669047,
+    54672045
+  ],
+  "chain_parameters": {
+    "first_block": 54669047,
+    "last_block": 54672045,
+    "mean_block_interval_s": 0.19979986657771848,
+    "block_gas_limit": 120000000
+  },
+  "latency_definition": "client-observed time from broadcast to the first receipt returned by the RPC endpoint",
+  "lifecycles": 30,
+  "successful_transactions": 161,
+  "contracts": [
+    "DataRegistry",
+    "AccessController",
+    "BudgetLedger",
+    "AuditLedger",
+    "ValidatorRegistry",
+    "VCPv3Groth16Verifier",
+    "ComplianceVerifier",
+    "TrustCircuitSettlement",
+    "TimelockMultisig"
+  ],
+  "deployment_gas_total": 10250909,
+  "deployment_calldata_bytes_total": 45785,
+  "deployment_gas_by_contract": {
+    "DataRegistry": 791231,
+    "AccessController": 1779995,
+    "BudgetLedger": 1789265,
+    "AuditLedger": 471981,
+    "ValidatorRegistry": 1291778,
+    "VCPv3Groth16Verifier": 818889,
+    "ComplianceVerifier": 540788,
+    "TrustCircuitSettlement": 1794082,
+    "TimelockMultisig": 972900
+  },
+  "settle_gas": {
+    "p50": 641604,
+    "p95": 642029.4,
+    "min": 641386,
+    "max": 730616
+  },
+  "settle_fee_wei_p50": 3849624000000,
+  "gas_price_wei_p50": 6000000,
+  "inclusion_latency_s": {
+    "p50": 0.3591,
+    "p95": 2.1210850000000003,
+    "max": 2.2273
+  },
+  "validator_quorum": "2-of-3",
+  "governance": {
+    "contract": "TimelockMultisig",
+    "threshold": 2,
+    "owners": 3,
+    "delay_s": 60
+  },
+  "deployer_retired": true,
+  "rdp": {
+    "total_budget": "50000000",
+    "used": "1493519",
+    "orders": [
+      2,
+      3,
+      4,
+      6,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48,
+      64
+    ]
+  },
+  "vcp": {
+    "circuit_sha256": "0ffa2603c4ce6d24e97d070af24eef1a48b04a5bf47155c7479a77061a275b53",
+    "final_zkey_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+    "setup_note": "phase 2: a single contribution followed by a public beacon; sound only if that contributor erased its randomness. Further contributions can be appended with `contribute` before a deployment re-applies the beacon."
+  },
+  "addresses": {
+    "DataRegistry": "0x6d43AA7Af326B4dbaa2644915b0afd88D52faF0a",
+    "AccessController": "0x690dF3b2Fd8bCD1CA7c073e94788A981c6e20219",
+    "BudgetLedger": "0x4a2Da3B12d5c9e3f22Ae0Af28B92af9dd454DC17",
+    "AuditLedger": "0xc3E3bCbCE05b1adc9C87E30ba13E58BfA11C6f33",
+    "ValidatorRegistry": "0xA45049302A100153Bd9D8ebe5b08b21C112417C8",
+    "VCPv3Groth16Verifier": "0xf043cc5792a5F2F4f3331A0CC0A54ADBc1a77810",
+    "ComplianceVerifier": "0xd292331f845878534DB275ec8Db4B58b15dF1a9d",
+    "TrustCircuitSettlement": "0xb77b937ce2586115C1BB54192c3Ca2e9b7c4203a",
+    "TimelockMultisig": "0x5c77D4eF4576e2F455a2DC72fA8FaA0bcDa1FB05"
+  },
+  "roles": {
+    "operator": "0x2D77597672A7E671593397Bb4d22ec51b7e73218",
+    "provider": "0xee7bD7328Ac86e1f801D0993E0AC8ec1dd152C6c",
+    "consumer": "0xC31767CeE6CDb46B5cE225687105AAcD9d5548c0",
+    "validator1": "0x8202EDb0Af1a6609f2da08B9BDc143958e06C003",
+    "validator2": "0x205F01b1B4Ac383fBaa9ECb4573c5DEa5da6B7c7",
+    "validator3": "0x4A0E30dc8Fed6847E7DD1B2EBb7B0A26467c44d1",
+    "owner1": "0xD1c4D5519d13F2b5940246cc036cA00EEb035678",
+    "owner2": "0x2779f9A147f5678B6BD80aAAFEC05bc77a9F4092",
+    "owner3": "0x13Db58FE5564B71CFF79e045C7067137D5AdE6b9"
+  }
+}

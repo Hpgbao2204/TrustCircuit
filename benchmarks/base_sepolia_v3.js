@@ -101,7 +101,8 @@ async function sweep(file, rpcUrl) {
     const balance = await provider.getBalance(wallet.address);
     const fee = await provider.getFeeData();
     const price = (fee.maxFeePerGas ?? fee.gasPrice) * 2n;
-    const cost = 21_000n * price;
+    // OP-stack transactions also pay an L1 data fee; keep a small margin for it.
+    const cost = 21_000n * price * 2n + 1_000_000_000n;
     if (balance <= cost) continue;
     const tx = await wallet.sendTransaction({ to: data.deployer, value: balance - cost, gasLimit: 21_000n, maxFeePerGas: price, maxPriorityFeePerGas: fee.maxPriorityFeePerGas ?? 1n });
     await tx.wait();
@@ -316,6 +317,16 @@ async function main() {
   const settleGas = settles.map((r) => Number(r.gas_used));
   const latencies = settles.map((r) => Number(r.inclusion_latency_ms) / 1000);
   const blocks = rows.map((r) => r.block_number);
+  // Chain parameters measured from the campaign's own block headers.
+  const firstBlock = await provider.getBlock(Math.min(...blocks));
+  const lastBlock = await provider.getBlock(Math.max(...blocks));
+  const chainParameters = {
+    first_block: firstBlock.number,
+    last_block: lastBlock.number,
+    mean_block_interval_s:
+      (lastBlock.timestamp - firstBlock.timestamp) / Math.max(1, lastBlock.number - firstBlock.number),
+    block_gas_limit: Number(lastBlock.gasLimit),
+  };
   const summary = {
     schema: "TrustCircuit.Revision.BaseSepoliaV3.v1",
     run_id: runId,
@@ -323,6 +334,8 @@ async function main() {
     chain_id: network.chainId.toString(),
     rpc_host: new URL(rpcUrl).host,
     block_range: [Math.min(...blocks), Math.max(...blocks)],
+    chain_parameters: chainParameters,
+    latency_definition: "client-observed time from broadcast to the first receipt returned by the RPC endpoint",
     lifecycles: repetitions,
     successful_transactions: rows.length,
     contracts: CONTRACTS,
