@@ -1,8 +1,8 @@
 "use strict";
 
-// VCP v3 (TNSE revision) witness and public-statement encoding.
+// VCP v3 witness and public-statement encoding.
 //
-// Differences from scripts/lib/phase7_encoding.js (VCP v2):
+// Differences from scripts/lib/vcp_v2_encoding.js (VCP v2):
 //   * policy commitment   ph  = H_pol(P, F, vec(M), r_pol)          (salted)
 //   * context commitment  c_zk = H_ctx(..., purposeId, r_ctx)        (salted)
 //   * result commitment   y_h  = H_res(result, r_res)                (unchanged, salted)
@@ -22,7 +22,7 @@ const {
   domainHash,
   identifierDigest,
   splitBytes32,
-} = require("./phase7_encoding");
+} = require("./vcp_v2_encoding");
 
 const DATA_COMMITMENT_DOMAIN = Buffer.from("TrustCircuit.DataCommitment.v3\0", "utf8");
 const DP_CONFIG_TYPEHASH = keccak256(

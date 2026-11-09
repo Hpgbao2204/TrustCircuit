@@ -32,7 +32,7 @@ template RangeCheck(bits) {
     decomposition.in <== value;
 }
 
-// VCP v3 relation (TNSE revision). Identical public interface to v2 (24
+// VCP v3 relation. Identical public interface to v2 (24
 // signals); the policy and execution-context commitments are now salted with
 // private field elements so that low-entropy values (a 2x2 consent matrix, an
 // enclave measurement from a short allowlist) cannot be recovered by

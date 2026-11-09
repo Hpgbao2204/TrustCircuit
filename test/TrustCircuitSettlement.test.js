@@ -4,8 +4,8 @@ const S = require("../scripts/lib/v3_stack");
 
 // Settlement guards of the revised stack (quorum statement, ledger RDP charge).
 // The Groth16 verifier is mocked here; real proofs are exercised in
-// RevisionV3.test.js and scripts/revision/run_attack_matrix.js.
-describe("TrustCircuitSettlement (revised stack)", function () {
+// ProtocolStack.test.js and scripts/experiments/run_attack_matrix.js.
+describe("TrustCircuitSettlement", function () {
   const SIGMA = 9_689_610n;
   let provider;
   let consumer;

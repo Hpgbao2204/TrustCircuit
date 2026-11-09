@@ -1,9 +1,9 @@
 "use strict";
 
-// Shared deployment and request-lifecycle helpers for the TNSE-revision stack
+// Shared deployment and request-lifecycle helpers for the TrustCircuit stack
 // (VCP v3, ledger-enforced RDP accounting, k-of-n validator quorum, and the
 // sign-and-hash / stage-wise comparison designs). Used by the Hardhat tests,
-// the attack matrix, and the revision benchmarks.
+// the attack matrix, and the benchmarks.
 
 const fs = require("fs");
 const path = require("path");

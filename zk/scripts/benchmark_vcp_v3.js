@@ -1,15 +1,13 @@
 "use strict";
 
-// VCP v3 proof-cost benchmark (TNSE revision, R3.2).
-// Same methodology as zk/scripts/benchmark_vcp_v2.js: 2 warm-up + 30 retained
-// proofs; prove-only time excludes witness generation; isolated verifier gas is
+// VCP v3 proof-cost benchmark: 2 warm-up + 30 retained proofs; prove-only time excludes witness generation; isolated verifier gas is
 // the gasUsed of a transaction calling verifyProof. It also runs the
 // single-field mutation test over all 24 public signals and checks that two
 // distinct policy matrices verify under the same circuit-specific key.
 //
 // Run: npx hardhat run zk/scripts/benchmark_vcp_v3.js
-// Output: results/raw/revision/vcp_v3_runs.csv,
-//         results/summary/revision/vcp_v3_summary.json
+// Output: results/raw/vcp_v3_runs.csv,
+//         results/summary/vcp_v3_summary.json
 
 const fs = require("fs");
 const os = require("os");
@@ -25,8 +23,8 @@ const WASM = path.join(BUILD, "vcp_v3_js", "vcp_v3.wasm");
 const ZKEY = path.join(BUILD, "vcp_v3_final.zkey");
 const VKEY = path.join(BUILD, "vcp_v3_vkey.json");
 const METADATA = path.join(ROOT, "zk", "vcp_v3_metadata.json");
-const RAW = path.join(ROOT, "results", "raw", "revision", "vcp_v3_runs.csv");
-const SUMMARY = path.join(ROOT, "results", "summary", "revision", "vcp_v3_summary.json");
+const RAW = path.join(ROOT, "results", "raw", "vcp_v3_runs.csv");
+const SUMMARY = path.join(ROOT, "results", "summary", "vcp_v3_summary.json");
 const REPS = Number(process.env.TRUSTCIRCUIT_VCP_REPS || 30);
 const WARMUPS = Number(process.env.TRUSTCIRCUIT_VCP_WARMUPS || 2);
 

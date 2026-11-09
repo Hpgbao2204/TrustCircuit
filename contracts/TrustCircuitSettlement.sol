@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "./ComplianceVerifier.sol";
 import "./SettlementCore.sol";
 
-/// @notice Atomic settlement for the VCP relation (TNSE revision).
+/// @notice Atomic settlement for the VCP relation.
 /// Every bytes32 public value is matched as two uint128 limbs without modular
 /// reduction. Native evidence validation remains off-chain; a k-of-n validator
 /// quorum, the arithmetic context, expiry, Groth16 proof, ledger-computed RDP

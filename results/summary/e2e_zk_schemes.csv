@@ -1,4 +1,0 @@
-scheme,setup_model,tee_compute_ms,onchain_settlement_ms,prove_ms,offchain_verify_ms,e2e_latency_ms,throughput_req_s,onchain_verify_gas,proof_size_bytes
-groth16,per-circuit,44.0,13.0,175.7,15.15,247.9,4.034,255757,943
-plonk,universal,44.0,13.0,3373.2,15.16,3445.4,0.290,297014,2319
-fflonk,universal,44.0,13.0,3525.7,11.44,3594.1,0.278,222762,2314

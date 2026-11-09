@@ -1,0 +1,5 @@
+policy_leaves,threshold_k,trials,authorized_success_rate,unauthorized_block_rate,false_accept_rate,key_security_bits,symmetric_bits
+4,2,300,1.0000,1.0000,0.000000,128,256
+8,4,300,1.0000,1.0000,0.000000,128,256
+16,8,300,1.0000,1.0000,0.000000,128,256
+32,16,300,1.0000,1.0000,0.000000,128,256

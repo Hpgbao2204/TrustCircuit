@@ -1,4 +1,0 @@
-scheme,verify_gas,deploy_gas,verified
-groth16,282561,551775,true
-plonk,302660,1684786,true
-fflonk,226148,3796772,true
