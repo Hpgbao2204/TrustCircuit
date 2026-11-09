@@ -1,0 +1,3 @@
+# Keep hashed ceremony inputs byte-identical on every platform.
+*.circom text eol=lf
+zk/ceremony/*.json text eol=lf
