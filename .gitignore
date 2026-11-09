@@ -166,7 +166,6 @@ results/processed/sota_profiles/*
 
 # Local notes / markdown docs
 Paper/
-.skills/
 PROJECT_STATE.json
 
 # Canonical manuscript source and retained paper panels.
@@ -180,6 +179,14 @@ Paper/**
 !Paper/Figure/figures/base-sepolia/*.pdf
 !Paper/Figure/figures/abe/
 !Paper/Figure/figures/abe/ab1_policy_time_revised.pdf
+!Paper/Figure/figures/abe/ab4_throughput.pdf
+!Paper/Figure/figures/abe/ab6_peak_rss.pdf
+!Paper/Figure/figures/dp/
+!Paper/Figure/figures/dp/d3_error_contour.pdf
+!Paper/Figure/figures/deployment-profiles/
+!Paper/Figure/figures/deployment-profiles/*.pdf
+!Paper/Figure/figures/nitro_new/
+!Paper/Figure/figures/nitro_new/*.pdf
 
 # Logs
 *.log

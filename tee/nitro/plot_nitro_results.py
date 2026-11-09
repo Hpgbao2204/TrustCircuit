@@ -21,19 +21,20 @@ ATTEST_SUMMARY_CSV = REPO / "results" / "summary" / "nitro_attestation_summary.c
 POOL_SUMMARY_CSV = REPO / "results" / "summary" / "nitro_pool_summary.csv"
 POOL_PROJECTION_CSV = REPO / "results" / "summary" / "nitro_pool_projection_summary.csv"
 OUT_DIR = REPO / "results" / "figures" / "nitro"
+SELECTED_OUTPUTS: set[str] | None = None
 
 
-def apply_nitro_style() -> None:
+def apply_nitro_style(font_delta: int = 0) -> None:
     plt.rcdefaults()
     plt.rcParams.update(
         {
             "figure.figsize": (12, 6),
-            "font.size": 18,
-            "axes.titlesize": 18,
-            "axes.labelsize": 18,
-            "xtick.labelsize": 16,
-            "ytick.labelsize": 16,
-            "legend.fontsize": 14,
+            "font.size": 18 + font_delta,
+            "axes.titlesize": 18 + font_delta,
+            "axes.labelsize": 18 + font_delta,
+            "xtick.labelsize": 16 + font_delta,
+            "ytick.labelsize": 16 + font_delta,
+            "legend.fontsize": 14 + font_delta,
             "lines.linewidth": 2.4,
             "lines.markersize": 8,
             "axes.axisbelow": True,
@@ -45,6 +46,9 @@ def apply_nitro_style() -> None:
 
 
 def save_pdf_only(fig, name: str) -> None:
+    if SELECTED_OUTPUTS is not None and name not in SELECTED_OUTPUTS:
+        plt.close(fig)
+        return
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     fig.savefig(OUT_DIR / f"{name}.pdf", dpi=300, bbox_inches="tight", pad_inches=0.08)
     plt.close(fig)
@@ -141,7 +145,7 @@ def plot_throughput(summary: list[dict]) -> None:
     ax.set_ylim(0, max(throughput) * 1.18)
     for bar, value in zip(bars, throughput):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f"{value:.1f}",
-                ha="center", va="bottom", fontsize=12)
+                ha="center", va="bottom", fontsize=int(plt.rcParams["font.size"]) - 3)
     fig.tight_layout()
     save_pdf_only(fig, "nitro_payload_throughput")
 
@@ -346,7 +350,7 @@ def plot_pool(rows: list[dict]) -> None:
         ax2.tick_params(axis="y", labelcolor="#cc3311")
         for bar, value in zip(bars, per_worker):
             ax.text(bar.get_x() + bar.get_width() / 2, value, f"{value:.2f}",
-                    ha="center", va="bottom", fontsize=11)
+                    ha="center", va="bottom", fontsize=int(plt.rcParams["font.size"]) - 4)
         save_pdf_only(fig, "nitro_pool_per_worker_throughput")
 
         fig, ax = plt.subplots(figsize=(12, 6))
@@ -363,7 +367,7 @@ def plot_pool(rows: list[dict]) -> None:
         ax2.tick_params(axis="y", labelcolor="#8f4f2f")
         for bar, value in zip(bars, efficiency):
             ax.text(bar.get_x() + bar.get_width() / 2, value, f"{value:.3f}",
-                    ha="center", va="bottom", fontsize=11)
+                    ha="center", va="bottom", fontsize=int(plt.rcParams["font.size"]) - 4)
         save_pdf_only(fig, "nitro_pool_parallel_efficiency")
 
         fig, ax = plt.subplots(figsize=(12, 6))

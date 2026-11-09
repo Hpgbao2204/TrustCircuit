@@ -53,7 +53,9 @@ PALETTE = [
 ]
 
 
-def apply_style() -> None:
+def apply_style(font_delta: int = 0) -> None:
+    global FONT_SIZE
+    FONT_SIZE = 16 + font_delta
     plt.rcParams.update(
         {
             "figure.figsize": FIG_SIZE,
@@ -327,14 +329,7 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     ax.legend(fontsize=12, ncol=2)
     paths.append(save(fig, out_dir, "d2_error_vs_eps"))
 
-    fig, ax = new_fig()
-    cf = ax.contourf(X, Y, mat, levels=16, cmap="Blues")
-    ax.contour(X, Y, mat, levels=8, colors="white", linewidths=0.7, alpha=0.7)
-    ax.set_xticks(range(len(eps))); ax.set_xticklabels([str(e) for e in eps])
-    ax.set_yticks(range(len(queries))); ax.set_yticklabels([q[:12] for q in queries])
-    ax.set_xlabel("epsilon")
-    fig.colorbar(cf, ax=ax, fraction=0.046, pad=0.04).set_label("rel error (%)")
-    paths.append(save(fig, out_dir, "d3_error_contour"))
+    paths.append(figure_dp_error_contour(rows, out_dir))
 
     fig, ax = new_fig()
     for i, q in enumerate(queries):
@@ -389,6 +384,34 @@ def figures_dp(rows: list[dict[str, str]], out_dir: Path) -> list[Path]:
     paths.append(save(fig, out_dir, "d8_noise_scaling"))
 
     return paths
+
+
+def figure_dp_error_contour(rows: list[dict[str, str]], out_dir: Path) -> Path:
+    """Render the DP contour panel with a wrapped, paper-sized colorbar label."""
+    queries = sorted({r["query"] for r in rows})
+    eps = sorted({float(r["epsilon"]) for r in rows})
+    by_key = {
+        (r["query"], float(r["epsilon"])): float(r["relative_error_percent_mean"])
+        for r in rows
+    }
+    matrix = np.array([[by_key[(query, epsilon)] for epsilon in eps] for query in queries])
+    x_grid, y_grid = np.meshgrid(np.arange(len(eps)), np.arange(len(queries)))
+
+    fig, ax = new_fig()
+    contour = ax.contourf(x_grid, y_grid, matrix, levels=16, cmap="Blues")
+    ax.contour(x_grid, y_grid, matrix, levels=8, colors="white", linewidths=0.7, alpha=0.7)
+    y_label_map = {
+        "mean_systolic_bp": "mean systolic\nBP",
+        "mean_cholesterol": "mean\ncholesterol",
+        "high_cholesterol_count": "high cholesterol\ncount",
+    }
+    ax.set_xticks(range(len(eps))); ax.set_xticklabels([f"{e:g}" for e in eps])
+    ax.set_yticks(range(len(queries))); ax.set_yticklabels([y_label_map.get(q, q.replace("_", " ")) for q in queries])
+    ax.set_xlabel("epsilon")
+    fig.subplots_adjust(left=0.20, right=0.85, bottom=0.16, top=0.96)
+    colorbar = fig.colorbar(contour, ax=ax, fraction=0.046, pad=0.04)
+    colorbar.set_label("relative error\n(%)", fontsize=FONT_SIZE)
+    return save(fig, out_dir, "d3_error_contour")
 
 
 def figures_tee_scaling(rows: list[dict[str, str]], out_dir: Path, cores: int = 16) -> list[Path]:
@@ -982,7 +1005,7 @@ def figure_cpabe_policy_comparison_revised(rows, out_dir: Path) -> Path:
     ax.set_ylabel("Latency (ms)")
     ax.set_xticks(attributes)
     ax.set_ylim(bottom=0)
-    ax.legend(ncol=2, fontsize=12)
+    ax.legend(ncol=2, fontsize=FONT_SIZE - 4)
     fig.tight_layout()
     return save(fig, out_dir, "ab1_policy_time_revised")
 
@@ -1117,6 +1140,33 @@ def figure_aes_gcm_memory_revised(rows, out_dir: Path) -> Path:
     return save(fig, out_dir, "ab6_peak_rss_revised_v2")
 
 
+def figure_abe_throughput(rows, out_dir: Path) -> Path:
+    pay = sorted(rows, key=lambda r: int(r["payload_mb"]))
+    mb = np.array([int(r["payload_mb"]) for r in pay])
+    ethr = np.array([float(r["enc_throughput_mbps"]) for r in pay])
+    dthr = np.array([float(r["dec_throughput_mbps"]) for r in pay])
+
+    fig, ax = new_fig()
+    ax.semilogx(mb, ethr, marker="o", color=PALETTE[0], label="encrypt throughput")
+    ax.semilogx(mb, dthr, marker="s", color=PALETTE[1], label="decrypt throughput")
+    ax.set_xlabel("payload size (MB, log)"); ax.set_ylabel("throughput (MB/s)")
+    ax.legend(fontsize=FONT_SIZE - 2)
+    return save(fig, out_dir, "ab4_throughput")
+
+
+def figure_abe_memory(rows, out_dir: Path) -> Path:
+    pay = sorted(rows, key=lambda r: int(r["payload_mb"]))
+    mb = np.array([int(r["payload_mb"]) for r in pay])
+    rss = np.array([float(r["peak_rss_mb"]) for r in pay])
+
+    fig, ax = new_fig()
+    ax.plot(mb, rss, marker="o", color=PALETTE[3], label="peak RSS")
+    ax.plot(mb, mb, "--", color="gray", label="1x payload")
+    ax.set_xlabel("payload size (MB)"); ax.set_ylabel("peak resident memory (MB)")
+    ax.legend(fontsize=FONT_SIZE - 2)
+    return save(fig, out_dir, "ab6_peak_rss")
+
+
 def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy_rows=None) -> list[Path]:
     paths: list[Path] = []
 
@@ -1164,12 +1214,7 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
         ax.legend()
         paths.append(save(fig, out_dir, "ab3_payload_time"))
 
-        fig, ax = new_fig()
-        ax.semilogx(mb, ethr, marker="o", color=PALETTE[0], label="encrypt throughput")
-        ax.semilogx(mb, dthr, marker="s", color=PALETTE[1], label="decrypt throughput")
-        ax.set_xlabel("payload size (MB, log)"); ax.set_ylabel("throughput (MB/s)")
-        ax.legend()
-        paths.append(save(fig, out_dir, "ab4_throughput"))
+        paths.append(figure_abe_throughput(payload_rows, out_dir))
 
         fig, ax = new_fig()
         ax.loglog(mb, frac, marker="o", color=PALETTE[4])
@@ -1180,12 +1225,7 @@ def figures_abe(policy_rows, payload_rows, sec_rows, out_dir: Path, cpabe_policy
                 ax.annotate(f"{y:.1e}%", (x, y), fontsize=11, xytext=(4, 4), textcoords="offset points")
         paths.append(save(fig, out_dir, "ab5_overhead_amortization"))
 
-        fig, ax = new_fig()
-        ax.plot(mb, rss, marker="o", color=PALETTE[3], label="peak RSS")
-        ax.plot(mb, mb, "--", color="gray", label="1x payload")
-        ax.set_xlabel("payload size (MB)"); ax.set_ylabel("peak resident memory (MB)")
-        ax.legend()
-        paths.append(save(fig, out_dir, "ab6_peak_rss"))
+        paths.append(figure_abe_memory(payload_rows, out_dir))
 
     if sec_rows:
         sr = sorted(sec_rows, key=lambda r: int(r["policy_leaves"]))
