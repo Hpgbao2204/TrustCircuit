@@ -125,20 +125,13 @@ def plot_latency(summary: list[dict]) -> None:
 
 
 def plot_throughput(summary: list[dict]) -> None:
-    measured_payloads = [r["payload_mib"] for r in summary]
-    measured_throughput = [r["throughput_mib_s"] for r in summary]
-    plateau = statistics.mean(measured_throughput[-min(3, len(measured_throughput)):])
-    projected_payloads = [p for p in (256, 512, 1024) if p > max(measured_payloads)]
-    projected_throughput = [
-        round(plateau * (1.0 - 0.004 * i), 3)
-        for i, _ in enumerate(projected_payloads, start=1)
-    ]
-    payloads = measured_payloads + projected_payloads
-    throughput = measured_throughput + projected_throughput
+    # Measured payload sizes only; no extrapolated points.
+    payloads = [r["payload_mib"] for r in summary]
+    throughput = [r["throughput_mib_s"] for r in summary]
+    plateau = statistics.mean(throughput[-min(3, len(throughput)):])
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    colors = ["#2f6f8f"] * len(measured_payloads) + ["#86b8c8"] * len(projected_payloads)
-    bars = ax.bar([str(p) for p in payloads], throughput, color=colors, edgecolor="#2c3e50", linewidth=0.8)
+    bars = ax.bar([str(p) for p in payloads], throughput, color="#2f6f8f", edgecolor="#2c3e50", linewidth=0.8)
     ax.axhline(plateau, color="#7f7f7f", linewidth=1.3, linestyle="--", alpha=0.8)
     ax.set_xlabel("Payload size (MiB)")
     ax.set_ylabel("Throughput (MiB/s)")
