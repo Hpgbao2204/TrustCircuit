@@ -1,8 +1,8 @@
-"""Multi-party request-network model (TNSE revision, R3.1).
+"""Multi-party request-network model.
 
 Model-based analysis of TrustCircuit as a network of consumers, TEE workers,
 provers, a validator quorum, and the ledger, parameterized with the measured
-values of the revision benchmarks. Three results:
+values of the benchmarks. Three results:
 
 1. Pipeline capacity  X <= min{ w x_w, p / T_prove, floor(G / g_settle) / tau_blk }.
 2. Budget contention  among consumers that share one asset's non-replenishable
@@ -14,9 +14,9 @@ values of the revision benchmarks. Three results:
 
 Run (from the repository root):
     .venv/Scripts/python.exe analysis/network_model.py
-Outputs: results/summary/revision/network_model.json,
-         results/raw/revision/network_contention.csv, network_locked.csv,
-         results/figures/revision/fig_network_dynamics.pdf
+Outputs: results/summary/network_model.json,
+         results/raw/network_contention.csv, network_locked.csv,
+         results/figures/fig_network_dynamics.pdf
 """
 
 from __future__ import annotations
@@ -32,9 +32,9 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-SUMMARY = ROOT / "results" / "summary" / "revision"
-RAW = ROOT / "results" / "raw" / "revision"
-FIGURES = ROOT / "results" / "figures" / "revision"
+SUMMARY = ROOT / "results" / "summary"
+RAW = ROOT / "results" / "raw"
+FIGURES = ROOT / "results" / "figures"
 
 KAPPA = 1_000_000
 DELTA = 1e-5

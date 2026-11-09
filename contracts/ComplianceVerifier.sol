@@ -12,7 +12,7 @@ interface IVCPGroth16Verifier {
     ) external view returns (bool);
 }
 
-/// @notice Thin verifier adapter for the paper-aligned VCP v2 relation.
+/// @notice Thin verifier adapter for the VCP relation.
 /// Request-state matching and validator authentication live in atomic settlement;
 /// this adapter enforces proof validity and global nullifier uniqueness.
 contract ComplianceVerifier is LifecycleRoles {

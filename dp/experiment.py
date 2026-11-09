@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from benchmarks.paper_plot_style import apply_paper_style, save_pdf
+from benchmarks.plot_style import apply_paper_style, save_pdf
 
 
 EPSILON_SCALE = 1_000_000
@@ -275,7 +275,7 @@ def export_cohort(config: ExperimentConfig) -> Path:
     """Write the generated cohort to data/generated/ for reproducibility.
 
     The file is fully synthetic (seeded) and carries no disclosure risk; it lets
-    reviewers reproduce the exact dataset used in the privacy-utility study.
+    others reproduce the exact dataset used in the privacy-utility study.
     """
     rng = np.random.default_rng(config.seed)
     data = synthetic_healthcare(config.rows, rng)

@@ -174,7 +174,7 @@ def main() -> int:
         "summary_csv": str(args.summary_output.resolve().relative_to(ROOT)),
         "limitations": [
             "RSS is host-process RSS sampled at stage/chunk boundaries, not an OS event-traced instantaneous maximum.",
-            "The benchmark does not run inside Nitro or VBS enclaves.",
+            "The benchmark does not run inside an enclave.",
             "Chunked mode models bounded-buffer processing and does not write ciphertext to persistent storage.",
         ],
     }

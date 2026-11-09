@@ -28,7 +28,7 @@ contract ValidatorRegistry is LifecycleRoles {
         bytes signature;
     }
 
-    /// @notice k-of-n validator statement (TNSE revision). Every listed
+    /// @notice k-of-n validator statement. Every listed
     /// validator signs its own payload over the same native digest, arithmetic
     /// context, and expiry; ids must be strictly increasing, so they are distinct.
     struct QuorumAttestation {

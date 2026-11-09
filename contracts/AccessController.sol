@@ -31,7 +31,7 @@ contract AccessController is LifecycleRoles {
         uint64 deadlineUnixMs;
         RequestStatus status;
         bool vcpV2;
-        // TNSE revision: public Gaussian-mechanism parameters charged on-chain.
+        // Public Gaussian-mechanism parameters charged on-chain.
         uint64 sigmaFixed;
         uint64 sensitivityFixed;
         bool rdp;

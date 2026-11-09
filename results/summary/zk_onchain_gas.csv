@@ -1,2 +1,0 @@
-scheme,curve,circuit,public_inputs,verify_gas,deploy_gas,verified
-groth16,bn128,compliance_2,7,255757,470580,true

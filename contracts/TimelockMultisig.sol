@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @notice Minimal k-of-n multisignature account with a timelock (TNSE
-/// revision, R2.4). It owns registry governance (validator activation and
-/// revocation, threshold changes, coordinator roles) so that no single key can
-/// admit a rogue validator, and every change is visible for `delay` seconds
-/// before it takes effect.
+/// @notice Minimal k-of-n multisignature account with a timelock. It owns
+/// registry governance (validator activation and revocation, threshold changes,
+/// coordinator roles) so that no single key can admit a rogue validator, and
+/// every change is visible for `delay` seconds before it takes effect.
 contract TimelockMultisig {
     struct Proposal {
         address target;

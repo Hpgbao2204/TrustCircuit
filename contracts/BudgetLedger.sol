@@ -31,7 +31,7 @@ contract BudgetLedger is LifecycleRoles {
     mapping(bytes32 => Reservation) private reservations;
 
     // ------------------------------------------------------------------
-    // Ledger-enforced cumulative RDP accounting (TNSE revision, R3.4).
+    // Ledger-enforced cumulative RDP accounting.
     // For every asset the contract keeps the consumed fixed-point RDP vector
     // rho over a finite order set O' (<= 16 orders, 64-bit lanes packed four
     // per storage word) together with the conversion offsets

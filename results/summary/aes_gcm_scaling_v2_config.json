@@ -1,0 +1,47 @@
+{
+  "schema": "TrustCircuit.AesGcmScaling.v2",
+  "run_id": "aes-gcm-20260720T200356Z-a985b9bd",
+  "timestamp_utc": "2026-07-20T20:03:56.148070+00:00",
+  "measurement_type": "directly measured",
+  "scope": "host-side bulk symmetric encryption; not access-control throughput and not enclave memory",
+  "backend": "Node.js crypto backed by OpenSSL 3.0.15+quic",
+  "threading": "single JavaScript thread; synchronous crypto API",
+  "payload_sizes_mib": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    256,
+    512
+  ],
+  "repetitions_per_point": 10,
+  "chunk_mib": 4,
+  "variants": {
+    "full_buffer": "whole plaintext, ciphertext, and recovered plaintext retained concurrently",
+    "chunked": "AES-GCM encrypt/decrypt updates in bounded chunks; output consumed immediately"
+  },
+  "timing": "process startup, payload allocation, correctness comparison, and warm-up excluded; measured wall-clock crypto calls",
+  "memory": "fresh process per repetition; idle RSS sampled after warm-up/GC; incremental RSS = observed peak RSS - idle RSS",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 116 Stepping 1, AuthenticAMD",
+    "logical_cpu_count": 16,
+    "python": "3.12.10",
+    "node": "22.13.0",
+    "openssl": "3.0.15+quic",
+    "arch": "x64"
+  },
+  "git_commit": "bd081c968cb7d7fd342a81073e97869211506909",
+  "raw_csv": "results\\raw\\aes_gcm_scaling_v2.csv",
+  "raw_csv_sha256": "960e5e6f848e450b9a6e0775591326188178e80dd1b2baf8608e128640369733",
+  "summary_csv": "results\\summary\\aes_gcm_scaling_v2_summary.csv",
+  "limitations": [
+    "RSS is host-process RSS sampled at stage/chunk boundaries, not an OS event-traced instantaneous maximum.",
+    "The benchmark does not run inside Nitro or VBS enclaves.",
+    "Chunked mode models bounded-buffer processing and does not write ciphertext to persistent storage."
+  ]
+}

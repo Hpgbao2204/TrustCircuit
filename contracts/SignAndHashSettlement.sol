@@ -3,13 +3,13 @@ pragma solidity ^0.8.24;
 
 import "./SettlementCore.sol";
 
-/// @notice Sign-and-hash settlement (SHS) comparison design, TNSE revision.
+/// @notice Sign-and-hash settlement (SHS) comparison design.
 /// It keeps every TrustCircuit contract guard, salted commitment, validator
 /// quorum, ledger-computed RDP charge, nullifier uniqueness, and audit
 /// insertion, but replaces the Groth16 proof by a validator-quorum signature
 /// over the public statement x and the validators' own evaluation a_Pi of the
 /// hidden policy. The contract cannot evaluate a hidden policy, so it accepts
-/// whatever a compromised quorum signs (failure F4 in the paper).
+/// whatever a compromised quorum signs (failure F4).
 contract SignAndHashSettlement is SettlementCore {
     bytes32 public constant SHS_TYPEHASH = keccak256(
         "TrustCircuitSignAndHash(bytes32 statementHash,uint8 admissible)"

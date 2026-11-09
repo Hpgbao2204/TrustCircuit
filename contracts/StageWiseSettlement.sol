@@ -5,7 +5,7 @@ import "./AccessController.sol";
 import "./LifecycleRoles.sol";
 import "./ValidatorRegistry.sol";
 
-/// @notice Stage-wise composition harness (comparison design, TNSE revision).
+/// @notice Stage-wise composition harness (comparison design).
 /// Each stage verifies its own evidence under its own identifier:
 ///   * admission checks the authorization record of the request and an
 ///     aggregate per-asset budget counter, but reserves nothing;
@@ -13,7 +13,7 @@ import "./ValidatorRegistry.sol";
 ///     identifier and a result commitment, not about the request;
 ///   * settlement decrements the aggregate counter checked at admission and
 ///     does not re-check the policy version.
-/// Used only to execute failures F1-F3 of the paper against a design without
+/// Used only to execute failures F1-F3 against a design without
 /// a shared request interface. It is not part of the TrustCircuit protocol.
 contract StageWiseSettlement is LifecycleRoles {
     bytes32 public constant EXEC_TYPEHASH = keccak256(

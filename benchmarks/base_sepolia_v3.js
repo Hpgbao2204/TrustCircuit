@@ -1,6 +1,6 @@
 "use strict";
 
-// Base Sepolia campaign for the TNSE revision (VCP v3, ledger RDP accounting,
+// Base Sepolia campaign (VCP v3, ledger RDP accounting,
 // 2-of-3 validator quorum, multisignature governance, retired deployer).
 //
 // Roles (each a distinct key):
@@ -35,8 +35,8 @@ const ROOT = path.resolve(__dirname, "..");
 const WASM = path.join(ROOT, "zk", "build", "v3", "vcp_v3_js", "vcp_v3.wasm");
 const ZKEY = path.join(ROOT, "zk", "build", "v3", "vcp_v3_final.zkey");
 const METADATA = path.join(ROOT, "zk", "vcp_v3_metadata.json");
-const RAW_ROOT = path.join(ROOT, "results", "raw", "revision", "testnet");
-const SUMMARY = path.join(ROOT, "results", "summary", "revision", "base_sepolia_v3_summary.json");
+const RAW_ROOT = path.join(ROOT, "results", "raw", "testnet");
+const SUMMARY = path.join(ROOT, "results", "summary", "base_sepolia_v3_summary.json");
 const SECRETS = path.join(ROOT, "secrets");
 const ENV_FILE = path.join(ROOT, ".env");
 const BASE_SEPOLIA = 84532n;

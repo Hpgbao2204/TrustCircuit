@@ -1,6 +1,6 @@
 "use strict";
 
-// VCP v3 Groth16 setup ceremony (TNSE revision, R2.4).
+// VCP v3 Groth16 setup ceremony.
 //
 // Phase 1: the public Perpetual Powers of Tau transcript of the Ethereum
 //          Foundation PSE team (round 80, prepared for 2^16 constraints).

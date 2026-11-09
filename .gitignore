@@ -1,228 +1,61 @@
 # Dependencies
 node_modules/
-.pnp/
-.pnp.cjs
 
 # Python
 __pycache__/
 *.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
 .venv/
 venv/
-env/
 
-# Environment
+# Secrets and keys
 .env
 .env.*
 !.env.example
 secrets/
-credentials/
-private-keys/
-*.secret
-*.secrets
 *.key
 *.pem
-*.pfx
-*.p12
-*.crt
-*.cer
-*.jks
-*.keystore
-*.kdbx
-*.tfstate
-*.tfstate.*
 
-# Hardhat / Solidity
+# Hardhat
 artifacts/
 cache/
-typechain/
 typechain-types/
 coverage/
 coverage.json
-gas-report.txt
 
-# Circom / ZK build outputs
+# Circom / snarkjs build outputs and downloaded tools
+zk/build/
+zk/ptau/
 *.r1cs
 *.sym
 *.zkey
 *.wtns
-proof.json
-public.json
-verification_key.json
-zk/build/
-zk/ptau/
-zk/circuits/compliance_lib.circom
-
-# Downloaded tool binaries
 tools/
+crypto/rabe_benchmark/target/
 
-# Experiment outputs are local by default. Only canonical raw evidence is tracked.
+# Generated data. Only the canonical measurements under results/ are tracked.
+data/generated/*
+!data/generated/.gitkeep
 results/**
-!results/
-!results/raw/
-!results/raw/phase8/
-!results/raw/phase8/attack_binding_matrix.csv
-!results/raw/phase8/attack_binding_matrix_config.json
-!results/raw/phase8/budget_exhaustion.csv
-!results/raw/phase8/chain_experiment_config.json
-!results/raw/phase8/comparison_capabilities.csv
-!results/raw/phase8/comparison_performance.csv
-!results/raw/phase8/dp_composition.csv
-!results/raw/phase8/dp_rounding_boundaries.csv
-!results/raw/phase8/dp_vbs.csv
-!results/raw/phase8/e2e_ablation.csv
-!results/raw/phase8/native_vbs_performance.csv
-!results/raw/phase8/protocol_attacks.csv
-!results/raw/phase8/settlement_concurrency.csv
-!results/raw/phase8/vbs_experiment_config.json
-!results/raw/phase8/zk_backend_runs.csv
-!results/raw/phase8/zk_backends.csv
-!results/raw/phase8/zk_backends_config.json
-!results/raw/phase8/zk_scaling.csv
-!results/raw/phase8/zk_scaling_config.json
-!results/raw/phase8/zk_scaling_runs.csv
-!results/raw/phase8/vcp_v2_runs.csv
-!results/raw/phase8/vcp_v2_integration.json
-!results/raw/phase8/testnet/
-!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/
-!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/config.json
-!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/deployments.json
-!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/proof_preparation.csv
-!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/run_result.json
-!results/raw/phase8/testnet/base_sepolia_full_20260722T173930848Z/transactions.csv
-!results/raw/phase8/testnet/base_sepolia_vcp_v2_*/
-!results/raw/phase8/testnet/base_sepolia_vcp_v2_*/*
-
-# Canonical evidence used by the Nitro paper evaluation.
-!results/raw/contract_gas_benchmark.csv
-!results/raw/zk_benchmark.csv
-!results/raw/zk_schemes.csv
-!results/raw/dp_utility.csv
-!results/raw/cpabe_policy_benchmark.csv
-!results/raw/abe_payload_scaling.csv
-!results/raw/nitro_latency.csv
-!results/raw/nitro_attestation.csv
-!results/raw/nitro_pool.csv
-!results/raw/tee_attack_trials.csv
-!results/raw/phase8/sota_profiles/
-results/raw/phase8/sota_profiles/*
-!results/raw/phase8/sota_profiles/config.json
-
-!results/summary/
-results/summary/*
-!results/summary/contract_gas_summary.csv
-!results/summary/zk_benchmark_summary.csv
-!results/summary/zk_benchmark_config.json
-!results/summary/zk_schemes_summary.csv
-!results/summary/zk_schemes_config.json
-!results/summary/zk_onchain_gas.csv
-!results/summary/zk_schemes_gas.csv
-!results/summary/e2e_zk_schemes.csv
-!results/summary/dp_utility_summary.csv
-!results/summary/dp_config.json
-!results/summary/cpabe_policy_summary.csv
-!results/summary/cpabe_policy_config.json
-!results/summary/abe_payload_summary.csv
-!results/summary/abe_scaling_config.json
-!results/summary/nitro_latency_summary.csv
-!results/summary/nitro_attestation_summary.csv
-!results/summary/nitro_config.json
-!results/summary/nitro_pool_summary.csv
-!results/summary/nitro_pool_projection_summary.csv
-!results/summary/tee_attack_summary.csv
-!results/summary/tee_attack_config.json
-!results/summary/vcp_v2_summary.csv
-!results/summary/vcp_v2_config.json
-!results/summary/base_sepolia_vcp_v2_summary.json
-!results/summary/base_sepolia_vcp_v2_deployments.csv
-
-# TNSE revision evidence (VCP v3, ablation, RDP ledger, network model, testnet).
-!results/raw/revision/
-!results/raw/revision/*.csv
-!results/raw/revision/*.json
-!results/raw/revision/testnet/
-!results/raw/revision/testnet/base_sepolia_v3_*/
-!results/raw/revision/testnet/base_sepolia_v3_*/*
-results/raw/revision/testnet/base_sepolia_v3_local_*/
-!results/summary/revision/
-!results/summary/revision/*.json
-!results/figures/
-results/figures/*
-!results/figures/revision/
-!results/figures/revision/*.pdf
-!results/figures/revision/*.png
-
-!results/processed/
-results/processed/*
-!results/processed/sota_profiles/
-results/processed/sota_profiles/*
-!results/processed/sota_profiles/field_work_curve.csv
-!results/processed/sota_profiles/compound_field_curve.csv
-!results/processed/sota_profiles/profile_summary.csv
-!results/processed/sota_profiles/reconstruction_scope.csv
+!results/*/
+!results/raw/testnet/*/
+!results/raw/*.csv
+!results/raw/*.json
+!results/raw/testnet/base_sepolia_v3_*/*
+results/raw/testnet/base_sepolia_v3_local_*/
+!results/summary/*.csv
+!results/summary/*.json
+!results/figures/*.pdf
+!results/figures/*.png
 *.csv.tmp
 
-# Local notes / markdown docs
+# Local notes and manuscript sources
 Paper/
-PROJECT_STATE.json
+*.md
+!/README.md
 
-# Canonical manuscript source and retained paper panels.
-!Paper/
-Paper/**
-!Paper/main-new.tex
-!Paper/refs.bib
-!Paper/Figure/
-!Paper/Figure/figures/
-!Paper/Figure/figures/base-sepolia/
-!Paper/Figure/figures/base-sepolia/*.pdf
-!Paper/Figure/figures/abe/
-!Paper/Figure/figures/abe/ab1_policy_time_revised.pdf
-!Paper/Figure/figures/abe/ab4_throughput.pdf
-!Paper/Figure/figures/abe/ab6_peak_rss.pdf
-!Paper/Figure/figures/dp/
-!Paper/Figure/figures/dp/d3_error_contour.pdf
-!Paper/Figure/figures/deployment-profiles/
-!Paper/Figure/figures/deployment-profiles/*.pdf
-!Paper/Figure/figures/nitro_new/
-!Paper/Figure/figures/nitro_new/*.pdf
-
-# Logs
+# Logs and OS / editor files
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# OS / editor
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-
-# Local generated data
-data/generated/*
-!data/generated/.gitkeep
-data/private/
-data/raw/
-data/sensitive/
-tee/witness/
-
-# Windows VBS Enclave local configuration and build outputs
-tee/vbs/TrustCircuitVbs.Local.props
-tee/vbs/.vs/
-tee/vbs/packages/
-tee/vbs/x64/
-tee/vbs/**/x64/
-tee/vbs/**/Generated Files/
-tee/vbs/**/*.vcxproj.user
-
-# Local Rust build output for the pairing-based CP-ABE benchmark.
-crypto/rabe_benchmark/target/
-
-# Markdown
-*.md
-!/README.md
+.vscode/

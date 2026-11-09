@@ -1,8 +1,8 @@
-"""Plot the two Base Sepolia panels of the paper from the latest full v3 campaign.
+"""Plot the two Base Sepolia panels from the latest full v3 campaign.
 
 Same style as benchmarks/process_base_sepolia_vcp_v2.py. Reads
-results/raw/revision/testnet/base_sepolia_v3_full_*/{transactions.csv,run_summary.json}
-and writes results/figures/revision/figure_1a_deployment_resources.pdf and
+results/raw/testnet/base_sepolia_v3_full_*/{transactions.csv,run_summary.json}
+and writes results/figures/figure_1a_deployment_resources.pdf and
 figure_2a_settlement_latency.pdf.
 """
 
@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW_ROOT = ROOT / "results" / "raw" / "revision" / "testnet"
-FIGURE_ROOT = ROOT / "results" / "figures" / "revision"
+RAW_ROOT = ROOT / "results" / "raw" / "testnet"
+FIGURE_ROOT = ROOT / "results" / "figures"
 PALETTE = ["#286F9E", "#E58C3B", "#3E9C76", "#C8514D", "#8064A2"]
 SHORT = {
     "DataRegistry": "Data reg.", "AccessController": "Access", "BudgetLedger": "Budget",
@@ -42,7 +42,7 @@ def save(fig, name: str) -> None:
     FIGURE_ROOT.mkdir(parents=True, exist_ok=True)
     fig.tight_layout(pad=0.8)
     fig.savefig(FIGURE_ROOT / f"{name}.pdf", bbox_inches="tight", pad_inches=0.04,
-                metadata={"Creator": "TrustCircuit revision plotter", "CreationDate": None, "ModDate": None})
+                metadata={"Creator": "TrustCircuit plotter", "CreationDate": None, "ModDate": None})
     plt.close(fig)
 
 
