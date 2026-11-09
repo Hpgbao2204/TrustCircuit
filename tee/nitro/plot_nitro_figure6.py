@@ -50,17 +50,17 @@ def save_nitro_fig(fig, name: str) -> None:
     plt.close(fig)
 
 
-def apply_nitro_style() -> None:
+def apply_nitro_style(font_delta: int = 0) -> None:
     plt.rcdefaults()
     plt.rcParams.update(
         {
             "figure.figsize": (12, 6),
-            "font.size": 18,
-            "axes.titlesize": 18,
-            "axes.labelsize": 18,
-            "xtick.labelsize": 16,
-            "ytick.labelsize": 16,
-            "legend.fontsize": 14,
+            "font.size": 18 + font_delta,
+            "axes.titlesize": 18 + font_delta,
+            "axes.labelsize": 18 + font_delta,
+            "xtick.labelsize": 16 + font_delta,
+            "ytick.labelsize": 16 + font_delta,
+            "legend.fontsize": 14 + font_delta,
             "lines.linewidth": 2.4,
             "lines.markersize": 8,
             "axes.axisbelow": True,
@@ -118,12 +118,6 @@ def fig_latency_composition_area() -> None:
     ax.stackplot(ws, *layers, labels=labels, colors=colors, alpha=0.86)
     ax.scatter(measured_x, e2e_ms + attest_ms, color="black", s=22, zorder=5,
                label="measured request sizes")
-    ax.annotate("flat enclave memory\n(no SGX EPC paging cliff)",
-                xy=(92, float(np.interp(92, ws, payload_layer + fixed_compute_layer))),
-                xytext=(35, max(e2e_ms) * 0.34),
-                arrowprops=dict(arrowstyle="->", color=PALETTE[7], linewidth=1.2),
-                color=PALETTE[7], fontsize=12,
-                bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.78))
     ax.set_ylabel("Latency (ms)")
     ax.set_xlim(0, 128)
     ax.set_ylim(0, None)
@@ -136,8 +130,8 @@ def fig_latency_composition_area() -> None:
     axins.set_xlim(0, 8)
     axins.set_ylim(0, float(np.interp(8, ws, total)) * 1.08)
     axins.text(0.04, 0.92, "0--8 MiB zoom", transform=axins.transAxes,
-               fontsize=12, va="top")
-    axins.tick_params(labelsize=11)
+               fontsize=int(plt.rcParams["font.size"]) - 4, va="top")
+    axins.tick_params(labelsize=int(plt.rcParams["font.size"]) - 5)
     axins.grid(True, alpha=0.2)
     mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec=PALETTE[7], lw=0.8, alpha=0.8)
 
@@ -173,15 +167,22 @@ def fig_attestation_amortization() -> None:
     ax.axhline(overhead_p50[0], color=PALETTE[1], linestyle="--", linewidth=1.5,
                label=f"per request ({overhead_p50[0]:.2f} ms)")
     ax.annotate("NSM document cost\namortized across batch",
-                xy=(16, overhead_p50[15]), xytext=(27, overhead_p50[0] * 0.62),
+                xy=(16, overhead_p50[15]), xytext=(9, overhead_p50[0] * 0.62),
                 arrowprops=dict(arrowstyle="->", color=PALETTE[7], linewidth=1.2),
-                fontsize=14, color=PALETTE[7],
+                fontsize=int(plt.rcParams["font.size"]) - 2, color=PALETTE[7],
                 bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.78))
-    ax.set_xlabel("attestation batch size (requests per Nitro document)")
+    ax.set_xlabel("attestation batch size (requests)")
     ax.set_ylabel("Attest. overhead (ms/req)")
     ax.set_xlim(1, 64)
     ax.set_ylim(0, overhead_p50[0] * 1.18)
     ax.grid(True, alpha=0.25)
+
+    checkpoints = np.array([1, 8, 16, 32, 64])
+    for checkpoint in checkpoints:
+        index = int(checkpoint) - 1
+        ax.axvline(checkpoint, color=PALETTE[7], linewidth=0.75, alpha=0.14, zorder=0)
+        ax.scatter(checkpoint, overhead_p50[index], color=PALETTE[4], s=34,
+                   edgecolor="white", linewidth=0.7, zorder=5)
 
     ax2 = ax.twinx()
     ax2.fill_between(batch, thru_p5, thru_p95, color=PALETTE[0], alpha=0.12)
@@ -190,10 +191,47 @@ def fig_attestation_amortization() -> None:
     ax2.set_ylabel("Throughput (req/s)")
     ax2.set_ylim(min(thru_p5) * 0.995, max(thru_p95) * 1.003)
 
+    for checkpoint in checkpoints:
+        index = int(checkpoint) - 1
+        ax2.scatter(checkpoint, thru_p50[index], color=PALETTE[0], s=28,
+                    edgecolor="white", linewidth=0.7, zorder=5)
+
+    checkpoint_rows = []
+    for checkpoint in checkpoints:
+        index = int(checkpoint) - 1
+        saved = 100.0 * (1.0 - overhead_p50[index] / overhead_p50[0])
+        checkpoint_rows.append([
+            f"{checkpoint:d}",
+            f"{overhead_p50[index]:.2f}",
+            f"{thru_p50[index]:.1f}",
+            f"{saved:.0f}%",
+        ])
+    table = ax.table(
+        cellText=checkpoint_rows,
+        colLabels=["q", "Attest.\nms/req", "Throughput\nreq/s", "Saved"],
+        cellLoc="center",
+        colLoc="center",
+        colWidths=[0.14, 0.27, 0.35, 0.15],
+        bbox=[0.47, 0.43, 0.51, 0.35],
+    )
+    table.set_zorder(6)
+    table.auto_set_font_size(False)
+    table_font = int(plt.rcParams["font.size"]) - 5
+    for (row, _column), cell in table.get_celld().items():
+        cell.set_edgecolor("#cbd5df")
+        cell.set_linewidth(0.6)
+        cell.set_facecolor("#f5f8fb" if row == 0 else "white")
+        cell.get_text().set_fontsize(table_font - 2 if row == 0 else table_font)
+        if row == 0:
+            cell.get_text().set_weight("bold")
+    ax.text(0.48, 0.80, "Selected bounded-batch checkpoints", transform=ax.transAxes,
+            fontsize=table_font, fontweight="bold", color="#46515D",
+            ha="left", va="bottom")
+
     lines, labels = ax.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax.legend(lines + lines2, labels + labels2, loc="lower right",
-              framealpha=0.92, fontsize=12)
+              framealpha=0.92, fontsize=int(plt.rcParams["font.size"]) - 4)
     save_nitro_fig(fig, "n3_attestation_amortization")
 
 

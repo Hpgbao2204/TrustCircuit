@@ -1,0 +1,26 @@
+{
+  "schema": "TrustCircuit.VCPv3.Metadata.v1",
+  "circuit": "zk/circuits/vcp_v3.circom",
+  "circuit_sha256": "0ffa2603c4ce6d24e97d070af24eef1a48b04a5bf47155c7479a77061a275b53",
+  "r1cs_sha256": "24daf0a52c04b5c0e71440a6e9099b1b7ad48a906d7f68bb793432d18c30200b",
+  "r1cs_info": [
+    "Curve: bn-128",
+    "# of Wires: 41193",
+    "# of Constraints: 41195",
+    "# of Private Inputs: 14",
+    "# of Public Inputs: 24",
+    "# of Labels: 60163",
+    "# of Outputs: 0"
+  ],
+  "ptau_sha256": "ed3622a7c79b0b49aadd134ebbc5b77df8c8c59bccebdfd0d9bf2c1a51561cf9",
+  "final_zkey_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+  "final_zkey_bytes": 19297145,
+  "vkey_sha256": "c0bdf03cd403064d1387e0c41da267136ec8ee58596e38ebf879e1038fd9e3b6",
+  "vkey_bytes": 7137,
+  "verifier_solidity_sha256": "83cf4084bdc5d7bceb03ea3afeffd73c29490edc1d0d883c6f9849218b6b1b84",
+  "ceremony_transcript_sha256": "39514e597daab5acfaaf96f0664d31d3f1557b3e9a097d067a0b4a4e14e540e3",
+  "contributors": [
+    "Bao Huynh"
+  ],
+  "note": "phase 2: a single contribution followed by a public beacon; sound only if that contributor erased its randomness. Further contributions can be appended with `contribute` before a deployment re-applies the beacon."
+}

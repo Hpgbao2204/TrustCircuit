@@ -1,0 +1,296 @@
+{
+  "schema": "TrustCircuit.Revision.GasBenchmarks.v1",
+  "timestamp_utc": "2026-11-05T03:46:07.593Z",
+  "network": "hardhat (chain 31337), Solidity 0.8.24, optimizer 200 runs",
+  "ablation": {
+    "quorum": "2-of-3",
+    "settlements_per_design": 30,
+    "stage": {
+      "settle_gas": {
+        "n": 30,
+        "p50": 72425,
+        "p95": 72457,
+        "min": 72389,
+        "max": 89545,
+        "mean": 72994.06666666667
+      },
+      "settle_gas_first": 89545,
+      "settle_gas_after_first": {
+        "n": 29,
+        "p50": 72425,
+        "p95": 72457,
+        "min": 72389,
+        "max": 72457,
+        "mean": 72423.3448275862
+      },
+      "reserve_gas": {
+        "n": 30,
+        "p50": 129199,
+        "p95": 129199,
+        "min": 129187,
+        "max": 129199,
+        "mean": 129197
+      },
+      "client_prove_ms": null
+    },
+    "shs": {
+      "settle_gas": {
+        "n": 30,
+        "p50": 276904,
+        "p95": 277375.2,
+        "min": 276682,
+        "max": 365952,
+        "mean": 279925.6666666667
+      },
+      "settle_gas_first": 365952,
+      "settle_gas_after_first": {
+        "n": 29,
+        "p50": 276898,
+        "p95": 277333.2,
+        "min": 276682,
+        "max": 277386,
+        "mean": 276959.2413793103
+      },
+      "reserve_gas": {
+        "n": 30,
+        "p50": 199854,
+        "p95": 199854,
+        "min": 199842,
+        "max": 212084,
+        "mean": 200260.86666666667
+      },
+      "client_prove_ms": null
+    },
+    "trustcircuit": {
+      "settle_gas": {
+        "n": 30,
+        "p50": 641604,
+        "p95": 642082.6,
+        "min": 641386,
+        "max": 730536,
+        "mean": 644626.4666666667
+      },
+      "settle_gas_first": 730536,
+      "settle_gas_after_first": {
+        "n": 29,
+        "p50": 641594,
+        "p95": 642036.4,
+        "min": 641386,
+        "max": 642106,
+        "mean": 641664.0689655172
+      },
+      "reserve_gas": {
+        "n": 30,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199841,
+        "max": 212083,
+        "mean": 200270.66666666666
+      },
+      "client_prove_ms": {
+        "n": 30,
+        "p50": 2603.5,
+        "p95": 3026.6499999999996,
+        "min": 2282,
+        "max": 9438,
+        "mean": 2853.9
+      }
+    }
+  },
+  "quorum_sweep": {
+    "k1": {
+      "threshold": 1,
+      "validators": 3,
+      "settle_gas": {
+        "n": 9,
+        "p50": 628644,
+        "p95": 628806.4,
+        "min": 628508,
+        "max": 628816,
+        "mean": 628662.2222222222
+      }
+    },
+    "k2": {
+      "threshold": 2,
+      "validators": 3,
+      "settle_gas": {
+        "n": 9,
+        "p50": 641914,
+        "p95": 642086.8,
+        "min": 641702,
+        "max": 642106,
+        "mean": 641898.4444444445
+      }
+    },
+    "k3": {
+      "threshold": 3,
+      "validators": 3,
+      "settle_gas": {
+        "n": 9,
+        "p50": 655148,
+        "p95": 655329.6,
+        "min": 654976,
+        "max": 655336,
+        "mean": 655166.6666666666
+      }
+    },
+    "extra_gas_per_signature": {
+      "k1_to_k2": 13270,
+      "k2_to_k3": 13234
+    }
+  },
+  "rdp_order_sweep": {
+    "orders_4": {
+      "order_count": 4,
+      "orders": [
+        2,
+        4,
+        16,
+        64
+      ],
+      "reserve_gas": {
+        "n": 9,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199853,
+        "max": 199865,
+        "mean": 199862.33333333334
+      },
+      "settle_gas": {
+        "n": 9,
+        "p50": 607432,
+        "p95": 607470.4,
+        "min": 607304,
+        "max": 607472,
+        "mean": 607416.8888888889
+      },
+      "settle_gas_first": 661778
+    },
+    "orders_8": {
+      "order_count": 8,
+      "orders": [
+        2,
+        3,
+        4,
+        8,
+        12,
+        16,
+        32,
+        64
+      ],
+      "reserve_gas": {
+        "n": 9,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199853,
+        "max": 199865,
+        "mean": 199863.66666666666
+      },
+      "settle_gas": {
+        "n": 9,
+        "p50": 625936,
+        "p95": 626078.4,
+        "min": 625888,
+        "max": 626088,
+        "mean": 625966.6666666666
+      },
+      "settle_gas_first": 697582
+    },
+    "orders_11": {
+      "order_count": 11,
+      "orders": [
+        2,
+        3,
+        4,
+        6,
+        8,
+        12,
+        16,
+        24,
+        32,
+        48,
+        64
+      ],
+      "reserve_gas": {
+        "n": 9,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199865,
+        "max": 199865,
+        "mean": 199865
+      },
+      "settle_gas": {
+        "n": 9,
+        "p50": 641914,
+        "p95": 642084.4,
+        "min": 641738,
+        "max": 642086,
+        "mean": 641916.6666666666
+      },
+      "settle_gas_first": 730636
+    },
+    "orders_16": {
+      "order_count": 16,
+      "orders": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        10,
+        12,
+        16,
+        20,
+        24,
+        32,
+        40,
+        48,
+        56,
+        64
+      ],
+      "reserve_gas": {
+        "n": 9,
+        "p50": 199865,
+        "p95": 199865,
+        "min": 199865,
+        "max": 199865,
+        "mean": 199865
+      },
+      "settle_gas": {
+        "n": 9,
+        "p50": 662820,
+        "p95": 663297.6,
+        "min": 662640,
+        "max": 663312,
+        "mean": 662914.2222222222
+      },
+      "settle_gas_first": 768954
+    }
+  },
+  "rdp_trace": {
+    "requests": 24,
+    "orders": [
+      2,
+      3,
+      4,
+      6,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48,
+      64
+    ],
+    "delta": 0.00001,
+    "kappa": 1000000,
+    "final_onchain_epsilon": 1.386153,
+    "final_exact_epsilon_same_orders": 1.386134,
+    "final_exact_epsilon_orders_2_64": 1.373162,
+    "max_gap_fixed_units": 18.92170703341253,
+    "max_gap_epsilon": 0.00001892170703341253,
+    "lemma_bound_holds": true
+  },
+  "seconds": 244.941
+}

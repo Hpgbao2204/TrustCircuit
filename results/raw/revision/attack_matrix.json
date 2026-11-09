@@ -1,0 +1,154 @@
+{
+  "schema": "TrustCircuit.Revision.AttackMatrix.v1",
+  "timestamp_utc": "2026-11-05T03:41:54.016Z",
+  "network": "hardhat",
+  "validator_quorum": "2-of-3; F4/N use the two compromised keys",
+  "trustcircuit_proofs": "real Groth16 VCP v3 proofs",
+  "seconds": 23.719,
+  "rows": [
+    {
+      "attack": "F1",
+      "design": "stage",
+      "result": "accepted",
+      "detail": "transaction succeeded",
+      "expected": "accepted",
+      "matches": true
+    },
+    {
+      "attack": "F1",
+      "design": "shs",
+      "result": "rejected",
+      "detail": "ContextMismatch(0)",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "F1",
+      "design": "trustcircuit",
+      "result": "rejected",
+      "detail": "ContextMismatch(0)",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "F2",
+      "design": "stage",
+      "result": "accepted",
+      "detail": "transaction succeeded",
+      "expected": "accepted",
+      "matches": true
+    },
+    {
+      "attack": "F2",
+      "design": "shs",
+      "result": "rejected",
+      "detail": "PolicyMismatch()",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "F2",
+      "design": "trustcircuit",
+      "result": "rejected",
+      "detail": "PolicyMismatch()",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "F3",
+      "design": "stage",
+      "result": "accepted",
+      "detail": "transaction succeeded; used 1200000 of total 800000",
+      "expected": "accepted",
+      "matches": true
+    },
+    {
+      "attack": "F3",
+      "design": "shs",
+      "result": "rejected",
+      "detail": "InsufficientBudget(\"0x31ed663ba958d204fc1ab338a2be39babc5a518e826438832798d0a117769622\", 523575, 276425); used 500579 reserved 0 of total 800000",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "F3",
+      "design": "trustcircuit",
+      "result": "rejected",
+      "detail": "InsufficientBudget(\"0x7b5babb49da0260711dde70e548d8a1255aebcef11791f2db9b754fd14f049d3\", 523575, 276425); used 500579 reserved 0 of total 800000",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "F4",
+      "design": "stage",
+      "result": "accepted",
+      "detail": "transaction succeeded",
+      "expected": "accepted",
+      "matches": true
+    },
+    {
+      "attack": "F4",
+      "design": "shs",
+      "result": "accepted",
+      "detail": "transaction succeeded",
+      "expected": "accepted",
+      "matches": true
+    },
+    {
+      "attack": "F4",
+      "design": "trustcircuit",
+      "result": "rejected",
+      "detail": "proving: Error: Assert Failed. Error in template ComplianceCheckV3_87 line: 186; proof substitution: InvalidProof(\"0x4aa5ad3dc9c96529144e6e923ef89ebca098bf2ee373024b68e450147ef39cf0\")",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "R",
+      "design": "stage",
+      "result": "rejected",
+      "detail": "AlreadySettled(\"0x74ad8cbacadd4f7ca77ec1c044e43e35a48697f6dfafdc56be067aa4caf059b2\")",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "R",
+      "design": "shs",
+      "result": "rejected",
+      "detail": "copy: WrongConsumer(\"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\", \"0x90F79bf6EB2c4f870365E785982E1f101E93b906\"); replay: RequestNotReserved(\"0xf5f6610871dbfef983697f0d337d15a6e0f200ba4c68ae88afc15a6aa8690d8c\")",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "R",
+      "design": "trustcircuit",
+      "result": "rejected",
+      "detail": "copy: WrongConsumer(\"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\", \"0x90F79bf6EB2c4f870365E785982E1f101E93b906\"); replay: RequestNotReserved(\"0xdd04ec231467e68224309a4f6c3ef8839302cbe23cf3f1e57c19db3647823ffc\")",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "N",
+      "design": "shs",
+      "result": "rejected",
+      "detail": "PrivacyCostExceedsReservation(1546064, 523575)",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "N",
+      "design": "trustcircuit",
+      "result": "rejected",
+      "detail": "Error: Assert Failed. Error in template ComplianceCheckV3_87 line: 195",
+      "expected": "rejected",
+      "matches": true
+    },
+    {
+      "attack": "N",
+      "design": "stage",
+      "result": "n/a",
+      "detail": "stage-wise settlement carries no expenditure statement",
+      "expected": "n/a",
+      "matches": true
+    }
+  ]
+}

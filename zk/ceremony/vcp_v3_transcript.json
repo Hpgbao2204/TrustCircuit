@@ -1,0 +1,62 @@
+{
+  "schema": "TrustCircuit.VCPv3.Ceremony.v1",
+  "circuit": "zk/circuits/vcp_v3.circom",
+  "circuit_sha256": "0ffa2603c4ce6d24e97d070af24eef1a48b04a5bf47155c7479a77061a275b53",
+  "r1cs_sha256": "24daf0a52c04b5c0e71440a6e9099b1b7ad48a906d7f68bb793432d18c30200b",
+  "r1cs_info": [
+    "Curve: bn-128",
+    "# of Wires: 41193",
+    "# of Constraints: 41195",
+    "# of Private Inputs: 14",
+    "# of Public Inputs: 24",
+    "# of Labels: 60163",
+    "# of Outputs: 0"
+  ],
+  "phase1": {
+    "source": "Perpetual Powers of Tau, Ethereum Foundation PSE, round 80 (prepared, 2^16)",
+    "url": "https://pse-trusted-setup-ppot.s3.eu-central-1.amazonaws.com/pot28_0080/ppot_0080_16.ptau",
+    "sha256": "ed3622a7c79b0b49aadd134ebbc5b77df8c8c59bccebdfd0d9bf2c1a51561cf9"
+  },
+  "phase2": [
+    {
+      "index": 0,
+      "kind": "initial",
+      "output": "vcp_v3_0000.zkey",
+      "output_sha256": "5a0c2e9b7912be187d9bc22c74a884d54517dedb8662674431caa552242c028f",
+      "seconds": 17.095
+    },
+    {
+      "index": 1,
+      "kind": "contribution",
+      "name": "Bao Huynh",
+      "input_sha256": "5a0c2e9b7912be187d9bc22c74a884d54517dedb8662674431caa552242c028f",
+      "output": "vcp_v3_0001.zkey",
+      "output_sha256": "cfb59da1554641f88855aca8a1c41855c2f5694bde4f51d63d5980ea3a1e3e93",
+      "contribution_hash": "4ba7e69f3c9c24d1caa2370dde530f2941c4fe021ea534dc35105229537e087b6cb5d1d97e499a8f30ca1aca151c45ec88c19ce7cbfed0298659a8e8b1a6d887",
+      "entropy": "64 bytes from the OS CSPRNG, not stored",
+      "timestamp": "2026-11-05T03:40:01.123Z",
+      "seconds": 7.608
+    }
+  ],
+  "beacon": {
+    "input_sha256": "cfb59da1554641f88855aca8a1c41855c2f5694bde4f51d63d5980ea3a1e3e93",
+    "hash": "bc8a7b3a255cf2be08469d19f9eaa8a8871e65ee6929fcce0abad2c39fc353e6",
+    "iterations_exp": 10,
+    "source": "Base Sepolia (chain 84532) block 54640634 hash; fixed as block 54640604 + 30 after the last phase-2 contribution",
+    "output": "vcp_v3_final.zkey",
+    "output_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+    "contribution_hash": "5e9c5ce2550a095ce8c778697b218cc35e1da37dec0e91b56537074a739c41841bac423e9c41e283655ab170dc679a79da82fc48c2940ece2e679aa3b39ad3ab",
+    "seconds": 6.935
+  },
+  "final": {
+    "zkey_verified": true,
+    "verify_seconds": 19.373,
+    "final_zkey_sha256": "50cd1b7cdd89aed247a86a23486962239f5deb9a56db917abc16c7eaca029e7b",
+    "vkey_sha256": "c0bdf03cd403064d1387e0c41da267136ec8ee58596e38ebf879e1038fd9e3b6",
+    "verifier_sol_sha256": "83cf4084bdc5d7bceb03ea3afeffd73c29490edc1d0d883c6f9849218b6b1b84",
+    "contributors": [
+      "Bao Huynh"
+    ],
+    "transcript_note": "phase 2: a single contribution followed by a public beacon; sound only if that contributor erased its randomness. Further contributions can be appended with `contribute` before a deployment re-applies the beacon."
+  }
+}

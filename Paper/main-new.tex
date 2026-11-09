@@ -1421,40 +1421,32 @@ To determine whether every deployment requires the complete privacy stack, we re
 
 Figure~\ref{fig:deployment_profiles} reports this retained measured/composed cost study. Serialized latency increases from $6.3$~ms for \textsf{TC-Lite} to $148.0$~ms for \textsf{TC-Protected} and $378.6$~ms for the legacy \textsf{TC-Full} profile. The profile combines a prepared trusted-processor bundle, proof generation, and local transactions; it is not one continuously live orchestration trace. Its additional latency is concentrated in proof generation rather than registry, budget, settlement, or audit processing.
 
-Figure~\ref{fig:deployment_profile_throughput_gas} reports serialized request capacity and the integrated gas envelope exercised by each profile. Serialized capacity is derived from the measured critical path and does not represent aggregate concurrent throughput. It reaches $159.84$~req/s for \textsf{TC-Lite}, $6.84$~req/s for \textsf{TC-Protected}, and $2.65$~req/s for \textsf{TC-Full}. The corresponding profile gas envelopes are approximately $0.43$, $0.69$, and $1.37$ million gas.
+Figure~\ref{fig:deployment_profile_cost_resource} jointly reports serialized request capacity, the integrated gas envelope, and host-resource demand. Serialized capacity is derived from the measured critical path and does not represent aggregate concurrent throughput. It reaches $159.84$~req/s for \textsf{TC-Lite}, $6.84$~req/s for \textsf{TC-Protected}, and $2.65$~req/s for \textsf{TC-Full}. The corresponding profile gas envelopes are approximately $0.43$, $0.69$, and $1.37$ million gas.
 
 For the retained \textsf{TC-Full} profile, the $1.37$-million-gas value is the mean aggregate gas over $30$ non-warm-up runs. Each run comprises seven top-level transactions for asset registration, budget registration, access request, approval, budget reservation, expectation registration, and settlement. The final settlement call performs context validation, proof verification, nullifier consumption, budget consumption, request completion, and audit recording. Contract deployment and off-chain TEE and proving work are excluded from this gas envelope; Section~\ref{subsec:public_testnet} separately measures the final VCP stack.
 
-Figure~\ref{fig:deployment_profile_resources} shows that stronger profiles increase CPU demand without increasing the measured peak resident set. Mean CPU utilization ranges from $26.1\%$ to $39.8\%$, while peak RSS remains $1.17$~GiB across the three profiles. The stable peak reflects the shared runtime and trusted-processing allocation, whereas the additional assurance mechanisms primarily affect CPU demand and latency.
+The same panel shows that stronger profiles increase CPU demand without increasing the measured peak resident set. Mean CPU utilization ranges from $26.1\%$ to $39.8\%$, while peak RSS remains $1.17$~GiB across the three profiles. The convergence at the final axis reflects the shared runtime and trusted-processing allocation, whereas the additional assurance mechanisms primarily affect CPU demand and latency.
 
 \begin{figure*}[!t]
 \centering
 
-\begin{subfigure}[t]{0.32\textwidth}
+\begin{subfigure}[t]{0.48\textwidth}
 \centering
 \includegraphics[width=\linewidth]
 {Figure/figures/deployment-profiles/deployment_profile_a_latency_reused.pdf}
-\caption{Profile latency composition.}
+\caption{Lifecycle latency profile.}
 \label{fig:deployment_profile_latency}
 \end{subfigure}
 \hfill
-\begin{subfigure}[t]{0.32\textwidth}
+\begin{subfigure}[t]{0.48\textwidth}
 \centering
 \includegraphics[width=\linewidth]
-{Figure/figures/deployment-profiles/deployment_profile_b_throughput_gas_reused.pdf}
-\caption{Serialized capacity and profile gas envelope.}
-\label{fig:deployment_profile_throughput_gas}
-\end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.32\textwidth}
-\centering
-\includegraphics[width=\linewidth]
-{Figure/figures/deployment-profiles/deployment_profile_c_cpu_ram_reused.pdf}
-\caption{CPU utilization and peak RSS.}
-\label{fig:deployment_profile_resources}
+{Figure/figures/deployment-profiles/deployment_profile_b_cost_resource_reused.pdf}
+\caption{Deployment cost--resource profile.}
+\label{fig:deployment_profile_cost_resource}
 \end{subfigure}
 
-\caption{Retained component-profile cost and assurance trade-offs. TC-Lite excludes CP-ABE/AES payload work; TC-Protected adds prepared trusted-processing and privacy-accounting components; TC-Full adds the legacy proof stage. These profiles predate the canonical VCP measurement.}
+\caption{Retained component-profile cost and assurance trade-offs. Independent axis scales place the preferable direction upward; hollow N/A markers denote stages absent from a profile rather than zero-cost execution. TC-Lite excludes CP-ABE/AES payload work; TC-Protected adds prepared trusted-processing and privacy-accounting components; TC-Full adds the legacy proof stage. These profiles predate the canonical VCP measurement.}
 \label{fig:deployment_profiles}
 \end{figure*}
 
@@ -1587,7 +1579,7 @@ Overall, the results separate asset initialization, recurring lifecycle state, p
 \begin{subfigure}[t]{0.32\textwidth}
 \centering
 \includegraphics[width=\linewidth]
-{Figure/figures/nitro/nitro_pool_per_worker_throughput.pdf}
+{Figure/figures/nitro_new/nitro_pool_per_worker_throughput.pdf}
 \caption{Per-worker throughput.}
 \label{fig:nitro_per_worker_throughput}
 \end{subfigure}
@@ -1595,7 +1587,7 @@ Overall, the results separate asset initialization, recurring lifecycle state, p
 \begin{subfigure}[t]{0.32\textwidth}
 \centering
 \includegraphics[width=\linewidth]
-{Figure/figures/nitro/nitro_pool_parallel_efficiency.pdf}
+{Figure/figures/nitro_new/nitro_pool_parallel_efficiency.pdf}
 \caption{Parallel efficiency.}
 \label{fig:nitro_parallel_efficiency}
 \end{subfigure}
@@ -1603,7 +1595,7 @@ Overall, the results separate asset initialization, recurring lifecycle state, p
 \begin{subfigure}[t]{0.32\textwidth}
 \centering
 \includegraphics[width=\linewidth]
-{Figure/figures/nitro/nitro_payload_throughput.pdf}
+{Figure/figures/nitro_new/nitro_payload_throughput.pdf}
 \caption{Payload throughput.}
 \label{fig:nitro_payload_throughput}
 \end{subfigure}
@@ -1613,7 +1605,7 @@ Overall, the results separate asset initialization, recurring lifecycle state, p
 \begin{subfigure}[t]{0.32\textwidth}
 \centering
 \includegraphics[width=\linewidth]
-{Figure/figures/nitro/nitro_latency_vs_payload.pdf}
+{Figure/figures/nitro_new/nitro_latency_vs_payload.pdf}
 \caption{Payload-dependent latency.}
 \label{fig:nitro_latency_vs_payload}
 \end{subfigure}
@@ -1672,7 +1664,7 @@ Payload experiments expose a different bottleneck. Fig.~\ref{fig:nitro_payload_t
 \begin{subfigure}[t]{0.95\columnwidth}
 \centering
 \includegraphics[width=\linewidth]
-{Figure/figures/sgx_model/n1_latency_composition_area.pdf}
+{Figure/figures/nitro_new/n1_latency_composition_area.pdf}
 \caption{Latency composition under encrypted working-set growth.}
 \label{fig:nitro_latency_composition}
 \end{subfigure}
@@ -1682,7 +1674,7 @@ Payload experiments expose a different bottleneck. Fig.~\ref{fig:nitro_payload_t
 \begin{subfigure}[t]{0.95\columnwidth}
 \centering
 \includegraphics[width=\linewidth]
-{Figure/figures/sgx_model/n3_attestation_amortization.pdf}
+{Figure/figures/nitro_new/n3_attestation_amortization.pdf}
 \caption{Attestation overhead under request batching.}
 \label{fig:nitro_attestation_amortization}
 \end{subfigure}

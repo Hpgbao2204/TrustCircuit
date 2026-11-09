@@ -28,10 +28,24 @@ contract ValidatorRegistry is LifecycleRoles {
         bytes signature;
     }
 
+    /// @notice k-of-n validator statement (TNSE revision). Every listed
+    /// validator signs its own payload over the same native digest, arithmetic
+    /// context, and expiry; ids must be strictly increasing, so they are distinct.
+    struct QuorumAttestation {
+        bytes32 nativeDigest;
+        uint256 contextCommitment;
+        uint64 expiresAtUnixMs;
+        bytes32[] validatorIds;
+        bytes[] signatures;
+    }
+
     mapping(bytes32 => ValidatorKey) private validators;
+    /// @notice Number k of distinct active validator signatures a statement needs.
+    uint256 public threshold = 1;
 
     event ValidatorActivated(bytes32 indexed validatorId, address indexed signer);
     event ValidatorRevoked(bytes32 indexed validatorId, address indexed signer);
+    event ThresholdUpdated(uint256 threshold);
 
     error InvalidValidatorId();
     error InvalidSigner();
@@ -42,6 +56,16 @@ contract ValidatorRegistry is LifecycleRoles {
     error InvalidSignatureLength();
     error InvalidSignatureS();
     error InvalidSignatureV();
+    error InvalidThreshold();
+    error QuorumNotReached(uint256 provided, uint256 required);
+    error ValidatorOrder(uint256 index);
+    error LengthMismatch();
+
+    function setThreshold(uint256 newThreshold) external onlyOwner {
+        if (newThreshold == 0) revert InvalidThreshold();
+        threshold = newThreshold;
+        emit ThresholdUpdated(newThreshold);
+    }
 
     function activateValidator(bytes32 validatorId, address signer) external onlyOwner {
         if (validatorId == bytes32(0)) revert InvalidValidatorId();
@@ -129,6 +153,105 @@ contract ValidatorRegistry is LifecycleRoles {
         signer = _recover(statementDigest(statement), statement.signature);
         if (signer != validator.signer) {
             revert InvalidValidatorSignature(statement.validatorId);
+        }
+    }
+
+    /// @notice Per-validator payload of a quorum statement. It has the same
+    /// layout as statementPayload, so a k = 1 quorum signs the v2 message.
+    function quorumPayload(
+        bytes32 validatorId,
+        bytes32 nativeDigest,
+        uint256 contextCommitment,
+        uint64 expiresAtUnixMs
+    ) public view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                ATTESTATION_TYPEHASH,
+                validatorId,
+                nativeDigest,
+                contextCommitment,
+                expiresAtUnixMs,
+                block.chainid,
+                address(this)
+            )
+        );
+    }
+
+    /// @notice Audit commitment ah of a quorum statement (public VCP input).
+    function quorumHash(QuorumAttestation calldata statement)
+        external
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encode(
+                statement.nativeDigest,
+                statement.contextCommitment,
+                statement.expiresAtUnixMs,
+                statement.validatorIds,
+                statement.signatures
+            )
+        );
+    }
+
+    /// @notice Requires at least `threshold` distinct, currently active
+    /// validators to have signed the statement before it expires.
+    function requireQuorum(QuorumAttestation calldata statement) external view {
+        uint256 currentUnixMs = block.timestamp * 1000;
+        if (currentUnixMs > statement.expiresAtUnixMs) {
+            revert StaleAttestation(currentUnixMs, statement.expiresAtUnixMs);
+        }
+        uint256 count = statement.validatorIds.length;
+        if (count != statement.signatures.length) revert LengthMismatch();
+        for (uint256 i = 0; i < count; i++) {
+            bytes32 validatorId = statement.validatorIds[i];
+            if (i > 0 && uint256(validatorId) <= uint256(statement.validatorIds[i - 1])) {
+                revert ValidatorOrder(i);
+            }
+            bytes32 payload = quorumPayload(
+                validatorId,
+                statement.nativeDigest,
+                statement.contextCommitment,
+                statement.expiresAtUnixMs
+            );
+            _requireSigned(validatorId, payload, statement.signatures[i]);
+        }
+        if (count < threshold) revert QuorumNotReached(count, threshold);
+    }
+
+    /// @notice Generic k-of-n check over an arbitrary message, used by the
+    /// sign-and-hash and stage-wise comparison designs. Validator i signs
+    /// keccak256(abi.encode(message, validatorId, chainId, registry)).
+    function requireQuorumOn(
+        bytes32 message,
+        bytes32[] calldata validatorIds,
+        bytes[] calldata signatures
+    ) external view {
+        uint256 count = validatorIds.length;
+        if (count != signatures.length) revert LengthMismatch();
+        for (uint256 i = 0; i < count; i++) {
+            if (i > 0 && uint256(validatorIds[i]) <= uint256(validatorIds[i - 1])) {
+                revert ValidatorOrder(i);
+            }
+            bytes32 payload = keccak256(
+                abi.encode(message, validatorIds[i], block.chainid, address(this))
+            );
+            _requireSigned(validatorIds[i], payload, signatures[i]);
+        }
+        if (count < threshold) revert QuorumNotReached(count, threshold);
+    }
+
+    function _requireSigned(bytes32 validatorId, bytes32 payload, bytes calldata signature)
+        private
+        view
+    {
+        ValidatorKey memory validator = validators[validatorId];
+        if (!validator.active) revert ValidatorNotActive(validatorId);
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", payload)
+        );
+        if (_recover(digest, signature) != validator.signer) {
+            revert InvalidValidatorSignature(validatorId);
         }
     }
 
