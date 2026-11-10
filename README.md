@@ -46,6 +46,7 @@ node zk/scripts/ceremony_v3.js finalize                  # verification key and 
 | Command | Measures | Output |
 |---|---|---|
 | `npm run bench:vcp` | Proving time, verifier gas, 24 public-signal mutations | `vcp_v3_runs.csv`, `vcp_v3_summary.json` |
+| `npm run test:openings` | Valid commitment openings prove; a wrong policy salt, result opening, context salt, result, or policy entry has no witness | `vcp_v3_openings.json` |
 | `npm run bench:attacks` | Splice, stale policy, shared budget, forbidden use, replay against three designs | `attack_matrix.{csv,json}` |
 | `npm run bench:gas` | Settlement ablation, quorum sweep, RDP order-set cost, on-chain RDP trace | `settlement_gas.csv`, `rdp_trace.csv`, `gas_benchmarks.json` |
 | `npm run bench:network` | Pipeline capacity, Erlang-C prover pool, budget contention | `network_*.csv`, `network_model.json` |

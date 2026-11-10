@@ -1,0 +1,32 @@
+{
+  "circuit": "vcp_v3",
+  "generated_at": "2026-11-10T18:13:02.926Z",
+  "pass": true,
+  "results": [
+    {
+      "case": "valid openings",
+      "witness": true,
+      "proof_verifies": true
+    },
+    {
+      "case": "wrong policy salt r_Pi (ph)",
+      "witness": false
+    },
+    {
+      "case": "wrong result opening r_y (y_h)",
+      "witness": false
+    },
+    {
+      "case": "wrong context salt r_chi (c_zk)",
+      "witness": false
+    },
+    {
+      "case": "wrong released result (y_h)",
+      "witness": false
+    },
+    {
+      "case": "flipped policy entry M[0][0] (ph)",
+      "witness": false
+    }
+  ]
+}

@@ -10,6 +10,7 @@
     "zk:build": "node zk/scripts/ceremony_v3.js build",
     "zk:status": "node zk/scripts/ceremony_v3.js status",
     "bench:vcp": "hardhat run zk/scripts/benchmark_vcp_v3.js",
+    "test:openings": "hardhat run zk/scripts/test_vcp_v3_openings.js",
     "bench:attacks": "hardhat run scripts/experiments/run_attack_matrix.js",
     "bench:gas": "hardhat run scripts/experiments/run_gas_benchmarks.js",
     "bench:network": "python analysis/network_model.py",
